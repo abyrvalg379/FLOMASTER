@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
+    <ApplicationIcon>Resources\flomaster.ico</ApplicationIcon>
+    <AssemblyTitle>FLOMASTER</AssemblyTitle>
+    <AssemblyDescription>OCIO Launcher for DCC Applications</AssemblyDescription>
+    <AssemblyVersion>2.0.0.0</AssemblyVersion>
+    <FileVersion>2.0.0.0</FileVersion>
+    <Company>FLOMASTER</Company>
+    <Product>FLOMASTER OCIO Launcher</Product>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Resource Include="Resources\flomaster.ico" />
+  </ItemGroup>
+
+</Project>

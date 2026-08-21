@@ -1,0 +1,16 @@
+# Build artifacts
+FLOMASTER_CS/bin/
+FLOMASTER_CS/obj/
+FLOMASTER_CS/ocio/
+
+# User config
+launcher_config.json
+flomaster.log
+
+# Output
+out/
+
+# OS
+Thumbs.db
+Desktop.ini
+.DS_Store
