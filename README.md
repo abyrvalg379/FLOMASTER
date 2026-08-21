@@ -1,94 +1,94 @@
 # FLOMASTER
 
-**OCIO Launcher** — единая точка запуска для DCC-приложений с кастомным цветовым пространством ACES 1.2.
+**OCIO Launcher** — A unified launch point for DCC applications with custom ACES 1.2 color space support.
 
 ---
 
-## Быстрый старт
+## Quick Start
 
-1. Скачай последний релиз
-2. Запусти `FLOMASTER.exe`
-3. Лаунчер автоматически найдёт установленные DCC-приложения
+1. Download the latest release
+2. Run `FLOMASTER.exe`
+3. The launcher will automatically find installed DCC applications
 
-### Требования
+### Requirements
 
 - Windows 10/11
-- .NET 8 Desktop Runtime (встроен в self-contained версию)
+- .NET 8 Desktop Runtime (bundled in self-contained version)
 
 ---
 
-## Возможности
+## Features
 
-### Темы в стиле DCC
-5 цветовых схем, вдохновлённых популярным софтом:
+### DCC Color Themes
+5 color schemes inspired by popular software:
 
-| Тема | Акцент | Вдохновение |
-|------|--------|-------------|
-| **Blender** | Оранжевый | Blender |
-| **Maya** | Бирюзовый | Autodesk Maya |
-| **Houdini** | Янтарный | SideFX Houdini |
-| **Nuke** | Зелёный | Foundry Nuke |
-| **DaVinci** | Красный | DaVinci Resolve |
+| Theme | Accent | Inspiration |
+|-------|--------|-------------|
+| **Blender** | Orange | Blender |
+| **Maya** | Teal | Autodesk Maya |
+| **Houdini** | Amber | SideFX Houdini |
+| **Nuke** | Green | Foundry Nuke |
+| **DaVinci** | Red | DaVinci Resolve |
 
-### Автоскан
-Находит: Blender, K-Cycles, Maya, Houdini, Nuke, DaVinci Resolve, Unreal Engine, Substance Painter
+### Auto-Scan
+Finds: Blender, K-Cycles, Maya, Houdini, Nuke, DaVinci Resolve, Unreal Engine, Substance Painter
 
 ### Quick Commands
-Раскривающееся меню с аргументами запуска для каждого приложения.
+Expandable menu with launch arguments for each application.
 
 ### Recent Files
-Последние открытые файлы: `.blend`, `.spp`, `.ma`, `.hip`, `.nk`
+Recently opened files: `.blend`, `.spp`, `.ma`, `.hip`, `.nk`
 
 ### Drag & Drop
-- `.exe` → создать пресет
-- `.blend/.spp/.ma/.hip/.nk` → открыть в выбранном приложении
+- `.exe` → create preset
+- `.blend/.spp/.ma/.hip/.nk` → open in selected application
 
-### Контекстное меню
-ПКМ по файлам → "Open in FLOMASTER"
+### Context Menu
+Right-click files → "Open in FLOMASTER"
 
 ### Settings
-- **Theme select** — выбор темы
-- **Start with Windows** — автозапуск
-- **Always on top** — окно поверх всех
-- **Smooth animation** — плавное раскрытие панелей
-- **Default OCIO** — дефолтный конфиг для запуска из трея
-- **Scan paths** — кастомные папки для автоскана
-- **Shortcuts** — ярлыки на рабочий стол
+- **Theme select** — choose color theme
+- **Start with Windows** — auto-start
+- **Always on top** — window above all others
+- **Smooth animation** — animated panel expand/collapse
+- **Default OCIO** — default config for tray launches
+- **Scan paths** — custom folders for auto-scan
+- **Shortcuts** — desktop shortcuts
 
 ---
 
-## Структура
+## Structure
 
 ```
 FLOMASTER/
-├── FLOMASTER.exe             ← Приложение (self-contained)
-├── flomaster.ico             ← Иконка
-├── flomaster_logo.png        ← Логотип
-├── launcher_config.json      ← Настройки
+├── FLOMASTER.exe             ← Application (self-contained)
+├── flomaster.ico             ← Icon
+├── flomaster_logo.png        ← Logo
+├── launcher_config.json      ← Settings
 ├── LICENSE.txt               ← MIT License
-├── README.md                 ← Этот файл
-└── ocio/                     ← ACES 1.2 конфиг
+├── README.md                 ← This file
+└── ocio/                     ← ACES 1.2 config
     ├── config.ocio
     └── luts/
 ```
 
 ---
 
-## Поддержка OCIO
+## OCIO Support
 
-| Приложение | Поддержка |
-|-----------|-----------|
-| Blender | ✅ нативно |
-| Maya | ✅ нативно |
-| Houdini | ✅ нативно |
-| Nuke | ✅ нативно |
-| DaVinci Resolve | ✅ нативно |
-| Unreal Engine | ✅ через аргумент `-ocio=` |
-| Substance Painter | ✅ нативно |
+| Application | Support |
+|-------------|---------|
+| Blender | Native |
+| Maya | Native |
+| Houdini | Native |
+| Nuke | Native |
+| DaVinci Resolve | Native |
+| Unreal Engine | Via `-ocio=` argument |
+| Substance Painter | Native |
 
 ---
 
-## Сборка из исходников
+## Build from Source
 
 ```bash
 cd FLOMASTER_CS
@@ -97,8 +97,8 @@ dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=
 
 ---
 
-## Лицензия
+## License
 
-MIT License — см. [LICENSE.txt](LICENSE.txt)
+MIT License — see [LICENSE.txt](LICENSE.txt)
 
-OCIO конфиг — лицензия Academy of Motion Picture Arts and Sciences
+OCIO config — Academy of Motion Picture Arts and Sciences license. See ocio/LICENSE.md for details.
