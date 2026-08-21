@@ -102,3 +102,16 @@ dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=
 MIT License — see [LICENSE.txt](LICENSE.txt)
 
 OCIO config — Academy of Motion Picture Arts and Sciences license. See ocio/LICENSE.md for details.
+
+
+---
+
+## 🔗 Related Tools
+
+| Tool | Description |
+|------|-------------|
+| [STUKACH](https://github.com/abyrvalg379/STUKACH) | Pipeline asset validator for Blender |
+| [LAMPOCHKA](https://github.com/abyrvalg379/LAMPOCHKA) | Scene light manager |
+| [Switch_UDIM](https://github.com/abyrvalg379/Switch_UDIM) | Single ↔ UDIM texture switcher |
+| [FLOMASTER](https://github.com/abyrvalg379/FLOMASTER) | OCIO launcher for DCC apps |
+| [FILTER](https://github.com/abyrvalg379/FILTER) | Toggle visibility/selection by type, name, collection |
