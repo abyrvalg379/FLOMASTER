@@ -7,7 +7,7 @@
 ## Quick Start
 
 1. Download the latest release from [Releases](https://github.com/abyrvalg379/FLOMASTER/releases)
-2. Extract `FLOMASTER_v2.0.zip`
+2. Extract `FLOMASTER_v2.1.zip`
 3. Run `FLOMASTER.exe`
 4. The launcher will automatically find installed DCC applications
 
@@ -47,11 +47,13 @@ Recently opened files: `.blend`, `.spp`, `.ma`, `.hip`, `.nk`
 ### Context Menu
 Right-click files → "Open in FLOMASTER"
 
+### Logging
+All launches are logged with timestamps, user, application, OCIO config, and exit codes. View logs via the Log button.
+
 ### Settings
 - **Theme select** — choose color theme
 - **Start with Windows** — auto-start
 - **Always on top** — window above all others
-- **Smooth animation** — animated panel expand/collapse
 - **Default OCIO** — default config for tray launches
 - **Scan paths** — custom folders for auto-scan
 - **Shortcuts** — desktop shortcuts
@@ -65,12 +67,15 @@ FLOMASTER/
 ├── FLOMASTER.exe             ← Application (self-contained)
 ├── flomaster.ico             ← Icon
 ├── flomaster_logo.png        ← Logo
-├── launcher_config.json      ← Settings
 ├── LICENSE.txt               ← MIT License
 ├── README.md                 ← This file
 └── ocio/                     ← ACES 1.2 config
     ├── config.ocio
     └── luts/
+
+User data (auto-created in %APPDATA%\FLOMASTER\):
+├── launcher_config.json      ← Settings
+└── flomaster.log             ← Launch log
 ```
 
 ---
@@ -104,15 +109,13 @@ MIT License — see [LICENSE.txt](LICENSE.txt)
 
 OCIO config — Academy of Motion Picture Arts and Sciences license. See ocio/LICENSE.md for details.
 
-
 ---
 
-## 🔗 Related Tools
+## Related Tools
 
 | Tool | Description |
 |------|-------------|
 | [STUKACH](https://github.com/abyrvalg379/STUKACH) | Pipeline asset validator for Blender |
 | [LAMPOCHKA](https://github.com/abyrvalg379/LAMPOCHKA) | Scene light manager |
 | [Switch_UDIM](https://github.com/abyrvalg379/Switch_UDIM) | Single ↔ UDIM texture switcher |
-| [FLOMASTER](https://github.com/abyrvalg379/FLOMASTER) | OCIO launcher for DCC apps |
 | [FILTER](https://github.com/abyrvalg379/FILTER) | Toggle visibility/selection by type, name, collection |
