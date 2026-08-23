@@ -188,14 +188,7 @@ namespace FLOMASTER
 
         private OcioConfig GetActiveOcio()
         {
-            if (OcioCombo.SelectedItem is OcioConfig ocio)
-            {
-                if (!string.IsNullOrEmpty(ocio.Path) && File.Exists(ocio.Path))
-                {
-                    return ocio;
-                }
-            }
-            return null;
+            return OcioService.GetActiveOcio(_config, OcioCombo.SelectedItem);
         }
 
         private void LaunchProcess(string exe, string arguments = "")
@@ -203,7 +196,6 @@ namespace FLOMASTER
             try
             {
                 var ocio = GetActiveOcio();
-                var isUnreal = exe.ToLower().Contains("unreal");
 
                 var psi = new ProcessStartInfo
                 {
@@ -211,19 +203,10 @@ namespace FLOMASTER
                     UseShellExecute = false
                 };
 
-                // For UE: pass OCIO as command line argument
-                var args = arguments;
-                if (isUnreal && ocio != null && !string.IsNullOrEmpty(ocio.Path))
-                {
-                    var ocioArg = $"-ocio=\"{ocio.Path}\"";
-                    args = string.IsNullOrEmpty(args) ? ocioArg : $"{ocioArg} {args}";
-                }
+                if (!string.IsNullOrEmpty(arguments))
+                    psi.Arguments = arguments;
 
-                if (!string.IsNullOrEmpty(args))
-                    psi.Arguments = args;
-
-                if (ocio != null && !string.IsNullOrEmpty(ocio.Path))
-                    psi.EnvironmentVariables["OCIO"] = ocio.Path;
+                OcioService.ApplyOcio(psi, ocio, exe);
 
                 Process.Start(psi);
             }
@@ -315,35 +298,35 @@ namespace FLOMASTER
                 var name = Microsoft.VisualBasic.Interaction.InputBox("OCIO config name:", "FLOMASTER", defaultName);
                 if (string.IsNullOrWhiteSpace(name)) return;
 
-                if (_config.OcioConfigs.Any(o => o.Path == ocioPath))
+                if (OcioService.AddOcioConfig(_config, name, ocioPath))
                 {
-                    MessageBox.Show("This OCIO config already exists.", "FLOMASTER", MessageBoxButton.OK, MessageBoxImage.Information);
-                    return;
+                    ConfigManager.Save(_config);
+                    RefreshOcio();
+                    StatusText.Text = $"Added OCIO: {name}";
                 }
-
-                _config.OcioConfigs.Add(new() { Name = name, Path = ocioPath });
-                ConfigManager.Save(_config);
-                RefreshOcio();
+                else
+                {
+                    MessageBox.Show("This OCIO config already exists or is invalid.", "FLOMASTER", MessageBoxButton.OK, MessageBoxImage.Information);
+                }
             };
 
             RemoveOcioBtn.Click += (s, e) =>
             {
                 if (OcioCombo.SelectedItem is not OcioConfig selected) return;
-                if (_config.OcioConfigs.Count <= 1)
-                {
-                    MessageBox.Show("Cannot remove the last OCIO config.", "FLOMASTER", MessageBoxButton.OK, MessageBoxImage.Warning);
-                    return;
-                }
 
                 var result = MessageBox.Show($"Remove \"{selected.Name}\"?", "FLOMASTER", MessageBoxButton.YesNo, MessageBoxImage.Question);
                 if (result != MessageBoxResult.Yes) return;
 
-                _config.OcioConfigs.RemoveAll(o => o.Name == selected.Name);
-                if (_config.DefaultOcio == selected.Name && _config.OcioConfigs.Count > 0)
-                    _config.DefaultOcio = _config.OcioConfigs[0].Name;
-
-                ConfigManager.Save(_config);
-                RefreshOcio();
+                if (OcioService.RemoveOcioConfig(_config, selected))
+                {
+                    ConfigManager.Save(_config);
+                    RefreshOcio();
+                    StatusText.Text = $"Removed: {selected.Name}";
+                }
+                else
+                {
+                    MessageBox.Show("Cannot remove the last OCIO config.", "FLOMASTER", MessageBoxButton.OK, MessageBoxImage.Warning);
+                }
             };
 
             // Clear args
@@ -378,6 +361,21 @@ namespace FLOMASTER
                 ConfigManager.Save(_config);
                 RefreshApps();
                 StatusText.Text = $"Found {scanned.Count} apps";
+            };
+
+            // Log viewer
+            LogBtn.Click += (s, e) =>
+            {
+                var entries = Logger.GetLastEntries(50);
+                if (entries.Count == 0)
+                {
+                    StatusText.Text = "No log entries yet";
+                    return;
+                }
+
+                var logContent = string.Join(Environment.NewLine, entries);
+                var logWindow = UiHelper.CreateLogWindow(logContent, this);
+                logWindow.ShowDialog();
             };
 
             // Shortcut for selected app
@@ -809,7 +807,7 @@ namespace FLOMASTER
                 {
                     if (File.Exists(p.Exe))
                     {
-                        var ocio = _config.OcioConfigs.FirstOrDefault(o => o.Name == _config.DefaultOcio);
+                        var ocio = OcioService.GetDefaultOcio(_config);
                         LaunchProcess(p.Exe);
                         Logger.Log(p.Name, p.Exe, ocio?.Name ?? "", "tray");
                     }
