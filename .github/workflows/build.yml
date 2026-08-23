@@ -1,0 +1,64 @@
+name: Build FLOMASTER
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Build
+        run: |
+          cd FLOMASTER_CS
+          dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true
+
+      - name: Create Release Package
+        run: |
+          mkdir release
+          copy FLOMASTER_CS\bin\Release\net8.0-windows\win-x64\publish\FLOMASTER.exe release\
+          copy flomaster.ico release\
+          copy flomaster_logo.png release\
+          xcopy /E /I ocio release\ocio
+          copy README.md release\
+          copy LICENSE.txt release\
+
+      - name: Create ZIP
+        run: |
+          Compress-Archive -Path 'release\*' -DestinationPath 'FLOMASTER_Windows.zip'
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: FLOMASTER-Windows
+          path: FLOMASTER_Windows.zip
+
+  release:
+    needs: build-windows
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: FLOMASTER-Windows
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            FLOMASTER_Windows.zip
+          generate_release_notes: true
