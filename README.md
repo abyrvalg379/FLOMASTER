@@ -6,9 +6,10 @@
 
 ## Quick Start
 
-1. Download the latest release
-2. Run `FLOMASTER.exe`
-3. The launcher will automatically find installed DCC applications
+1. Download the latest release from [Releases](https://github.com/abyrvalg379/FLOMASTER/releases)
+2. Extract `FLOMASTER_v2.0.zip`
+3. Run `FLOMASTER.exe`
+4. The launcher will automatically find installed DCC applications
 
 ### Requirements
 
