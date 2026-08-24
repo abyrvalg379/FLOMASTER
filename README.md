@@ -22,13 +22,11 @@
 
 ## Screenshots
 
-| Main window — app select, OCIO, arguments | Settings — themes, autostart, scan paths |
+| | |
 |:---:|:---:|
-| ![Main window, Blender theme](docs/screenshot_main.jpg) | ![Settings panel, Maya theme](docs/screenshot_settings.jpg) |
+| ![Main window](docs/screenshot_main.jpg) | ![Settings](docs/screenshot_settings.jpg) |
 
-The log window opens beside the launcher, matching its height (Houdini theme):
-
-![Log window beside the launcher](docs/screenshot_log.jpg)
+![Log window](docs/screenshot_log.jpg)
 
 ---
 

@@ -22,13 +22,11 @@
 
 ## Скриншоты
 
-| Главное окно — выбор приложения, OCIO, аргументы | Настройки — темы, автозапуск, папки сканирования |
+| | |
 |:---:|:---:|
-| ![Главное окно, тема Blender](docs/screenshot_main.jpg) | ![Панель настроек, тема Maya](docs/screenshot_settings.jpg) |
+| ![Главное окно](docs/screenshot_main.jpg) | ![Настройки](docs/screenshot_settings.jpg) |
 
-Окно лога открывается сбоку от лаунчера, по высоте — как лаунчер (тема Houdini):
-
-![Окно лога рядом с лаунчером](docs/screenshot_log.jpg)
+![Окно лога](docs/screenshot_log.jpg)
 
 ---
 
