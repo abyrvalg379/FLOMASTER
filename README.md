@@ -20,6 +20,18 @@
 
 ---
 
+## Screenshots
+
+| Main window — app select, OCIO, arguments | Settings — themes, autostart, scan paths |
+|:---:|:---:|
+| ![Main window, Blender theme](docs/screenshot_main.jpg) | ![Settings panel, Maya theme](docs/screenshot_settings.jpg) |
+
+The log window opens beside the launcher, matching its height (Houdini theme):
+
+![Log window beside the launcher](docs/screenshot_log.jpg)
+
+---
+
 ## What's New in v2.2
 
 - **7 color themes** — Houdini and Nuke colors sampled from the real application UIs
