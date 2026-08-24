@@ -35,5 +35,7 @@ namespace FLOMASTER.Models
         public string Text { get; set; } = "";
         public string Dim { get; set; } = "";
         public string Border { get; set; } = "";
+        // Text color on accent-colored surfaces (light accents need dark text). Default white.
+        public string AccentText { get; set; } = "#FFFFFF";
     }
 }

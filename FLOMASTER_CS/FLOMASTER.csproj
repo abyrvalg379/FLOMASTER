@@ -8,8 +8,8 @@
     <ApplicationIcon>Resources\flomaster.ico</ApplicationIcon>
     <AssemblyTitle>FLOMASTER</AssemblyTitle>
     <AssemblyDescription>OCIO Launcher for DCC Applications</AssemblyDescription>
-    <AssemblyVersion>2.0.0.0</AssemblyVersion>
-    <FileVersion>2.0.0.0</FileVersion>
+    <AssemblyVersion>2.2.0.0</AssemblyVersion>
+    <FileVersion>2.2.0.0</FileVersion>
     <Company>FLOMASTER</Company>
     <Product>FLOMASTER OCIO Launcher</Product>
   </PropertyGroup>

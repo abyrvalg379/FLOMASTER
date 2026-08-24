@@ -21,3 +21,9 @@ Desktop.ini
 *.dll
 work/test/
 work/backup/
+
+# Work folders (local only)
+work/
+dist
+publish/
+dist

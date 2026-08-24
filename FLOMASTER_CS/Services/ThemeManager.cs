@@ -11,58 +11,80 @@ namespace FLOMASTER.Services
             ["blender"] = new()
             {
                 Name = "Blender",
-                Bg = "#303030",
-                Panel = "#383838",
+                Bg = "#161616",
+                Panel = "#202020",
                 Accent = "#E87D0D",
                 Text = "#E0E0E0",
-                Dim = "#999999",
-                Border = "#4A4A4A"
+                Dim = "#858585",
+                Border = "#303030"
             },
             ["maya"] = new()
             {
                 Name = "Maya",
-                Bg = "#3D3D4E",
-                Panel = "#4A4A5A",
-                Accent = "#6EC6D4",
-                Text = "#E0E0E0",
-                Dim = "#999999",
-                Border = "#555568"
+                Bg = "#1B232C",
+                Panel = "#2A3642",
+                Accent = "#3FD9E8",
+                Text = "#EAF1F6",
+                Dim = "#92A6B8",
+                Border = "#3A4958"
             },
             ["houdini"] = new()
             {
                 Name = "Houdini",
-                Bg = "#2B2B2B",
-                Panel = "#383838",
-                Accent = "#F9A028",
-                Text = "#E0E0E0",
-                Dim = "#999999",
-                Border = "#4A4A4A"
+                Bg = "#1A181D",
+                Panel = "#2C2A2E",
+                Accent = "#FF4713",
+                Text = "#E6E6E6",
+                Dim = "#787779",
+                Border = "#3D3B40"
             },
             ["nuke"] = new()
             {
                 Name = "Nuke",
-                Bg = "#3B3B3B",
-                Panel = "#454545",
-                Accent = "#8CC63F",
-                Text = "#E0E0E0",
-                Dim = "#999999",
-                Border = "#555555"
+                Bg = "#262626",
+                Panel = "#333333",
+                Accent = "#C8C8C8",
+                AccentText = "#1A1A1A",
+                Text = "#E8E8E8",
+                Dim = "#969696",
+                Border = "#454545"
             },
             ["davinci"] = new()
             {
                 Name = "DaVinci",
-                Bg = "#1A1A2E",
-                Panel = "#16213E",
-                Accent = "#E94560",
+                Bg = "#121222",
+                Panel = "#1E2340",
+                Accent = "#FF4D6D",
+                Text = "#EDEAF2",
+                Dim = "#8E8CAB",
+                Border = "#2C2C4A"
+            },
+            ["unreal"] = new()
+            {
+                Name = "Unreal",
+                Bg = "#1C1F24",
+                Panel = "#262A31",
+                Accent = "#3D9BFF",
                 Text = "#E0E0E0",
-                Dim = "#7A7A9A",
-                Border = "#2A2A44"
+                Dim = "#8A919C",
+                Border = "#33383F"
+            },
+            ["substance"] = new()
+            {
+                Name = "Substance",
+                Bg = "#0D0F0D",
+                Panel = "#161A16",
+                Accent = "#76B900",
+                Text = "#E0E0E0",
+                Dim = "#8FA08F",
+                Border = "#262B26"
             }
         };
 
         public static readonly List<string> ThemeOrder = new()
         {
-            "blender", "maya", "houdini", "nuke", "davinci"
+            "blender", "maya", "houdini", "nuke", "davinci",
+            "unreal", "substance"
         };
 
         public static ThemeColors GetTheme(string key)
