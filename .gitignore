@@ -27,3 +27,6 @@ work/
 dist
 publish/
 dist
+
+# Local dev materials (references, backups)
+ref/
