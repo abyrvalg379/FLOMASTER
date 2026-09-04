@@ -155,3 +155,4 @@ OCIO config — Academy of Motion Picture Arts and Sciences license. See ocio/LI
 | [LAMPOCHKA](https://github.com/abyrvalg379/LAMPOCHKA) | Scene light manager |
 | [Switch_UDIM](https://github.com/abyrvalg379/Switch_UDIM) | Single ↔ UDIM texture switcher |
 | [FILTER](https://github.com/abyrvalg379/FILTER) | Toggle visibility/selection by type, name, collection |
+| [KARUSELKA](https://github.com/abyrvalg379/karuselka) | Fast camera turntable rig: orbit or object spin |
