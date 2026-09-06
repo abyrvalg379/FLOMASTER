@@ -30,6 +30,14 @@
 
 ---
 
+## What's New in v2.3
+
+- **Bundled OCIO config restored to pipeline-correct defaults** — explicit ACES roles: 8-bit images load as `raw`, float images (EXR) load as `acescg`
+- **Lowercase ACES aliases** (`acescg`, `raw`) used for default colorspaces — interchange-safe names that match across Blender, Maya, Nuke and Houdini
+- Fixes the regression introduced by the old "Default sRGB fix for Blender" config edit, which silently moved the 8-bit default from Raw to sRGB Texture in Blender 5.1+
+
+---
+
 ## What's New in v2.2
 
 - **7 color themes** — Houdini and Nuke colors sampled from the real application UIs

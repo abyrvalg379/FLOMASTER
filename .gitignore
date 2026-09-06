@@ -30,3 +30,7 @@ dist
 
 # Local dev materials (references, backups)
 ref/
+
+# Local test materials
+original_config/
+test/

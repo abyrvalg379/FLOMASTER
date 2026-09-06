@@ -8,15 +8,16 @@ description: ACES 1.2 Config - Default sRGB fix for Blender
 roles:
   color_picking: Output - sRGB
   color_timing: ACES - ACEScc
-  compositing_linear: ACES - ACEScg
+  compositing_linear: acescg
   compositing_log: Input - ADX - ADX10
-  data: Utility - Raw
+  data: raw
   default: ACES - ACES2065-1
   matte_paint: Utility - sRGB - Texture
-  reference: Utility - Raw
-  rendering: ACES - ACEScg
-  scene_linear: ACES - ACEScg
+  reference: raw
+  rendering: acescg
+  scene_linear: acescg
   texture_paint: Utility - sRGB - Texture
+  default_byte: raw
 
 displays:
   ACES:
