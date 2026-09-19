@@ -8,7 +8,7 @@
 
 ## Быстрый старт
 
-1. Скачай последний релиз со страницы [Releases](https://github.com/abyrvalg379/FLOMASTER/releases)
+1. Скачай последний релиз со страницы [Releases](https://github.com/abyrvalg379/FLOMASTER/releases/latest)
 2. Распакуй архив
 3. Запусти `FLOMASTER.exe`
 4. Лаунчер автоматически найдёт установленные DCC-приложения
