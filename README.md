@@ -2,7 +2,7 @@
 
 **OCIO Launcher** — a unified launch point for DCC applications with custom ACES 1.2 color space support.
 
-[README на русском](README_RU.md)
+*Документация на русском: [README.ru.md](README.ru.md)*
 
 ---
 
@@ -108,7 +108,7 @@ FLOMASTER/
 ├── flomaster_logo.png        ← Logo
 ├── LICENSE.txt               ← MIT License
 ├── README.md                 ← This file
-├── README_RU.md              ← Russian README
+├── README.ru.md              ← Russian README
 └── ocio/                     ← ACES 1.2 config
     ├── config.ocio
     └── luts/

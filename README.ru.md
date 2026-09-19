@@ -2,7 +2,7 @@
 
 **OCIO-лаунчер** — единая точка запуска DCC-приложений с поддержкой кастомного цветового пространства ACES 1.2.
 
-[English README](README.md)
+*English documentation: [README.md](README.md)*
 
 ---
 
@@ -108,7 +108,7 @@ FLOMASTER/
 ├── flomaster_logo.png        ← Логотип
 ├── LICENSE.txt               ← Лицензия MIT
 ├── README.md                 ← Английский README
-├── README_RU.md              ← Этот файл
+├── README.ru.md              ← Этот файл
 └── ocio/                     ← Конфиг ACES 1.2
     ├── config.ocio
     └── luts/
