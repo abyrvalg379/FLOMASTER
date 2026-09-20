@@ -1,5 +1,7 @@
 # FLOMASTER
 
+![FLOMASTER](docs/cover.png)
+
 **OCIO Launcher** — a unified launch point for DCC applications with custom ACES 1.2 color space support.
 
 *Документация на русском: [README.ru.md](README.ru.md)*

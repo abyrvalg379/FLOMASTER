@@ -1,5 +1,7 @@
 # FLOMASTER
 
+![FLOMASTER](docs/cover.png)
+
 **OCIO-лаунчер** — единая точка запуска DCC-приложений с поддержкой кастомного цветового пространства ACES 1.2.
 
 *English documentation: [README.md](README.md)*
