@@ -162,4 +162,4 @@ OCIO-конфиг — лицензия Academy of Motion Picture Arts and Scienc
 | [STUKACH](https://github.com/abyrvalg379/STUKACH) | Проверка ассетов пайплайна в Blender |
 | [LAMPOCHKA](https://github.com/abyrvalg379/LAMPOCHKA) | Менеджер света в сцене |
 | [Switch_UDIM](https://github.com/abyrvalg379/Switch_UDIM) | Переключатель текстур Single ↔ UDIM |
-| [FILTER](https://github.com/abyrvalg379/FILTER) | Видимость/выделение по типу, имени, коллекции |
+| [FILTER](https://github.com/abyrvalg379/FILTER) | Видимость/выделение по типу, имени, коллекции + массовое управление модификаторами |
