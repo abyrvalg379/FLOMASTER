@@ -151,7 +151,7 @@ Requires the .NET 8 SDK. Output: a single ~155 MB self-contained executable.
 
 ## License
 
-MIT License — see [LICENSE.txt](LICENSE.txt)
+MIT License — see [LICENSE.txt](LICENSE.txt). Third-party attributions: [NOTICE.md](NOTICE.md)
 
 OCIO config — Academy of Motion Picture Arts and Sciences license. See ocio/LICENSE.md for details.
 

@@ -151,7 +151,7 @@ dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=
 
 ## Лицензия
 
-MIT — см. [LICENSE.txt](LICENSE.txt)
+MIT — см. [LICENSE.txt](LICENSE.txt). Сторонние лицензии: [NOTICE.md](NOTICE.md)
 
 OCIO-конфиг — лицензия Academy of Motion Picture Arts and Sciences. Подробности в ocio/LICENSE.md.
 
