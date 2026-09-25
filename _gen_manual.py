@@ -7,234 +7,46 @@ r"""FLOMASTER - Руководство пользователя (RU + EN). Ге�
 Выход:   work\docs\FLOMASTER_Manual_RU.docx + FLOMASTER_Manual_EN.docx
 """
 
-from docx import Document
-from docx.shared import Pt, RGBColor, Cm, Inches
-from docx.enum.text import WD_ALIGN_PARAGRAPH
-from docx.enum.table import WD_ALIGN_VERTICAL
-from docx.oxml.ns import qn
-from docx.oxml import OxmlElement
+import json
+
+import _docstyle as ds
 
 OUT_RU = r'D:\AI\ZCode\Project\FLOMASTER\work\docs\FLOMASTER_Manual_RU.docx'
 OUT_EN = r'D:\AI\ZCode\Project\FLOMASTER\work\docs\FLOMASTER_Manual_EN.docx'
 
-# ── фирменные цвета FLOMASTER ─────────────────────────────────────────────
-
-ACCENT      = RGBColor(0xE8, 0x7D, 0x0D)   # оранжевый
-ACCENT_SOFT = RGBColor(0xF2, 0xA2, 0x4B)   # светлее для H2
-HDR_BG      = 'E87D0D'
-ALT_ROW     = 'FDF4EA'
-GREY        = RGBColor(0x55, 0x55, 0x55)
-
-
-def _new_doc():
-    doc = Document()
-    for section in doc.sections:
-        section.top_margin    = Inches(0.9)
-        section.bottom_margin = Inches(0.9)
-        section.left_margin   = Inches(1)
-        section.right_margin  = Inches(1)
-
-    normal = doc.styles['Normal']
-    normal.font.name = 'Arial'
-    normal.font.size = Pt(10)
-    normal.paragraph_format.line_spacing = 1.3
-    normal.paragraph_format.space_after = Pt(4)
-    normal.paragraph_format.space_before = Pt(0)
-    rpr = normal.element.get_or_add_rPr()
-    rfonts = rpr.find(qn('w:rFonts'))
-    rfonts.set(qn('w:cs'), 'Arial')
-
-    for lvl, size in (('Heading 1', 15), ('Heading 2', 12.5)):
-        st = doc.styles[lvl]
-        st.font.name = 'Arial'
-        st.font.size = Pt(size)
-        st.font.bold = True
-        st.font.color.rgb = ACCENT if lvl == 'Heading 1' else ACCENT_SOFT
-        st.paragraph_format.space_before = Pt(14 if lvl == 'Heading 1' else 10)
-        st.paragraph_format.space_after = Pt(5)
-        st.paragraph_format.line_spacing = 1.15
-        st.paragraph_format.keep_with_next = True
-    return doc
-
-
-# ── хелперы ────────────────────────────────────────────────────────────────
-
-def set_cell_bg(cell, hex_color):
-    tcPr = cell._tc.get_or_add_tcPr()
-    shd = OxmlElement('w:shd')
-    shd.set(qn('w:val'), 'clear')
-    shd.set(qn('w:color'), 'auto')
-    shd.set(qn('w:fill'), hex_color)
-    tcPr.append(shd)
-
-
-def set_cell_borders(cell, color='CCCCCC'):
-    tcPr = cell._tc.get_or_add_tcPr()
-    tcB = OxmlElement('w:tcBorders')
-    for side in ('top', 'left', 'bottom', 'right'):
-        b = OxmlElement(f'w:{side}')
-        b.set(qn('w:val'), 'single')
-        b.set(qn('w:sz'), '4')
-        b.set(qn('w:space'), '0')
-        b.set(qn('w:color'), color)
-        tcB.append(b)
-    tcPr.append(tcB)
-
-
-def cell_para(cell, text, bold=False, size=9, color=None):
-    p_ = cell.paragraphs[0]
-    p_.paragraph_format.space_before = Pt(2)
-    p_.paragraph_format.space_after = Pt(2)
-    p_.paragraph_format.line_spacing = 1.1
-    run = p_.add_run(text)
-    run.font.name = 'Arial'
-    run.font.size = Pt(size)
-    run.font.bold = bold
-    if color:
-        run.font.color.rgb = RGBColor(*color)
-
-
-def add_table(doc, rows, col_widths_cm):
-    table = doc.add_table(rows=0, cols=len(col_widths_cm))
-    table.style = 'Table Grid'
-    table.autofit = False
-    tblPr = table._tbl.tblPr
-    mar = OxmlElement('w:tblCellMar')
-    for side, val in (('top', 40), ('left', 80), ('bottom', 40), ('right', 80)):
-        el = OxmlElement(f'w:{side}')
-        el.set(qn('w:w'), str(val))
-        el.set(qn('w:type'), 'dxa')
-        mar.append(el)
-    tblPr.append(mar)
-
-    for r_idx, row_data in enumerate(rows):
-        row = table.add_row()
-        big = len(rows) > 2
-        trPr = row._tr.get_or_add_trPr()
-        trPr.append(OxmlElement('w:cantSplit'))
-        if big and r_idx == 0:
-            trPr.append(OxmlElement('w:tblHeader'))
-
-        glue = len(rows) <= 10 and r_idx < len(rows) - 1
-        for c_idx, (text, w) in enumerate(zip(row_data, col_widths_cm)):
-            cell = row.cells[c_idx]
-            cell.width = Cm(w)
-            set_cell_borders(cell)
-            cell.vertical_alignment = WD_ALIGN_VERTICAL.TOP
-            if r_idx == 0:
-                set_cell_bg(cell, HDR_BG)
-                cell_para(cell, text, bold=True, size=9, color=(0xFF, 0xFF, 0xFF))
-            else:
-                if r_idx % 2 == 0:
-                    set_cell_bg(cell, ALT_ROW)
-                cell_para(cell, text, bold=(c_idx == 0), size=9)
-            if glue:
-                for par in cell.paragraphs:
-                    par.paragraph_format.keep_with_next = True
-
-    sp = doc.add_paragraph()
-    sp.paragraph_format.space_after = Pt(4)
-    sp.paragraph_format.space_before = Pt(0)
-    sp.paragraph_format.line_spacing = 1.0
-    return table
-
 
 def h1(doc, text):
-    doc.add_heading(text, level=1)
+    return ds.h1(doc, text)
 
 
 def h2(doc, text):
-    doc.add_heading(text, level=2)
+    return ds.h2(doc, text)
 
 
-def p(doc, text, bullet=False):
-    par = doc.add_paragraph(style='List Bullet' if bullet else None)
-    run = par.add_run(text)
-    run.font.name = 'Arial'
-    run.font.size = Pt(9.5)
-    return par
+def p(doc, text, bullet=False, italic=False, grey=False):
+    return ds.p(doc, text, bullet=bullet, italic=italic, grey=grey)
 
 
 def kv_note(doc, text):
-    par = doc.add_paragraph()
-    run = par.add_run(text)
-    run.font.name = 'Arial'
-    run.font.size = Pt(9)
-    run.font.italic = True
-    run.font.color.rgb = GREY
+    return ds.kv(doc, text)
 
 
-def add_toc_field(doc, hint):
-    par = doc.add_paragraph()
-    run = par.add_run()
-    fb = OxmlElement('w:fldChar'); fb.set(qn('w:fldCharType'), 'begin')
-    instr = OxmlElement('w:instrText'); instr.set(qn('xml:space'), 'preserve')
-    instr.text = r'TOC \o "1-1" \h \z \u'
-    fs = OxmlElement('w:fldChar'); fs.set(qn('w:fldCharType'), 'separate')
-    t = OxmlElement('w:t'); t.text = hint
-    fs.append(t)
-    fe = OxmlElement('w:fldChar'); fe.set(qn('w:fldCharType'), 'end')
-    r = run._r
-    r.append(fb); r.append(instr); r.append(fs); r.append(fe)
-    br = doc.add_paragraph()
-    rb = br.add_run()
-    pb = OxmlElement('w:br'); pb.set(qn('w:type'), 'page')
-    rb._r.append(pb)
+def add_table(doc, rows, widths, sev_col=None):
+    return ds.add_table(doc, rows, widths, sev_col=sev_col)
 
 
-def add_footer_pagenum(doc):
-    footer = doc.sections[0].footer
-    par = footer.paragraphs[0]
-    par.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    run = par.add_run()
-    fb = OxmlElement('w:fldChar'); fb.set(qn('w:fldCharType'), 'begin')
-    instr = OxmlElement('w:instrText'); instr.set(qn('xml:space'), 'preserve')
-    instr.text = r'PAGE \* arabic \* MERGEFORMAT'
-    fe = OxmlElement('w:fldChar'); fe.set(qn('w:fldCharType'), 'end')
-    run._r.append(fb); run._r.append(instr); run._r.append(fe)
-    run.font.name = 'Arial'
-    run.font.size = Pt(9)
-    run.font.color.rgb = GREY
-
-
-def title_block(doc, name, subtitle, tagline, version):
-    tp = doc.add_paragraph()
-    tp.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    tp.paragraph_format.space_before = Pt(30)
-    tp.paragraph_format.space_after = Pt(4)
-    r = tp.add_run(name)
-    r.font.name = 'Arial'; r.font.size = Pt(30); r.font.bold = True
-    r.font.color.rgb = ACCENT
-
-    t2 = doc.add_paragraph()
-    t2.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    t2.paragraph_format.space_after = Pt(10)
-    r = t2.add_run(subtitle)
-    r.font.name = 'Arial'; r.font.size = Pt(18); r.font.bold = True
-    r.font.color.rgb = ACCENT
-
-    s1 = doc.add_paragraph()
-    s1.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    s1.paragraph_format.space_after = Pt(4)
-    r = s1.add_run(tagline)
-    r.font.name = 'Arial'; r.font.size = Pt(11); r.font.color.rgb = GREY
-
-    s2 = doc.add_paragraph()
-    s2.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    s2.paragraph_format.space_after = Pt(20)
-    r = s2.add_run(version)
-    r.font.name = 'Arial'; r.font.size = Pt(10.5); r.font.color.rgb = GREY
-
-
-# ════════════════════════════════════════════════════════════════════════════
-# RU
-# ════════════════════════════════════════════════════════════════════════════
+def _save(doc, out):
+    ds.footer(doc.sections[1], 'FLOMASTER')
+    ds.strip_tail(doc)
+    doc.save(out)
+    h1s = [t for t in ds.H1_REGISTRY if t.lower() not in ('содержание', 'contents')]
+    json.dump(h1s, open(out.replace('.docx', '.h1.json'), 'w', encoding='utf-8'),
+              ensure_ascii=False)
+    print('saved:', out)
 
 def build_ru():
-    doc = _new_doc()
-    title_block(doc, 'FLOMASTER', 'Руководство пользователя',
-                'Единая точка запуска DCC-приложений под OCIO-конфигом',
-                'Версия 2.3 - Windows 10/11')
+    ds.H1_REGISTRY.clear()
+    doc = ds.new_doc('FLOMASTER', 'Руководство пользователя', 'V2.3  -  WINDOWS 10/11')
 
     p(doc, 'FLOMASTER - лаунчер для рабочих приложений трёхмерной графики: одна кнопка '
            'запускает Blender, Maya, Houdini, Nuke, DaVinci Resolve, Unreal Engine или '
@@ -246,7 +58,7 @@ def build_ru():
     kv_note(doc, 'github.com/abyrvalg379/FLOMASTER')
 
     h1(doc, 'Содержание')
-    add_toc_field(doc, 'Оглавление: откройте документ в Word/LibreOffice и обновите поле (F9), '
+    ds.toc_field(doc, 'Оглавление: откройте документ в Word/LibreOffice и обновите поле (F9), '
                        'чтобы заполнить номера страниц.')
 
     h1(doc, '1. О программе')
@@ -396,9 +208,7 @@ def build_ru():
         ('Не заменяется exe при обновлении', 'лаунчер запущен (в том числе в трее) и файл занят', 'закройте FLOMASTER полностью, затем замените файлы'),
     ], [4.6, 5.4, 7.0])
 
-    add_footer_pagenum(doc)
-    doc.save(OUT_RU)
-    print('saved:', OUT_RU)
+    _save(doc, OUT_RU)
 
 
 # ════════════════════════════════════════════════════════════════════════════
@@ -406,10 +216,8 @@ def build_ru():
 # ════════════════════════════════════════════════════════════════════════════
 
 def build_en():
-    doc = _new_doc()
-    title_block(doc, 'FLOMASTER', 'User Guide',
-                'A single launch point for DCC applications under one OCIO config',
-                'Version 2.3 - Windows 10/11')
+    ds.H1_REGISTRY.clear()
+    doc = ds.new_doc('FLOMASTER', 'User Guide', 'V2.3  -  WINDOWS 10/11')
 
     p(doc, 'FLOMASTER is a launcher for 3D graphics applications: one button starts Blender, '
            'Maya, Houdini, Nuke, DaVinci Resolve, Unreal Engine or Substance Painter with a '
@@ -420,7 +228,7 @@ def build_en():
     kv_note(doc, 'github.com/abyrvalg379/FLOMASTER')
 
     h1(doc, 'Contents')
-    add_toc_field(doc, 'Table of contents: open the document in Word/LibreOffice and refresh '
+    ds.toc_field(doc, 'Table of contents: open the document in Word/LibreOffice and refresh '
                        'the field (F9) to fill in page numbers.')
 
     h1(doc, '1. About FLOMASTER')
@@ -570,27 +378,9 @@ def build_en():
         ('Cannot replace the exe when updating', 'the launcher is running (including the tray) and the file is locked', 'close FLOMASTER completely, then replace the files'),
     ], [4.6, 5.4, 7.0])
 
-    add_footer_pagenum(doc)
-    doc.save(OUT_EN)
-    print('saved:', OUT_EN)
-
-
-def _strip_trailing_empty_paras(doc):
-    """Хвостовые пустые абзацы не должны плодить пустую последнюю страницу."""
-    body = doc.element.body
-    for el in list(body)[::-1]:
-        if el.tag == qn('w:sectPr'):
-            continue
-        if el.tag == qn('w:p') and not ''.join(el.itertext()).strip():
-            body.remove(el)
-        else:
-            break
+    _save(doc, OUT_EN)
 
 
 if __name__ == '__main__':
-    for build, out in ((build_ru, OUT_RU), (build_en, OUT_EN)):
-        build()
-        d = Document(out)
-        _strip_trailing_empty_paras(d)
-        d.save(out)
-        print('cleaned:', out)
+    build_ru()
+    build_en()
