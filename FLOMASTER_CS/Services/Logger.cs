@@ -27,15 +27,6 @@ namespace FLOMASTER.Services
             AppendLine(line);
         }
 
-        // Process exit code log
-        public static void LogProcessExit(string appName, int exitCode, string exePath)
-        {
-            var timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
-            var status = exitCode == 0 ? "SUCCESS" : "FAILED";
-            var line = $"{timestamp}|PROCESS|{Sanitize(appName)}|exit={exitCode}|{status}|{Sanitize(exePath)}";
-            AppendLine(line);
-        }
-
         public static List<string> GetLastEntries(int count = 30)
         {
             try
