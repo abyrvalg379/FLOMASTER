@@ -192,18 +192,32 @@ namespace FLOMASTER
             _trayIcon.Text = "FLOMASTER";
             _trayIcon.Visible = true;
 
-            var menu = new WinForms.ContextMenuStrip();
-            foreach (var p in viewModel.Presets)
+            _trayIcon.ContextMenuStrip = new WinForms.ContextMenuStrip();
+            RebuildTrayMenu(viewModel);
+            viewModel.Presets.CollectionChanged += (s, e) => RebuildTrayMenu(viewModel);
+
+            _trayIcon.DoubleClick += (s, e) => { Show(); WindowState = WindowState.Normal; Activate(); };
+        }
+
+        private void RebuildTrayMenu(MainViewModel viewModel)
+        {
+            var menu = _trayIcon.ContextMenuStrip;
+            if (menu == null) return;
+            menu.Items.Clear();
+
+            foreach (var preset in viewModel.Presets)
             {
-                var preset = p;
-                var item = menu.Items.Add(p.Name);
+                var item = menu.Items.Add(preset.Name);
                 item.Click += (s, e) =>
                 {
-                    if (File.Exists(preset.Exe))
+                    if (!File.Exists(preset.Exe))
                     {
-                        viewModel.SelectedPreset = preset;
-                        viewModel.LaunchCommand.Execute(null);
+                        Logger.Log("Tray", $"Preset exe not found: {preset.Exe}", "warn");
+                        viewModel.StatusText = $"{preset.Name}: exe not found";
+                        return;
                     }
+                    viewModel.SelectedPreset = preset;
+                    viewModel.LaunchCommand.Execute(null);
                 };
             }
 
@@ -212,9 +226,6 @@ namespace FLOMASTER
             showItem.Click += (s, e) => { Show(); WindowState = WindowState.Normal; Activate(); };
             var quitItem = menu.Items.Add("Quit");
             quitItem.Click += (s, e) => { _trayIcon.Visible = false; _trayIcon.Dispose(); Close(); };
-
-            _trayIcon.ContextMenuStrip = menu;
-            _trayIcon.DoubleClick += (s, e) => { Show(); WindowState = WindowState.Normal; Activate(); };
         }
 
         private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
