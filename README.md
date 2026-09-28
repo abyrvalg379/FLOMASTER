@@ -38,15 +38,24 @@
 
 ---
 
-## What's New in v2.3
+## What's New in v2.3.3
 
-- **Bundled OCIO config restored to pipeline-correct defaults** — explicit ACES roles: 8-bit images load as `raw`, float images (EXR) load as `acescg`
-- **Lowercase ACES aliases** (`acescg`, `raw`) used for default colorspaces — interchange-safe names that match across Blender, Maya, Nuke and Houdini
-- Fixes the regression introduced by the old "Default sRGB fix for Blender" config edit, which silently moved the 8-bit default from Raw to sRGB Texture in Blender 5.1+
+- **Per-preset OCIO role overrides** — pick `scene_linear`, `data`, `default_byte` and other roles right in the launcher; applied at launch through a derived config, so **the original .ocio file is never modified**
+- **Family-grouped picker** — colorspaces in a Blender-style tree (ACES / Input / Output / Utility / Aliases…) with instant search
+- **Auto-update** — optional check on start (Settings), background download, one-click "Restart and install"
+- **Layout & polish** — collapsible panels with Arguments and Quick commands at the bottom, themed scrollbar everywhere, window minimize restored
 
----
+### [v2.3.2](https://github.com/abyrvalg379/FLOMASTER/releases/tag/v2.3.2) — OCIO config validation
+Key roles are shown and validated per config: missing `default_byte` or `data`, roles pointing to unknown colorspaces — warnings right in the UI and the log.
 
-## What's New in v2.2
+### [v2.3.1](https://github.com/abyrvalg379/FLOMASTER/releases/tag/v2.3.1) — tray fixes
+Tray menu now updates with presets; items with missing exes warn instead of doing nothing.
+
+### [v2.3](https://github.com/abyrvalg379/FLOMASTER/releases/tag/v2.3) — pipeline-correct defaults
+Explicit ACES roles in the bundled config: 8-bit images load as `raw`, float (EXR) as `acescg` — lowercase interchange-safe aliases, fixing the old sRGB-fix regression in Blender 5.1+.
+
+<details>
+<summary><b>What's New in v2.2</b></summary>
 
 - **7 color themes** — Houdini and Nuke colors sampled from the real application UIs
 - **Fully themed interface** — checkboxes, scrollbars and dropdown popups follow the selected theme, rounded corners everywhere
@@ -54,6 +63,8 @@
 - **Extended drag & drop** — `.mb`, `.hipl`, `.hipnc` added
 - **Window opens in the top-right corner** of the screen
 - MVVM architecture under the hood
+
+</details>
 
 ---
 
