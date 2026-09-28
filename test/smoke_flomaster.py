@@ -153,6 +153,13 @@ if csproj_ver and m_title:
 else:
     record("02 XAML Title синхронна csproj", "FAIL", "Title не распознан")
 
+# 02b: в XAML не должно быть захардкоженных версий в Run (урок v2.3.1: шапка окна
+# осталась "v2.3" после бампа 2.3.1 — версия в UI только через бинд VersionLabel)
+hard_ver = [ln for ln in xaml.splitlines()
+            if re.search(r'<Run Text="[^"]*v\d+\.\d+', ln)]
+record("02b XAML: версии без хардкода в Run", "FAIL" if hard_ver else "PASS",
+       hard_ver[0].strip()[:70] if hard_ver else "версия в шапке через бинд VersionLabel")
+
 HEX_RE = re.compile(r"#[0-9A-Fa-f]{6}\b")
 bad_hex = []
 for line_no, line in enumerate(xaml.splitlines(), 1):
