@@ -24,6 +24,7 @@ namespace FLOMASTER.ViewModels
         private bool _argsPanelVisible;
         private bool _settingsPanelVisible;
         private bool _rolesPanelVisible;
+        private bool _profilesPanelVisible;
         private bool _autoStartEnabled;
         private bool _topMostEnabled;
         private bool _animationEnabled;
@@ -37,6 +38,7 @@ namespace FLOMASTER.ViewModels
         // Collections
         public ObservableCollection<Preset> Presets { get; } = new();
         public ObservableCollection<OcioConfig> OcioConfigs { get; } = new();
+        public ObservableCollection<Profile> Profiles { get; } = new();
         public ObservableCollection<string> LogEntries { get; } = new();
         public ObservableCollection<string> RecentFiles { get; } = new();
 
@@ -56,6 +58,9 @@ namespace FLOMASTER.ViewModels
         public ICommand ResetRolesCommand { get; private set; }
         public ICommand UpdateCommand { get; private set; }
         public ICommand ClearRecentCommand { get; private set; }
+        public ICommand SaveProfileCommand { get; private set; }
+        public ICommand ApplyProfileCommand { get; private set; }
+        public ICommand DeleteProfileCommand { get; private set; }
 
         public MainViewModel()
         {
@@ -70,6 +75,7 @@ namespace FLOMASTER.ViewModels
             RefreshPresets();
             RefreshOcioConfigs();
             RefreshRecentFiles();
+            RefreshProfiles();
 
             // Init themes
             foreach (var key in ThemeManager.ThemeOrder)
@@ -91,6 +97,9 @@ namespace FLOMASTER.ViewModels
             ResetRolesCommand = new RelayCommand(_ => ResetRoleOverrides(), _ => SelectedPreset?.RoleOverrides is { Count: > 0 });
             UpdateCommand = new RelayCommand(_ => ApplyUpdate(), _ => UpdateReady);
             ClearRecentCommand = new RelayCommand(_ => ClearRecentFiles());
+            SaveProfileCommand = new RelayCommand(_ => SaveProfile());
+            ApplyProfileCommand = new RelayCommand<Profile>(p => ApplyProfile(p));
+            DeleteProfileCommand = new RelayCommand<Profile>(p => DeleteProfile(p));
 
             // Init state
             _selectedTheme = ThemeManager.GetTheme(_config.Theme).Name;
@@ -148,6 +157,7 @@ namespace FLOMASTER.ViewModels
         public bool ArgsPanelVisible { get => _argsPanelVisible; set => SetProperty(ref _argsPanelVisible, value); }
         public bool SettingsPanelVisible { get => _settingsPanelVisible; set => SetProperty(ref _settingsPanelVisible, value); }
         public bool RolesPanelVisible { get => _rolesPanelVisible; set => SetProperty(ref _rolesPanelVisible, value); }
+        public bool ProfilesPanelVisible { get => _profilesPanelVisible; set => SetProperty(ref _profilesPanelVisible, value); }
         public bool AutoStartEnabled
         {
             get => _autoStartEnabled;
@@ -474,10 +484,11 @@ namespace FLOMASTER.ViewModels
             catch (Exception ex) { StatusText = $"Shortcut error: {ex.Message}"; }
         }
 
-        private void OpenRecentFile(string filePath)
+        public void OpenRecentFile(string filePath)
         {
             if (!File.Exists(filePath)) { StatusText = "File not found"; RefreshRecentFiles(); return; }
-            if (SelectedPreset == null || !File.Exists(SelectedPreset.Exe)) return;
+            if (SelectedPreset == null) { StatusText = "Select an app first"; return; }
+            if (!File.Exists(SelectedPreset.Exe)) { StatusText = "App not found"; return; }
             var ocio = SelectedOcio;
             var psi = new ProcessStartInfo { FileName = SelectedPreset.Exe, Arguments = $"\"{filePath}\"", UseShellExecute = false };
             OcioService.ApplyOcio(psi, ocio, SelectedPreset.Exe);
@@ -631,6 +642,78 @@ namespace FLOMASTER.ViewModels
             Logger.Log("OCIO", $"Preset '{SelectedPreset.Name}': role overrides reset", "info");
             StatusText = $"Roles reset: {SelectedPreset.Name}";
         }
+
+        // ============ ПРОФИЛИ: слепок {пресет, аргументы, OCIO}; применение заполняет состояние окна ============
+
+        private void RefreshProfiles()
+        {
+            Profiles.Clear();
+            foreach (var p in _config.Profiles) Profiles.Add(p);
+        }
+
+        /// <summary>Сохраняет текущее состояние окна (пресет + OCIO + аргументы) как именованный профиль.</summary>
+        private void SaveProfile()
+        {
+            if (SelectedPreset == null) { StatusText = "No app selected"; return; }
+            var name = Microsoft.VisualBasic.Interaction.InputBox("Profile name:", "FLOMASTER", $"{SelectedPreset.Name} profile");
+            if (string.IsNullOrWhiteSpace(name)) return;
+
+            var existing = _config.Profiles.FirstOrDefault(p => p.Name == name);
+            if (existing != null)
+            {
+                var result = MessageBox.Show($"Profile \"{name}\" already exists. Overwrite?", "FLOMASTER",
+                    MessageBoxButton.YesNo, MessageBoxImage.Question);
+                if (result != MessageBoxResult.Yes) return;
+            }
+
+            var profile = existing ?? new Profile { Name = name };
+            profile.PresetName = SelectedPreset.Name;
+            profile.OcioName = SelectedOcio?.Name ?? "";
+            profile.Args = ArgsText?.Trim() ?? "";
+            if (existing == null) _config.Profiles.Add(profile);
+
+            ConfigManager.Save(_config);
+            RefreshProfiles();
+            StatusText = $"Profile saved: {name}";
+            Logger.Log("Profile", $"Saved '{name}': {profile.PresetName}, OCIO '{profile.OcioName}', args '{profile.Args}'", "info");
+        }
+
+        /// <summary>Применяет профиль: выставляет пресет, OCIO и аргументы. Запуск — штатным Launch.</summary>
+        public void ApplyProfile(Profile profile)
+        {
+            if (profile == null) return;
+            var preset = Presets.FirstOrDefault(p => p.Name == profile.PresetName);
+            if (preset == null)
+            {
+                StatusText = $"Profile '{profile.Name}': app '{profile.PresetName}' not found";
+                Logger.Log("Profile", $"'{profile.Name}': preset '{profile.PresetName}' not found", "warn");
+                return;
+            }
+            var ocio = OcioConfigs.FirstOrDefault(o => o.Name == profile.OcioName);
+            if (ocio == null && !string.IsNullOrEmpty(profile.OcioName))
+                Logger.Log("Profile", $"'{profile.Name}': OCIO '{profile.OcioName}' not found, keeping current", "warn");
+
+            SelectedPreset = preset;
+            if (ocio != null) SelectedOcio = ocio;
+            ArgsText = profile.Args ?? "";
+
+            StatusText = $"Profile applied: {profile.Name}";
+            Logger.Log("Profile", $"Applied '{profile.Name}': {preset.Name}, OCIO '{ocio?.Name ?? "(current)"}', args '{profile.Args}'", "info");
+        }
+
+        private void DeleteProfile(Profile profile)
+        {
+            if (profile == null) return;
+            var result = MessageBox.Show($"Delete profile \"{profile.Name}\"?", "FLOMASTER",
+                MessageBoxButton.YesNo, MessageBoxImage.Question);
+            if (result != MessageBoxResult.Yes) return;
+            _config.Profiles.RemoveAll(p => p.Name == profile.Name);
+            ConfigManager.Save(_config);
+            RefreshProfiles();
+            StatusText = $"Profile deleted: {profile.Name}";
+            Logger.Log("Profile", $"Deleted '{profile.Name}'", "info");
+        }
+
 
         private void RefreshRecentFiles()
         {

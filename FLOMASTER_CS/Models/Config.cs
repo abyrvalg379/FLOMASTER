@@ -8,6 +8,7 @@ namespace FLOMASTER.Models
         public List<OcioConfig> OcioConfigs { get; set; } = new();
         public string DefaultOcio { get; set; } = "ACES 1.2";
         public List<Preset> Presets { get; set; } = new();
+        public List<Profile> Profiles { get; set; } = new();
         public List<string> RecentFiles { get; set; } = new();
         public List<string> ScanPaths { get; set; } = new();
         public bool AnimationEnabled { get; set; } = true;
@@ -30,6 +31,19 @@ namespace FLOMASTER.Models
         // Канонический .ocio никогда не модифицируется: при запуске собирается
         // вариант конфига в %APPDATA%\FLOMASTER\variants\ и OCIO указывает на него.
         public Dictionary<string, string>? RoleOverrides { get; set; }
+    }
+
+    /// <summary>
+    /// Именованный слепок состояния запуска: пресет, аргументы, OCIO-конфиг.
+    /// Ссылки по имени (пресет/конфиг могут редактироваться после создания профиля).
+    /// Переопределения ролей не копируются — едут вместе с пресетом.
+    /// </summary>
+    public class Profile
+    {
+        public string Name { get; set; } = "";
+        public string PresetName { get; set; } = "";
+        public string OcioName { get; set; } = "";
+        public string Args { get; set; } = "";
     }
 
     public class ThemeColors
