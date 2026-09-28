@@ -192,7 +192,7 @@ elif enabled_bound:
 else:
     record("04 Настроечные галки имеют логику в сеттере", "WARN", "галок *Enabled в XAML не найдено")
 
-cmd_bindings = set(re.findall(r'Command="\{Binding (\w+)\}"', xaml))
+cmd_bindings = set(re.findall(r'Command="\{Binding (?:DataContext\.)?(\w+)', xaml))
 vm_cmds = set(re.findall(r"public ICommand (\w+)", vm))
 orphan = sorted(cmd_bindings - vm_cmds)
 if orphan:

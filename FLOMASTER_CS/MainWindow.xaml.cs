@@ -55,13 +55,15 @@ namespace FLOMASTER
                 else if (e.PropertyName == nameof(viewModel.RecentPanelVisible) ||
                     e.PropertyName == nameof(viewModel.ArgsPanelVisible) ||
                     e.PropertyName == nameof(viewModel.SettingsPanelVisible) ||
-                    e.PropertyName == nameof(viewModel.RolesPanelVisible))
+                    e.PropertyName == nameof(viewModel.RolesPanelVisible) ||
+                    e.PropertyName == nameof(viewModel.ProfilesPanelVisible))
                 {
                     double h = BaseHeight;
                     if (viewModel.RecentPanelVisible) h += 200;
                     if (viewModel.ArgsPanelVisible) h += 200;
                     if (viewModel.SettingsPanelVisible) h += 200;
                     if (viewModel.RolesPanelVisible) h += 220;
+                    if (viewModel.ProfilesPanelVisible) h += 180;
                     AnimateToHeight(h, viewModel.AnimationEnabled);
                 }
             };
@@ -116,6 +118,20 @@ namespace FLOMASTER
                         var current = viewModel.ArgsText?.Trim() ?? "";
                         viewModel.ArgsText = string.IsNullOrEmpty(current) ? cmd.Cmd : $"{current} {cmd.Cmd}";
                         quickList.SelectedIndex = -1; // deselect
+                    }
+                };
+            }
+
+            // Recent files click handler: открыть файл выбранным приложением
+            var recentList = (System.Windows.Controls.ListBox)FindName("RecentList");
+            if (recentList != null)
+            {
+                recentList.SelectionChanged += (s, e) =>
+                {
+                    if (recentList.SelectedItem is string file)
+                    {
+                        viewModel.OpenRecentFile(file);
+                        recentList.SelectedIndex = -1; // deselect
                     }
                 };
             }
@@ -218,6 +234,7 @@ namespace FLOMASTER
             _trayIcon.ContextMenuStrip = new WinForms.ContextMenuStrip();
             RebuildTrayMenu(viewModel);
             viewModel.Presets.CollectionChanged += (s, e) => RebuildTrayMenu(viewModel);
+            viewModel.Profiles.CollectionChanged += (s, e) => RebuildTrayMenu(viewModel);
 
             _trayIcon.DoubleClick += (s, e) => { Show(); WindowState = WindowState.Normal; Activate(); };
         }
@@ -242,6 +259,30 @@ namespace FLOMASTER
                     viewModel.SelectedPreset = preset;
                     viewModel.LaunchCommand.Execute(null);
                 };
+            }
+
+            // Профили: применение состояния + запуск тем же путём, что и Launch
+            if (viewModel.Profiles.Count > 0)
+            {
+                menu.Items.Add(new WinForms.ToolStripSeparator());
+                var header = menu.Items.Add("PROFILES");
+                header.Enabled = false;
+
+                foreach (var profile in viewModel.Profiles)
+                {
+                    var item = menu.Items.Add(profile.Name);
+                    item.Click += (s, e) =>
+                    {
+                        viewModel.ApplyProfile(profile);
+                        var exe = viewModel.SelectedPreset?.Exe;
+                        if (string.IsNullOrEmpty(exe) || !File.Exists(exe))
+                        {
+                            Logger.Log("Tray", $"Profile '{profile.Name}': exe not found: {exe}", "warn");
+                            return;
+                        }
+                        viewModel.LaunchCommand.Execute(null);
+                    };
+                }
             }
 
             menu.Items.Add(new WinForms.ToolStripSeparator());
