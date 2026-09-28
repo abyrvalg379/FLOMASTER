@@ -2,6 +2,10 @@
 
 ![FLOMASTER](docs/cover.png)
 
+[![Release](https://img.shields.io/github/v/release/abyrvalg379/FLOMASTER)](https://github.com/abyrvalg379/FLOMASTER/releases/latest)
+[![Windows](https://img.shields.io/badge/Windows-10%2F11-0078D6?logo=windows11&logoColor=white)](https://github.com/abyrvalg379/FLOMASTER/blob/main/README.ru.md#быстрый-старт)
+[![smoke](https://img.shields.io/badge/smoke-18%2F18%20passing-brightgreen)](test/smoke_flomaster.py)
+
 **OCIO-лаунчер** — единая точка запуска DCC-приложений с поддержкой кастомного цветового пространства ACES 1.2.
 
 *English documentation: [README.md](README.md)*

@@ -33,4 +33,5 @@ ref/
 
 # Local test materials
 original_config/
-test/
+test/*
+!test/smoke_flomaster.py
