@@ -26,6 +26,8 @@ namespace FLOMASTER.ViewModels
         private bool _topMostEnabled;
         private bool _animationEnabled;
         private OcioConfig _defaultOcio;
+        private string _ocioRolesText = "";
+        private string _ocioWarningsText = "";
 
         // Collections
         public ObservableCollection<Preset> Presets { get; } = new();
@@ -98,7 +100,15 @@ namespace FLOMASTER.ViewModels
         public string StatusText { get => _statusText; set => SetProperty(ref _statusText, value); }
         public string ArgsText { get => _argsText; set => SetProperty(ref _argsText, value); }
         public Preset SelectedPreset { get => _selectedPreset; set { if (SetProperty(ref _selectedPreset, value)) RefreshQuickCommands(); } }
-        public OcioConfig SelectedOcio { get => _selectedOcio; set => SetProperty(ref _selectedOcio, value); }
+        public OcioConfig SelectedOcio { get => _selectedOcio; set { if (SetProperty(ref _selectedOcio, value)) UpdateOcioRoles(); } }
+
+        // Валидация выбранного OCIO: ключевые роли + предупреждения (строка для UI)
+        public string OcioRolesText { get => _ocioRolesText; set => SetProperty(ref _ocioRolesText, value); }
+        public string OcioWarningsText { get => _ocioWarningsText; set => SetProperty(ref _ocioWarningsText, value); }
+
+        public string VersionLabel =>
+            "v" + string.Join(".", (System.Reflection.Assembly.GetEntryAssembly()?.GetName().Version
+                                    ?? new Version(2, 3, 2)).ToString().Split('.').Take(3));
         public string SelectedTheme
         {
             get => _selectedTheme;
@@ -437,6 +447,20 @@ namespace FLOMASTER.ViewModels
             foreach (var o in _config.OcioConfigs) OcioConfigs.Add(o);
             if (OcioConfigs.Count > 0)
                 SelectedOcio = OcioConfigs.FirstOrDefault(o => o.Name == _config.DefaultOcio) ?? OcioConfigs[0];
+        }
+
+        private void UpdateOcioRoles()
+        {
+            var ocio = SelectedOcio;
+            if (ocio == null || string.IsNullOrEmpty(ocio.Path) || !File.Exists(ocio.Path))
+            {
+                OcioRolesText = "";
+                OcioWarningsText = "";
+                return;
+            }
+            var report = OcioService.Validate(ocio.Path);
+            OcioRolesText = report.RolesLine;
+            OcioWarningsText = report.WarningsLine;
         }
 
         private void RefreshRecentFiles()
