@@ -12,6 +12,7 @@ namespace FLOMASTER.Models
         public List<string> ScanPaths { get; set; } = new();
         public bool AnimationEnabled { get; set; } = true;
         public bool TopMostEnabled { get; set; } = false;
+        public bool CheckUpdates { get; set; } = true;
     }
 
     public class OcioConfig
@@ -24,6 +25,11 @@ namespace FLOMASTER.Models
     {
         public string Name { get; set; } = "";
         public string Exe { get; set; } = "";
+
+        // Переопределения ролей OCIO на уровень запуска (роль -> colorspace).
+        // Канонический .ocio никогда не модифицируется: при запуске собирается
+        // вариант конфига в %APPDATA%\FLOMASTER\variants\ и OCIO указывает на него.
+        public Dictionary<string, string>? RoleOverrides { get; set; }
     }
 
     public class ThemeColors

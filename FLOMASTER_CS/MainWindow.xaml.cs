@@ -13,7 +13,7 @@ namespace FLOMASTER
     public partial class MainWindow : Window
     {
         private WinForms.NotifyIcon _trayIcon;
-        private const int BaseHeight = 500;
+        private const int BaseHeight = 540;
 
         public MainWindow()
         {
@@ -22,6 +22,7 @@ namespace FLOMASTER
             // Set ViewModel as DataContext
             var viewModel = new MainViewModel();
             DataContext = viewModel;
+            _viewModel = viewModel;
 
             // Open in top-right corner of the screen
             WindowStartupLocation = WindowStartupLocation.Manual;
@@ -53,12 +54,14 @@ namespace FLOMASTER
                 }
                 else if (e.PropertyName == nameof(viewModel.RecentPanelVisible) ||
                     e.PropertyName == nameof(viewModel.ArgsPanelVisible) ||
-                    e.PropertyName == nameof(viewModel.SettingsPanelVisible))
+                    e.PropertyName == nameof(viewModel.SettingsPanelVisible) ||
+                    e.PropertyName == nameof(viewModel.RolesPanelVisible))
                 {
                     double h = BaseHeight;
                     if (viewModel.RecentPanelVisible) h += 200;
                     if (viewModel.ArgsPanelVisible) h += 200;
                     if (viewModel.SettingsPanelVisible) h += 200;
+                    if (viewModel.RolesPanelVisible) h += 220;
                     AnimateToHeight(h, viewModel.AnimationEnabled);
                 }
             };
@@ -121,6 +124,26 @@ namespace FLOMASTER
             SetupTray(viewModel);
         }
 
+        private MainViewModel? _viewModel;
+
+        private void RolePick_Click(object sender, RoutedEventArgs e)
+        {
+            if ((sender as FrameworkElement)?.Tag is not ViewModels.OcioRoleRow row) return;
+            var ocio = _viewModel?.SelectedOcio;
+            if (ocio == null || string.IsNullOrEmpty(ocio.Path) || !File.Exists(ocio.Path)) return;
+            if (_viewModel == null) return;
+
+            var (_, colorspaces) = OcioService.Parse(ocio.Path);
+            string? current = null;
+            if (_viewModel.SelectedPreset?.RoleOverrides != null &&
+                _viewModel.SelectedPreset.RoleOverrides.TryGetValue(row.RoleName, out var v))
+                current = v;
+
+            var picker = UiHelper.CreateColorspacePicker(this, row.RoleName, current, colorspaces,
+                name => _viewModel.ApplyRolePick(row, name));
+            picker.ShowDialog();
+        }
+
         private void AnimateToHeight(double target, bool animate)
         {
             target = Math.Min(target, MaxHeight);
@@ -144,29 +167,29 @@ namespace FLOMASTER
             var t = ThemeManager.GetTheme(
                 ThemeManager.ThemeOrder.FirstOrDefault(k => ThemeManager.Themes[k].Name == themeName) ?? "blender"
             );
-            Resources["BgBrush"] = ThemeManager.Brush(t.Bg);
-            Resources["PanelBrush"] = ThemeManager.Brush(t.Panel);
-            Resources["AccentBrush"] = ThemeManager.Brush(t.Accent);
-            Resources["AccentTextBrush"] = ThemeManager.Brush(string.IsNullOrEmpty(t.AccentText) ? "#FFFFFF" : t.AccentText);
-            Resources["TextBrush"] = ThemeManager.Brush(t.Text);
-            Resources["DimBrush"] = ThemeManager.Brush(t.Dim);
-            Resources["BorderBrush"] = ThemeManager.Brush(t.Border);
+            Application.Current.Resources["BgBrush"] = ThemeManager.Brush(t.Bg);
+            Application.Current.Resources["PanelBrush"] = ThemeManager.Brush(t.Panel);
+            Application.Current.Resources["AccentBrush"] = ThemeManager.Brush(t.Accent);
+            Application.Current.Resources["AccentTextBrush"] = ThemeManager.Brush(string.IsNullOrEmpty(t.AccentText) ? "#FFFFFF" : t.AccentText);
+            Application.Current.Resources["TextBrush"] = ThemeManager.Brush(t.Text);
+            Application.Current.Resources["DimBrush"] = ThemeManager.Brush(t.Dim);
+            Application.Current.Resources["BorderBrush"] = ThemeManager.Brush(t.Border);
 
             var accentColor = (System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(t.Accent);
-            Resources["AccentHoverBrush"] = new System.Windows.Media.SolidColorBrush(
+            Application.Current.Resources["AccentHoverBrush"] = new System.Windows.Media.SolidColorBrush(
                 System.Windows.Media.Color.FromArgb(0x55, accentColor.R, accentColor.G, accentColor.B));
-            Resources["AccentPressBrush"] = new System.Windows.Media.SolidColorBrush(
+            Application.Current.Resources["AccentPressBrush"] = new System.Windows.Media.SolidColorBrush(
                 System.Windows.Media.Color.FromArgb(0x77, accentColor.R, accentColor.G, accentColor.B));
-            Resources["AccentLightBrush"] = new System.Windows.Media.SolidColorBrush(ShiftColor(accentColor, 1.18));
-            Resources["AccentDarkBrush"] = new System.Windows.Media.SolidColorBrush(ShiftColor(accentColor, 0.82));
+            Application.Current.Resources["AccentLightBrush"] = new System.Windows.Media.SolidColorBrush(ShiftColor(accentColor, 1.18));
+            Application.Current.Resources["AccentDarkBrush"] = new System.Windows.Media.SolidColorBrush(ShiftColor(accentColor, 0.82));
 
             // System color overrides for ComboBox dropdowns
-            Resources[System.Windows.SystemColors.WindowBrushKey] = ThemeManager.Brush(t.Panel);
-            Resources[System.Windows.SystemColors.WindowTextBrushKey] = ThemeManager.Brush(t.Text);
-            Resources[System.Windows.SystemColors.ControlBrushKey] = ThemeManager.Brush(t.Panel);
-            Resources[System.Windows.SystemColors.ControlTextBrushKey] = ThemeManager.Brush(t.Text);
-            Resources[System.Windows.SystemColors.HighlightBrushKey] = ThemeManager.Brush(t.Accent);
-            Resources[System.Windows.SystemColors.HighlightTextBrushKey] = ThemeManager.Brush(string.IsNullOrEmpty(t.AccentText) ? "#FFFFFF" : t.AccentText);
+            Application.Current.Resources[System.Windows.SystemColors.WindowBrushKey] = ThemeManager.Brush(t.Panel);
+            Application.Current.Resources[System.Windows.SystemColors.WindowTextBrushKey] = ThemeManager.Brush(t.Text);
+            Application.Current.Resources[System.Windows.SystemColors.ControlBrushKey] = ThemeManager.Brush(t.Panel);
+            Application.Current.Resources[System.Windows.SystemColors.ControlTextBrushKey] = ThemeManager.Brush(t.Text);
+            Application.Current.Resources[System.Windows.SystemColors.HighlightBrushKey] = ThemeManager.Brush(t.Accent);
+            Application.Current.Resources[System.Windows.SystemColors.HighlightTextBrushKey] = ThemeManager.Brush(string.IsNullOrEmpty(t.AccentText) ? "#FFFFFF" : t.AccentText);
         }
 
         private static System.Windows.Media.Color ShiftColor(System.Windows.Media.Color c, double k)

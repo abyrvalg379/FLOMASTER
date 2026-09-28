@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Windows;
 using System.Windows.Input;
+using System.Threading.Tasks;
 using FLOMASTER.Models;
 using FLOMASTER.Services;
 
@@ -22,12 +23,16 @@ namespace FLOMASTER.ViewModels
         private bool _recentPanelVisible;
         private bool _argsPanelVisible;
         private bool _settingsPanelVisible;
+        private bool _rolesPanelVisible;
         private bool _autoStartEnabled;
         private bool _topMostEnabled;
         private bool _animationEnabled;
         private OcioConfig _defaultOcio;
-        private string _ocioRolesText = "";
         private string _ocioWarningsText = "";
+        private string _ocioOverrideWarnings = "";
+
+        // Роли, значимые для пайплайна (порядок = порядок строк в UI)
+        private static readonly string[] RoleUiOrder = { "scene_linear", "rendering", "data", "default_byte", "texture_paint", "reference" };
 
         // Collections
         public ObservableCollection<Preset> Presets { get; } = new();
@@ -48,12 +53,16 @@ namespace FLOMASTER.ViewModels
         public ICommand CreateDesktopShortcutCommand { get; private set; }
         public ICommand OpenRecentFileCommand { get; private set; }
         public ICommand QuickCommandCommand { get; private set; }
+        public ICommand ResetRolesCommand { get; private set; }
+        public ICommand UpdateCommand { get; private set; }
         public ICommand ClearRecentCommand { get; private set; }
 
         public MainViewModel()
         {
             _config = ConfigManager.Load();
             Logger.Log("ViewModel", "Config loaded", "info");
+            UpdateService.CleanupOldInstall();
+            StartUpdateCheck();
 
             if (_config.Presets.Count == 0)
                 RescanApps();
@@ -79,6 +88,8 @@ namespace FLOMASTER.ViewModels
             CreateDesktopShortcutCommand = new RelayCommand(_ => CreateDesktopShortcut());
             OpenRecentFileCommand = new RelayCommand<string>(file => OpenRecentFile(file));
             QuickCommandCommand = new RelayCommand<string>(cmd => AddQuickCommand(cmd));
+            ResetRolesCommand = new RelayCommand(_ => ResetRoleOverrides(), _ => SelectedPreset?.RoleOverrides is { Count: > 0 });
+            UpdateCommand = new RelayCommand(_ => ApplyUpdate(), _ => UpdateReady);
             ClearRecentCommand = new RelayCommand(_ => ClearRecentFiles());
 
             // Init state
@@ -99,12 +110,15 @@ namespace FLOMASTER.ViewModels
 
         public string StatusText { get => _statusText; set => SetProperty(ref _statusText, value); }
         public string ArgsText { get => _argsText; set => SetProperty(ref _argsText, value); }
-        public Preset SelectedPreset { get => _selectedPreset; set { if (SetProperty(ref _selectedPreset, value)) RefreshQuickCommands(); } }
-        public OcioConfig SelectedOcio { get => _selectedOcio; set { if (SetProperty(ref _selectedOcio, value)) UpdateOcioRoles(); } }
+        public Preset SelectedPreset { get => _selectedPreset; set { if (SetProperty(ref _selectedPreset, value)) { RefreshQuickCommands(); RebuildRoleRows(); } } }
+        public OcioConfig SelectedOcio { get => _selectedOcio; set { if (SetProperty(ref _selectedOcio, value)) { UpdateOcioRoles(); RebuildRoleRows(); } } }
 
         // Валидация выбранного OCIO: ключевые роли + предупреждения (строка для UI)
-        public string OcioRolesText { get => _ocioRolesText; set => SetProperty(ref _ocioRolesText, value); }
         public string OcioWarningsText { get => _ocioWarningsText; set => SetProperty(ref _ocioWarningsText, value); }
+
+        // Переопределения ролей пресета (строки ROLES в главном окне)
+        public ObservableCollection<OcioRoleRow> OcioRoleRows { get; } = new();
+        public string OcioOverrideWarnings { get => _ocioOverrideWarnings; set => SetProperty(ref _ocioOverrideWarnings, value); }
 
         public string VersionLabel =>
             "v" + string.Join(".", (System.Reflection.Assembly.GetEntryAssembly()?.GetName().Version
@@ -133,6 +147,7 @@ namespace FLOMASTER.ViewModels
         public bool RecentPanelVisible { get => _recentPanelVisible; set => SetProperty(ref _recentPanelVisible, value); }
         public bool ArgsPanelVisible { get => _argsPanelVisible; set => SetProperty(ref _argsPanelVisible, value); }
         public bool SettingsPanelVisible { get => _settingsPanelVisible; set => SetProperty(ref _settingsPanelVisible, value); }
+        public bool RolesPanelVisible { get => _rolesPanelVisible; set => SetProperty(ref _rolesPanelVisible, value); }
         public bool AutoStartEnabled
         {
             get => _autoStartEnabled;
@@ -158,6 +173,88 @@ namespace FLOMASTER.ViewModels
                     StatusText = value ? "Always on top" : "Normal mode";
                 }
             }
+        }
+
+        // ——— Обновления ———
+
+        private string _updateInfoText = "";
+        private bool _updateReady;
+        private bool _checkingUpdates;
+        private string? _updateTag;
+        private string? _updateUrl;
+        private string? _updatePath;
+
+        /// <summary>Проверять обновления при старте (отключается в Settings).</summary>
+        public bool CheckUpdatesEnabled
+        {
+            get => _config.CheckUpdates;
+            set
+            {
+                _config.CheckUpdates = value;
+                ConfigManager.Save(_config);
+                OnPropertyChanged();
+                Logger.Log("Update", $"Auto-check {(value ? "enabled" : "disabled")}", "info");
+                if (value) StartUpdateCheck();
+            }
+        }
+
+        /// <summary>Строка статуса обновления для Settings (пустая = не показывать).</summary>
+        public string UpdateInfoText
+        {
+            get => _updateInfoText;
+            set => SetProperty(ref _updateInfoText, value);
+        }
+
+        /// <summary>Обновление скачано и готово к установке.</summary>
+        public bool UpdateReady
+        {
+            get => _updateReady;
+            set => SetProperty(ref _updateReady, value);
+        }
+
+        private async void StartUpdateCheck()
+        {
+            if (_checkingUpdates || !_config.CheckUpdates) return;
+            _checkingUpdates = true;
+            try
+            {
+                await Task.Delay(3000); // даём окну спокойно стартовать
+                var (tag, url) = await UpdateService.CheckAsync();
+                if (tag == null || url == null) { Logger.Log("Update", "Up to date", "info"); return; }
+
+                _updateTag = tag;
+                _updateUrl = url;
+                _updatePath = Path.Combine(Path.GetTempPath(), "FLOMASTER_update.exe");
+                UpdateInfoText = $"Update {tag}: downloading...";
+
+                await UpdateService.DownloadAsync(url, _updatePath,
+                    (done, total) => UpdateInfoText = total > 0
+                        ? $"Update {tag}: {done * 100 / total}%"
+                        : $"Update {tag}: downloading...");
+
+                UpdateInfoText = $"Update {tag} ready — restart to install";
+                UpdateReady = true;
+                StatusText = $"Update {tag} ready";
+                Logger.Log("Update", $"Update {tag} downloaded, ready to install", "info");
+            }
+            catch (Exception ex)
+            {
+                Logger.Log("Update", $"Check failed: {ex.Message}", "warn");
+            }
+            finally
+            {
+                _checkingUpdates = false;
+            }
+        }
+
+        private void ApplyUpdate()
+        {
+            if (_updatePath == null || !File.Exists(_updatePath)) return;
+            var exe = Process.GetCurrentProcess().MainModule?.FileName;
+            if (string.IsNullOrEmpty(exe)) { StatusText = "Update failed: exe path"; return; }
+            Logger.Log("Update", $"Applying {_updateTag}, exit for elevated installer", "info");
+            UpdateService.ApplyDownloadedUpdate(_updatePath, exe);
+            Application.Current.Shutdown();
         }
 
         public bool AnimationEnabled
@@ -193,7 +290,12 @@ namespace FLOMASTER.ViewModels
                 var psi = new ProcessStartInfo { FileName = SelectedPreset.Exe, UseShellExecute = false };
                 var args = ArgsText?.Trim() ?? "";
                 if (!string.IsNullOrEmpty(args)) psi.Arguments = args;
-                OcioService.ApplyOcio(psi, ocio, SelectedPreset.Exe);
+
+                // переопределения ролей пресета -> вариант конфига в %APPDATA% (канон не трогается)
+                string? variantPath = null;
+                if (ocio != null && SelectedPreset.RoleOverrides is { Count: > 0 })
+                    variantPath = OcioService.BuildVariant(ocio.Path, SelectedPreset.RoleOverrides, SelectedPreset.Name);
+                OcioService.ApplyOcio(psi, ocio, SelectedPreset.Exe, variantPath);
                 Process.Start(psi);
 
                 Logger.Log(SelectedPreset.Name, SelectedPreset.Exe, ocio?.Name ?? "", args);
@@ -454,13 +556,80 @@ namespace FLOMASTER.ViewModels
             var ocio = SelectedOcio;
             if (ocio == null || string.IsNullOrEmpty(ocio.Path) || !File.Exists(ocio.Path))
             {
-                OcioRolesText = "";
                 OcioWarningsText = "";
                 return;
             }
             var report = OcioService.Validate(ocio.Path);
-            OcioRolesText = report.RolesLine;
             OcioWarningsText = report.WarningsLine;
+        }
+
+        /// <summary>Пересобирает строки ROLES: текущие значения пресета поверх выбранного конфига.</summary>
+        private void RebuildRoleRows()
+        {
+            OcioRoleRows.Clear();
+            var preset = SelectedPreset;
+            var hasConfig = SelectedOcio != null && !string.IsNullOrEmpty(SelectedOcio.Path) && File.Exists(SelectedOcio.Path);
+            if (!hasConfig) { UpdateOcioOverrideWarnings(); return; }
+
+            var (roles, colorspaces) = OcioService.Parse(SelectedOcio.Path);
+            foreach (var role in RoleUiOrder)
+            {
+                var effective = roles.FirstOrDefault(r => r.Key == role).Value;
+                var row = new OcioRoleRow { RoleName = role };
+                var ov = preset?.RoleOverrides;
+                if (ov != null && ov.TryGetValue(role, out var v))
+                {
+                    row.IsOverridden = true;
+                    row.DisplayText = $"{role}: {v}";
+                }
+                else
+                {
+                    row.DisplayText = $"{role}: {(effective ?? "(not in config)")}   (config)";
+                }
+                OcioRoleRows.Add(row);
+            }
+            UpdateOcioOverrideWarnings();
+        }
+
+        /// <summary>Применяет выбор из пикера. name = null — вернуть значение из конфига.</summary>
+        public void ApplyRolePick(OcioRoleRow row, string? name)
+        {
+            if (SelectedPreset == null || row == null) return;
+            var preset = SelectedPreset;
+            var ov = preset.RoleOverrides ??= new Dictionary<string, string>();
+
+            if (name == null) ov.Remove(row.RoleName);
+            else ov[row.RoleName] = name;
+            if (ov.Count == 0) preset.RoleOverrides = null;
+
+            ConfigManager.Save(_config);
+            Logger.Log("OCIO", $"Preset '{preset.Name}': role {row.RoleName} -> {(name ?? "(config default)")}", "info");
+            StatusText = $"Roles saved: {preset.Name}";
+            RebuildRoleRows();
+        }
+
+        private void UpdateOcioOverrideWarnings()
+        {
+            if (SelectedOcio == null || string.IsNullOrEmpty(SelectedOcio.Path) || !File.Exists(SelectedOcio.Path))
+            { OcioOverrideWarnings = ""; return; }
+            var (_, colorspaces) = OcioService.Parse(SelectedOcio.Path);
+            var warns = new List<string>();
+            var ov = SelectedPreset?.RoleOverrides;
+            if (ov != null)
+                foreach (var kv in ov)
+                    if (!colorspaces.ContainsKey(kv.Value))
+                        warns.Add($"{kv.Key} -> '{kv.Value}' not in config, override will be dropped at launch");
+            OcioOverrideWarnings = warns.Count == 0 ? "" : "! " + string.Join("   ! ", warns);
+        }
+
+        private void ResetRoleOverrides()
+        {
+            if (SelectedPreset == null) return;
+            SelectedPreset.RoleOverrides = null;
+            ConfigManager.Save(_config);
+            RebuildRoleRows();
+            Logger.Log("OCIO", $"Preset '{SelectedPreset.Name}': role overrides reset", "info");
+            StatusText = $"Roles reset: {SelectedPreset.Name}";
         }
 
         private void RefreshRecentFiles()

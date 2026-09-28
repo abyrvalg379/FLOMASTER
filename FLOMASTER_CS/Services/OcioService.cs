@@ -37,7 +37,7 @@ namespace FLOMASTER.Services
             return null;
         }
 
-        public static void ApplyOcio(ProcessStartInfo psi, OcioConfig ocio, string exePath)
+        public static void ApplyOcio(ProcessStartInfo psi, OcioConfig ocio, string exePath, string? variantPath = null)
         {
             if (ocio == null || string.IsNullOrEmpty(ocio.Path))
             {
@@ -45,11 +45,16 @@ namespace FLOMASTER.Services
                 return;
             }
 
+            // вариант конфига (переопределения ролей пресета) вместо канонического файла
+            var ocioPath = string.IsNullOrEmpty(variantPath) ? ocio.Path : variantPath;
+            if (!string.IsNullOrEmpty(variantPath))
+                Logger.Log("OCIO", $"Using variant config: {variantPath}", "info");
+
             var isUnreal = exePath.ToLower().Contains("unreal");
 
             if (isUnreal)
             {
-                var ocioArg = $"-ocio=\"{ocio.Path}\"";
+                var ocioArg = $"-ocio=\"{ocioPath}\"";
                 psi.Arguments = string.IsNullOrEmpty(psi.Arguments)
                     ? ocioArg
                     : $"{ocioArg} {psi.Arguments}";
@@ -57,8 +62,8 @@ namespace FLOMASTER.Services
             }
             else
             {
-                psi.EnvironmentVariables["OCIO"] = ocio.Path;
-                Logger.Log("OCIO", $"Set OCIO={ocio.Path}", "info");
+                psi.EnvironmentVariables["OCIO"] = ocioPath;
+                Logger.Log("OCIO", $"Set OCIO={ocioPath}", "info");
             }
         }
 
@@ -119,28 +124,57 @@ namespace FLOMASTER.Services
         /// Предупреждает про отсутствующие критичные роли (дефолты Blender) и
         /// роли, цели которых не объявлены как colorspace (опечатки, битые конфиги).
         /// </summary>
+        /// <summary>
+        /// Разбирает config.ocio: секция roles + все объявленные colorspace (имя -> family).
+        /// Общий парсер для Validate, UI-настройки ролей и пикера с группировкой по family.
+        /// </summary>
+        public static (List<KeyValuePair<string, string>> roles, Dictionary<string, string> colorspaces) Parse(string ocioPath)
+        {
+            var lines = File.ReadAllLines(ocioPath);
+            var roles = new List<KeyValuePair<string, string>>();
+            var inRoles = false;
+            foreach (var raw in lines)
+            {
+                if (string.IsNullOrWhiteSpace(raw)) continue;
+                if (raw.StartsWith("roles:", StringComparison.Ordinal)) { inRoles = true; continue; }
+                if (inRoles && !char.IsWhiteSpace(raw[0])) break; // следующая top-level секция
+                if (!inRoles) continue;
+                var m = Regex.Match(raw, @"^\s+([A-Za-z_][\w_]*)\s*:\s*(.+?)\s*$");
+                if (m.Success) roles.Add(new(m.Groups[1].Value, m.Groups[2].Value));
+            }
+
+            var text = string.Join("\n", lines);
+            var colorspaces = new Dictionary<string, string>();
+            // блоки colorspace: имя из "name:", family — последний "family:" перед следующим name
+            string? currentName = null, currentFamily = null;
+            foreach (var raw in lines)
+            {
+                var mn = Regex.Match(raw, @"^\s*-?\s*name:\s*(.+?)\s*$");
+                if (mn.Success)
+                {
+                    if (currentName != null) colorspaces[currentName] = currentFamily ?? "";
+                    currentName = mn.Groups[1].Value;
+                    currentFamily = null;
+                    continue;
+                }
+                var mf = Regex.Match(raw, @"^\s*family:\s*(.+?)\s*$");
+                if (mf.Success && currentName != null) currentFamily = mf.Groups[1].Value;
+            }
+            if (currentName != null) colorspaces[currentName] = currentFamily ?? "";
+            return (roles, colorspaces);
+        }
+
+        /// <summary>
+        /// Проверяет конфиг: критичные роли, дефолты Blender, битые ссылки ролей.
+        /// </summary>
         public static OcioValidationReport Validate(string ocioPath)
         {
             var report = new OcioValidationReport();
             try
             {
-                var lines = File.ReadAllLines(ocioPath);
-                var text = string.Join("\n", lines);
-
-                var inRoles = false;
-                foreach (var raw in lines)
-                {
-                    if (string.IsNullOrWhiteSpace(raw)) continue;
-                    if (raw.StartsWith("roles:", StringComparison.Ordinal)) { inRoles = true; continue; }
-                    if (inRoles && !char.IsWhiteSpace(raw[0])) break; // следующая top-level секция
-                    if (!inRoles) continue;
-                    var m = Regex.Match(raw, @"^\s+([A-Za-z_][\w_]*)\s*:\s*(.+?)\s*$");
-                    if (m.Success) report.Roles.Add(new(m.Groups[1].Value, m.Groups[2].Value));
-                }
-
-                var colorspaces = new HashSet<string>(
-                    Regex.Matches(text, @"^\s*name:\s*(.+?)\s*$", RegexOptions.Multiline)
-                         .Cast<Match>().Select(mm => mm.Groups[1].Value));
+                var (parsedRoles, colorspaces) = Parse(ocioPath);
+                report.Roles.AddRange(parsedRoles);
+                var cs = new HashSet<string>(colorspaces.Keys);
 
                 if (report.Roles.Count == 0)
                 {
@@ -158,7 +192,7 @@ namespace FLOMASTER.Services
                     report.Warnings.Add("no data role: is_data textures have no target");
 
                 foreach (var r in report.Roles)
-                    if (!colorspaces.Contains(r.Value))
+                    if (!cs.Contains(r.Value))
                         report.Warnings.Add($"role {r.Key} -> colorspace '{r.Value}' not found");
 
                 Logger.Log("OCIO",
@@ -171,6 +205,89 @@ namespace FLOMASTER.Services
                 Logger.Log("OCIO", $"Validate failed: {ex.Message}", "warn");
             }
             return report;
+        }
+
+        /// <summary>
+        /// Собирает вариант конфига для пресета: basePath, в котором блок roles
+        /// дополнен/изменён согласно overrides. Оригинальный файл не трогается,
+        /// результат пишется в %APPDATA%\FLOMASTER\variants\.
+        /// Возвращает путь варианта или null (нет переопределений / нечего применять).
+        /// </summary>
+        public static string? BuildVariant(string basePath, Dictionary<string, string> overrides, string presetName)
+        {
+            try
+            {
+                var (baseRoles, colorspaces) = Parse(basePath);
+                var cs = new HashSet<string>(colorspaces.Keys);
+
+                // отбрасываем переопределения, ссылающиеся на необъявленные colorspace
+                var applied = new Dictionary<string, string>();
+                foreach (var (role, target) in overrides)
+                {
+                    if (!cs.Contains(target))
+                    {
+                        Logger.Log("OCIO", $"Variant '{presetName}': drop {role} -> '{target}' (colorspace not in config)", "warn");
+                        continue;
+                    }
+                    var baseVal = baseRoles.FirstOrDefault(r => r.Key == role).Value;
+                    if (baseVal == target) continue; // совпадает с базой - правка не нужна
+                    applied[role] = target;
+                }
+                if (applied.Count == 0) return null;
+
+                string text = File.ReadAllText(basePath);
+                string eol = text.Contains("\r\n") ? "\r\n" : "\n";
+                var lines = text.Replace("\r\n", "\n").Split('\n').ToList();
+
+                var outLines = new List<string>();
+                var inRoles = false;
+                var inserted = new HashSet<string>();
+                foreach (var raw in lines)
+                {
+                    var line = raw;
+                    if (!string.IsNullOrWhiteSpace(line))
+                    {
+                        if (line.StartsWith("roles:", StringComparison.Ordinal)) inRoles = true;
+                        else if (inRoles && !char.IsWhiteSpace(line[0])) inRoles = false;
+                    }
+                    if (inRoles)
+                    {
+                        var m = Regex.Match(line, @"^(\s+)([A-Za-z_][\w_]*)\s*:\s*(.+?)\s*$");
+                        if (m.Success && applied.TryGetValue(m.Groups[2].Value, out var newVal))
+                        {
+                            line = $"{m.Groups[1].Value}{m.Groups[2].Value}: {newVal}";
+                            inserted.Add(m.Groups[2].Value);
+                        }
+                    }
+                    outLines.Add(line);
+                }
+                // отсутствующие в базе роли дописываем в конец roles-блока (2 пробела)
+                for (int i = outLines.Count - 1; i >= 0; i--)
+                {
+                    if (outLines[i].StartsWith("roles:", StringComparison.Ordinal))
+                    {
+                        var missing = applied.Where(kv => !inserted.Contains(kv.Key)).ToList();
+                        for (int j = missing.Count - 1; j >= 0; j--)
+                            outLines.Insert(i + 1, $"  {missing[j].Key}: {missing[j].Value}");
+                        break;
+                    }
+                }
+
+                var dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "FLOMASTER", "variants");
+                Directory.CreateDirectory(dir);
+                var slug = new string(presetName.Select(c => char.IsLetterOrDigit(c) ? c : '-').ToArray()).Trim('-');
+                var hashInput = string.Join(";", applied.Select(kv => $"{kv.Key}={kv.Value}")) + "|" + File.GetLastWriteTimeUtc(basePath).Ticks;
+                var hash = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(hashInput)))[..8];
+                var variantPath = Path.Combine(dir, $"{slug}-{hash}.ocio");
+                File.WriteAllText(variantPath, string.Join(eol, outLines));
+                Logger.Log("OCIO", $"Variant for '{presetName}': {string.Join(", ", applied.Select(kv => $"{kv.Key}->{kv.Value}"))} -> {variantPath}", "info");
+                return variantPath;
+            }
+            catch (Exception ex)
+            {
+                Logger.Log("OCIO", $"Variant build failed: {ex.Message}", "warn");
+                return null;
+            }
         }
     }
 }
