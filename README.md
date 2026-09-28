@@ -28,6 +28,8 @@
 
 ## Screenshots
 
+![Role picker](docs/screenshot_roles.jpg)
+
 | | |
 |:---:|:---:|
 | ![Main window](docs/screenshot_main.jpg) | ![Settings](docs/screenshot_settings.jpg) |

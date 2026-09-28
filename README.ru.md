@@ -28,6 +28,8 @@
 
 ## Скриншоты
 
+![Пикер ролей](docs/screenshot_roles.jpg)
+
 | | |
 |:---:|:---:|
 | ![Главное окно](docs/screenshot_main.jpg) | ![Настройки](docs/screenshot_settings.jpg) |
