@@ -38,12 +38,14 @@
 
 ---
 
-## What's New in v2.3.3
+## What's New in v2.3.4
 
-- **Per-preset OCIO role overrides** — pick `scene_linear`, `data`, `default_byte` and other roles right in the launcher; applied at launch through a derived config, so **the original .ocio file is never modified**
-- **Family-grouped picker** — colorspaces in a Blender-style tree (ACES / Input / Output / Utility / Aliases…) with instant search
-- **Auto-update** — optional check on start (Settings), background download, one-click "Restart and install"
-- **Layout & polish** — collapsible panels with Arguments and Quick commands at the bottom, themed scrollbar everywhere, window minimize restored
+- **Launch profiles** — save the current app + OCIO config + arguments as a named snapshot; apply with a click or launch straight from the tray *PROFILES* section. Profiles reference apps and configs by name, so edits keep working; **the original .ocio file is never modified**
+- **Recent files — fixed** — clicking a recent file now opens it with the selected app (the handler had been silently lost in an old refactor); project files dropped onto the window populate the list
+- **Panel order** — Roles → Profiles → Recent files → Settings → Quick commands → Arguments
+
+### [v2.3.3](https://github.com/abyrvalg379/FLOMASTER/releases/tag/v2.3.3) — OCIO role picker + auto-update
+Per-preset role overrides with a Blender-style family-grouped picker; auto-update check on start with one-click install. Original config untouched.
 
 ### [v2.3.2](https://github.com/abyrvalg379/FLOMASTER/releases/tag/v2.3.2) — OCIO config validation
 Key roles are shown and validated per config: missing `default_byte` or `data`, roles pointing to unknown colorspaces — warnings right in the UI and the log.
