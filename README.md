@@ -4,7 +4,7 @@
 
 [![Release](https://img.shields.io/github/v/release/abyrvalg379/FLOMASTER)](https://github.com/abyrvalg379/FLOMASTER/releases/latest)
 [![Windows](https://img.shields.io/badge/Windows-10%2F11-0078D6?logo=windows11&logoColor=white)](https://github.com/abyrvalg379/FLOMASTER#quick-start)
-[![smoke](https://img.shields.io/badge/smoke-20%2F20%20passing-brightgreen)](test/smoke_flomaster.py)
+[![smoke](https://img.shields.io/badge/smoke-21%2F21%20passing-brightgreen)](test/smoke_flomaster.py)
 
 **OCIO Launcher** — a unified launch point for DCC applications with custom ACES 1.2 color space support.
 
@@ -70,6 +70,20 @@ Explicit ACES roles in the bundled config: 8-bit images load as `raw`, float (EX
 - MVVM architecture under the hood
 
 </details>
+
+---
+
+## Command Line
+
+Launch without the window — profiles resolve to an app + OCIO config + arguments, so batch files and farms get the same environment as a manual launch:
+
+```
+FLOMASTER.exe --list-profiles
+FLOMASTER.exe --launch "Show A" 
+FLOMASTER.exe --launch "Show A" --project "E:\shows\A\shot_042.blend"
+```
+
+`--project` appends the file to the profile arguments (or substitutes a `{file}` placeholder if the profile has one). Exit codes: `0` launched, `2` profile/preset/file not found, `1` launch error — script-friendly.
 
 ---
 

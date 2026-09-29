@@ -4,7 +4,7 @@
 
 [![Release](https://img.shields.io/github/v/release/abyrvalg379/FLOMASTER)](https://github.com/abyrvalg379/FLOMASTER/releases/latest)
 [![Windows](https://img.shields.io/badge/Windows-10%2F11-0078D6?logo=windows11&logoColor=white)](https://github.com/abyrvalg379/FLOMASTER/blob/main/README.ru.md#быстрый-старт)
-[![smoke](https://img.shields.io/badge/smoke-20%2F20%20passing-brightgreen)](test/smoke_flomaster.py)
+[![smoke](https://img.shields.io/badge/smoke-21%2F21%20passing-brightgreen)](test/smoke_flomaster.py)
 
 **OCIO-лаунчер** — единая точка запуска DCC-приложений с поддержкой кастомного цветового пространства ACES 1.2.
 
@@ -70,6 +70,20 @@
 - Внутри — MVVM-архитектура
 
 </details>
+
+---
+
+## Командная строка
+
+Запуск без окна — профиль разворачивается в приложение + OCIO-конфиг + аргументы, так что батники и фермы получают ту же среду, что и ручной запуск:
+
+```
+FLOMASTER.exe --list-profiles
+FLOMASTER.exe --launch "Show A" 
+FLOMASTER.exe --launch "Show A" --project "E:\shows\A\shot_042.blend"
+```
+
+`--project` добавляет файл к аргументам профиля (или подставляется вместо плейсхолдера `{file}`, если он есть в профиле). Коды возврата: `0` — запущено, `2` — не найден профиль/пресет/файл, `1` — ошибка запуска — удобно для скриптов.
 
 ---
 

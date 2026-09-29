@@ -1,8 +1,9 @@
 <Application x:Class="FLOMASTER.App"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             StartupUri="MainWindow.xaml">
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
+    <!-- StartupUri НЕТ: App.OnStartup разбирает аргументы — CLI-режим работает без окна,
+         обычный запуск создаёт MainWindow вручную (composition root). -->
     <!-- Тема-ресурсы уровня приложения: видны всем окнам (лаунчер, пикер, лог).
          ApplyTheme перезаписывает кисти при старте и смене темы. -->
     <Application.Resources>
