@@ -47,6 +47,9 @@
 - **Themed title bar** — the system chrome is replaced by a caption strip in your theme (minimize/close in accent colors)
 - Also: themed input dialogs, full-accent toggle highlights, pinned ARGUMENTS row
 
+### [v2.4.2](https://github.com/abyrvalg379/FLOMASTER/releases/tag/v2.4.2) — project file routing
+.spp opens in Substance Painter, .blend in Blender, .hip in Houdini — regardless of the selected app. Works in the Projects panel, Recent and drag & drop.
+
 ### [v2.4.1](https://github.com/abyrvalg379/FLOMASTER/releases/tag/v2.4.1) — polish patch
 Auto-update version check unit-tested; picker/log/input dialogs use the themed title bar.
 
