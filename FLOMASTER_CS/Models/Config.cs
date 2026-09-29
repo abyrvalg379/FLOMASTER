@@ -20,6 +20,9 @@ namespace FLOMASTER.Models
 
         /// <summary>DeviceName монитора, на котором оверлей был закрыт последний раз.</summary>
         public string OverlayScreenDeviceName { get; set; } = "";
+
+        /// <summary>Оверлей поверх всех окон (отключается, если мешает).</summary>
+        public bool OverlayTopmost { get; set; } = true;
     }
 
     public class OcioConfig

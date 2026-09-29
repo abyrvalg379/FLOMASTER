@@ -73,6 +73,10 @@ namespace FLOMASTER
                 {
                     ApplyHotkey(viewModel.HotkeyEnabled);
                 }
+                else if (e.PropertyName == nameof(viewModel.OverlayTopmost))
+                {
+                    if (_overlay != null) _overlay.Topmost = viewModel.OverlayTopmost;
+                }
                 else if (e.PropertyName == nameof(viewModel.RecentPanelVisible) ||
                     e.PropertyName == nameof(viewModel.ArgsPanelVisible) ||
                     e.PropertyName == nameof(viewModel.SettingsPanelVisible) ||
@@ -209,7 +213,18 @@ namespace FLOMASTER
         {
             if (_overlay != null)
             {
-                _overlay.Close();
+                if (_overlay.WindowState == WindowState.Minimized)
+                {
+                    _overlay.WindowState = WindowState.Normal;
+                    _overlay.Activate();
+                    return;
+                }
+                if (_overlay.IsActive)
+                {
+                    _overlay.Close();
+                    return;
+                }
+                _overlay.Activate();
                 return;
             }
             if (_viewModel == null) return;
@@ -224,6 +239,7 @@ namespace FLOMASTER
             preferred ??= _lastOverlayScreen;
 
             _overlay = new OverlayWindow(_viewModel, this, preferred);
+            _overlay.Topmost = _viewModel.OverlayTopmost;
             _overlay.Closing += (_, _) =>
             {
                 try

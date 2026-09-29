@@ -5,8 +5,8 @@
         WindowStyle="None"
         ResizeMode="CanResize"
         WindowStartupLocation="Manual"
-        Topmost="True"
         ShowInTaskbar="False"
+        Topmost="{Binding OverlayTopmost}"
         Background="{DynamicResource BgBrush}"
         PreviewKeyDown="Window_PreviewKeyDown">
 
@@ -522,8 +522,10 @@
                                   Foreground="{DynamicResource TextBrush}"/>
                     </Grid>
                     <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
-                        <CheckBox Content="Always on top" IsChecked="{Binding TopMostEnabled}"
-                                  Foreground="{DynamicResource TextBrush}" FontSize="12" Margin="0,0,22,0"/>
+                        <CheckBox Content="Launcher on top" IsChecked="{Binding TopMostEnabled}"
+                                  Foreground="{DynamicResource TextBrush}" FontSize="12" Margin="0,0,18,0"/>
+                        <CheckBox Content="Overlay on top" IsChecked="{Binding OverlayTopmost}"
+                                  Foreground="{DynamicResource TextBrush}" FontSize="12" Margin="0,0,18,0"/>
                         <CheckBox Content="Ctrl+Alt+F hotkey" IsChecked="{Binding HotkeyEnabled}"
                                   Foreground="{DynamicResource TextBrush}" FontSize="12"/>
                     </StackPanel>
