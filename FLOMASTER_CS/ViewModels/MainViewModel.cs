@@ -68,6 +68,8 @@ namespace FLOMASTER.ViewModels
         public ICommand AddProjectRootCommand { get; private set; }
         public ICommand RemoveProjectRootCommand { get; private set; }
         public ICommand OpenProjectCommand { get; private set; }
+        public ICommand ExportSettingsCommand { get; private set; }
+        public ICommand ImportSettingsCommand { get; private set; }
 
         private readonly IConfigStore _store;
         private readonly IOcioService _ocio;
@@ -119,6 +121,8 @@ namespace FLOMASTER.ViewModels
             AddProjectRootCommand = new RelayCommand(_ => AddProjectRoot());
             RemoveProjectRootCommand = new RelayCommand<string>(p => RemoveProjectRoot(p));
             OpenProjectCommand = new RelayCommand<string>(p => { if (p != null) OpenProjectFile(p); });
+            ExportSettingsCommand = new RelayCommand(_ => ExportSettings());
+            ImportSettingsCommand = new RelayCommand(_ => ImportSettings());
 
             // Init state
             _selectedTheme = ThemeManager.GetTheme(_config.Theme).Name;
@@ -795,6 +799,115 @@ namespace FLOMASTER.ViewModels
                 }
             }
             catch (UnauthorizedAccessException) { }
+        }
+
+        // ============ ПЕРЕНОС НАСТРОЕК МЕЖДУ МАШИНАМИ (v1: файл; профили/корни/тема; пути остаются машинными) ============
+
+        private void ExportSettings()
+        {
+            try
+            {
+                var dialog = new Microsoft.Win32.SaveFileDialog
+                {
+                    Title = "Export settings",
+                    Filter = "FLOMASTER setup (*.flomaster)|*.flomaster|JSON (*.json)|*.json",
+                    FileName = $"flomaster_setup_{DateTime.Now:yyyyMMdd}.flomaster"
+                };
+                if (dialog.ShowDialog() != true) return;
+
+                var export = new SettingsExport
+                {
+                    ExportedAt = DateTime.Now.ToString("s"),
+                    Theme = SelectedTheme,
+                    AnimationEnabled = AnimationEnabled,
+                    TopMostEnabled = TopMostEnabled,
+                    CheckUpdates = CheckUpdatesEnabled,
+                    Profiles = _config.Profiles.Select(p => new Profile
+                    {
+                        Name = p.Name, PresetName = p.PresetName, OcioName = p.OcioName, Args = p.Args
+                    }).ToList(),
+                    ProjectRoots = _config.ProjectRoots.ToList()
+                };
+                File.WriteAllText(dialog.FileName,
+                    System.Text.Json.JsonSerializer.Serialize(export, new System.Text.Json.JsonSerializerOptions
+                    {
+                        WriteIndented = true,
+                        PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase
+                    }));
+                StatusText = $"Settings exported: {Path.GetFileName(dialog.FileName)}";
+                Logger.Log("Sync", $"Exported {export.Profiles.Count} profiles, {export.ProjectRoots.Count} roots -> {dialog.FileName}", "info");
+            }
+            catch (Exception ex)
+            {
+                StatusText = $"Export error: {ex.Message}";
+                Logger.Log("Sync", $"Export failed: {ex.Message}", "error");
+            }
+        }
+
+        private void ImportSettings()
+        {
+            try
+            {
+                var dialog = new Microsoft.Win32.OpenFileDialog
+                {
+                    Title = "Import settings",
+                    Filter = "FLOMASTER setup (*.flomaster)|*.flomaster|JSON (*.json)|*.json"
+                };
+                if (dialog.ShowDialog() != true) return;
+
+                var json = File.ReadAllText(dialog.FileName);
+                var export = System.Text.Json.JsonSerializer.Deserialize<SettingsExport>(json,
+                    new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                if (export == null) { StatusText = "Import: file is not a FLOMASTER setup"; return; }
+
+                int overwritten = 0, added = 0;
+                foreach (var p in export.Profiles ?? new List<Profile>())
+                {
+                    var existing = _config.Profiles.FirstOrDefault(x => x.Name == p.Name);
+                    if (existing != null)
+                    {
+                        existing.PresetName = p.PresetName;
+                        existing.OcioName = p.OcioName;
+                        existing.Args = p.Args;
+                        overwritten++;
+                    }
+                    else
+                    {
+                        _config.Profiles.Add(new Profile
+                        {
+                            Name = p.Name, PresetName = p.PresetName, OcioName = p.OcioName, Args = p.Args
+                        });
+                        added++;
+                    }
+                }
+
+                int rootsAdded = 0;
+                foreach (var root in export.ProjectRoots ?? new List<string>())
+                    if (!_config.ProjectRoots.Contains(root))
+                    {
+                        _config.ProjectRoots.Add(root);
+                        rootsAdded++;
+                    }
+
+                _store.Save(_config);
+                RefreshProfiles();
+                RefreshProjectRoots();
+
+                if (!string.IsNullOrEmpty(export.Theme) && Themes.Contains(export.Theme))
+                    SelectedTheme = export.Theme;
+                AnimationEnabled = export.AnimationEnabled;
+                TopMostEnabled = export.TopMostEnabled;
+                CheckUpdatesEnabled = export.CheckUpdates;
+                _store.Save(_config);
+
+                StatusText = $"Imported: {added} new, {overwritten} updated profiles, {rootsAdded} roots";
+                Logger.Log("Sync", $"Imported: +{added}/~{overwritten} profiles, +{rootsAdded} roots, theme {export.Theme}", "info");
+            }
+            catch (Exception ex)
+            {
+                StatusText = $"Import error: {ex.Message}";
+                Logger.Log("Sync", $"Import failed: {ex.Message}", "error");
+            }
         }
 
         private void AddProjectRoot()

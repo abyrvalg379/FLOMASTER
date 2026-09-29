@@ -2,51 +2,81 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text.Json;
+using System.Text.RegularExpressions;
 using FLOMASTER.Models;
 
 namespace FLOMASTER.Services
 {
     public static class DccScanner
     {
+        // Канонические префиксы имён для реестра/манифестов (нижний регистр).
+        private static readonly string[] KnownPrefixes =
+        {
+            "blender", "autodesk maya", "maya", "sidefx houdini", "houdini",
+            "nuke", "davinci resolve", "adobe substance 3d painter", "substance 3d painter",
+            "unreal editor", "unreal engine"
+        };
+
+        /// <summary>NukeXX.Y.exe / NukeXX.YvN.exe / Nuke.exe — главный exe; Init/Assist/Register отсекается маской.</summary>
+        public static bool IsNukeMainExe(string fileName)
+        {
+            return Regex.IsMatch(fileName ?? "", @"^Nuke(\d+(\.\d+)?)?(v\d+)?\.exe$", RegexOptions.IgnoreCase);
+        }
+
+        /// <summary>Матчит DisplayName из реестра/манифеста на известное DCC-приложение.</summary>
+        public static bool MatchesKnownApp(string displayName)
+        {
+            var name = (displayName ?? "").Trim().ToLowerInvariant();
+            return KnownPrefixes.Any(name.StartsWith);
+        }
+
+        /// <summary>Читает Epic-манифест (*.item) и возвращает пресет, если это Unreal Engine.</summary>
+        public static Preset FromEpicManifest(string json)
+        {
+            try
+            {
+                using var doc = JsonDocument.Parse(json);
+                var root = doc.RootElement;
+                var name = root.TryGetProperty("DisplayName", out var dn) ? dn.GetString() : null;
+                var install = root.TryGetProperty("InstallLocation", out var il) ? il.GetString() : null;
+                var launchExe = root.TryGetProperty("LaunchExecutable", out var le) ? le.GetString() : null;
+                if (string.IsNullOrEmpty(install) || string.IsNullOrEmpty(launchExe)) return null;
+                if (!MatchesKnownApp(name)) return null;
+
+                var exe = Path.Combine(install, launchExe.Replace('/', '\\'));
+                return new Preset { Name = name.Trim(), Exe = exe };
+            }
+            catch { return null; }
+        }
+
         public static List<Preset> Scan(List<string> customPaths = null)
         {
             var found = new List<Preset>();
             Logger.Log("Scanner", "Starting DCC scan...", "info");
 
-            // Blender / K-Cycles
+            // 1) Реестр + Epic-манифесты: работает на любой машине без захардкоженных дисков
+            ScanRegistry(found);
+            ScanEpicManifests(found);
+
+            // 2) Файловые эвристики — fallback (переносные установки, нестандартные пути)
             ScanBlender(@"C:\Program Files\Blender Foundation", found);
             ScanBlender(@"C:\Program Files (x86)\Blender Foundation", found);
             ScanBlender(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Programs", "Blender Foundation"), found);
 
-            // Maya
             ScanMaya(found);
-
-            // Houdini
             ScanHoudini(found);
-
-            // Nuke
             ScanNuke(found);
-
-            // Unreal Engine
             ScanUnrealEngine(found);
 
-            // DaVinci Resolve
             var davinciExe = @"C:\Program Files\Blackmagic Design\DaVinci Resolve\Resolve.exe";
-            if (File.Exists(davinciExe))
-            {
+            if (File.Exists(davinciExe) && !found.Any(f => string.Equals(f.Exe, davinciExe, StringComparison.OrdinalIgnoreCase)))
                 found.Add(new() { Name = "DaVinci Resolve", Exe = davinciExe });
-                Logger.Log("Scanner", "Found: DaVinci Resolve", "info");
-            }
 
-            // Substance 3D Painter
             var substanceExe = @"C:\Program Files\Adobe\Adobe Substance 3D Painter\Adobe Substance 3D Painter.exe";
-            if (File.Exists(substanceExe))
-            {
+            if (File.Exists(substanceExe) && !found.Any(f => string.Equals(f.Exe, substanceExe, StringComparison.OrdinalIgnoreCase)))
                 found.Add(new() { Name = "Substance 3D Painter", Exe = substanceExe });
-                Logger.Log("Scanner", "Found: Substance 3D Painter", "info");
-            }
 
-            // Custom scan paths
             if (customPaths != null)
             {
                 foreach (var path in customPaths)
@@ -63,8 +93,96 @@ namespace FLOMASTER.Services
                 }
             }
 
+            // дедуп по exe: реестр может пересечься с эвристиками
+            found = found
+                .GroupBy(f => f.Exe, StringComparer.OrdinalIgnoreCase)
+                .Select(g => g.First())
+                .ToList();
+
             Logger.Log("Scanner", $"Scan complete: {found.Count} applications found", "info");
             return found;
+        }
+
+        /// <summary>HKLM Uninstall (+WOW6432Node): DisplayName/DisplayIcon известных DCC.</summary>
+        private static void ScanRegistry(List<Preset> found)
+        {
+            try
+            {
+                var roots = new[]
+                {
+                    Microsoft.Win32.Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall"),
+                    Microsoft.Win32.Registry.LocalMachine.OpenSubKey(@"SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall")
+                };
+
+                foreach (var root in roots)
+                {
+                    if (root == null) continue;
+                    using (root)
+                    foreach (var keyName in root.GetSubKeyNames())
+                    {
+                        try
+                        {
+                            using var key = root.OpenSubKey(keyName);
+                            var displayName = key?.GetValue("DisplayName") as string;
+                            if (string.IsNullOrEmpty(displayName) || !MatchesKnownApp(displayName)) continue;
+
+                            // DisplayIcon: "C:\path\app.exe,0" — до запятой путь к exe
+                            var icon = (key.GetValue("DisplayIcon") as string)?.Split(',')[0].Trim('"', ' ');
+                            string exe = null;
+                            if (!string.IsNullOrEmpty(icon) && File.Exists(icon) && icon.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
+                                exe = icon;
+
+                            if (exe == null)
+                            {
+                                var install = key.GetValue("InstallLocation") as string;
+                                if (!string.IsNullOrEmpty(install))
+                                {
+                                    var candidates = new[] { "blender.exe", "maya.exe", "houdini.exe", "Resolve.exe", "Adobe Substance 3D Painter.exe" };
+                                    exe = candidates.Select(c => Path.Combine(install, c)).FirstOrDefault(File.Exists) ?? "";
+                                }
+                            }
+
+                            if (string.IsNullOrEmpty(exe)) continue;
+                            if (found.Any(f => string.Equals(f.Exe, exe, StringComparison.OrdinalIgnoreCase))) continue;
+
+                            var presetName = Regex.Replace(displayName.Trim(), @"\s*\(x64\)$", "", RegexOptions.IgnoreCase);
+                            found.Add(new() { Name = presetName, Exe = exe });
+                            Logger.Log("Scanner", $"Registry: {presetName} at {exe}", "info");
+                        }
+                        catch { /* битый ключ реестра — не повод падать */ }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Log("Scanner", $"Registry scan failed: {ex.Message}", "warn");
+            }
+        }
+
+        /// <summary>Epic Games Launcher манифесты: %ProgramData%\Epic\EpicGamesLauncher\Data\Manifests\*.item.</summary>
+        private static void ScanEpicManifests(List<Preset> found)
+        {
+            try
+            {
+                var manifests = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
+                    "Epic", "EpicGamesLauncher", "Data", "Manifests");
+                if (!Directory.Exists(manifests)) return;
+
+                foreach (var file in Directory.GetFiles(manifests, "*.item"))
+                {
+                    var preset = FromEpicManifest(File.ReadAllText(file));
+                    if (preset != null && File.Exists(preset.Exe) &&
+                        !found.Any(f => string.Equals(f.Exe, preset.Exe, StringComparison.OrdinalIgnoreCase)))
+                    {
+                        found.Add(preset);
+                        Logger.Log("Scanner", $"Epic manifest: {preset.Name} at {preset.Exe}", "info");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Log("Scanner", $"Epic manifest scan failed: {ex.Message}", "warn");
+            }
         }
 
         private static void ScanBlender(string basePath, List<Preset> found)
@@ -152,11 +270,9 @@ namespace FLOMASTER.Services
             {
                 foreach (var dir in Directory.GetDirectories(nukeBase, "Nuke*"))
                 {
+                    // маска главного exe: NukeXX.Y.exe (Init/Assist/Register отсекаются ей же)
                     var nukeExe = Directory.GetFiles(dir, "Nuke*.exe")
-                        .Where(f => !Path.GetFileName(f).Contains("Init") &&
-                                    !Path.GetFileName(f).Contains("Assistant") &&
-                                    !Path.GetFileName(f).Contains("Register"))
-                        .OrderByDescending(f => f.Length)
+                        .Where(f => IsNukeMainExe(Path.GetFileName(f)))
                         .FirstOrDefault();
 
                     if (!string.IsNullOrEmpty(nukeExe))

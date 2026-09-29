@@ -614,6 +614,20 @@
                                     <Button Grid.Column="1" Content="Rescan" Style="{StaticResource BtnStyle}"
                                             Width="60" Height="26" Command="{Binding RescanCommand}"/>
                                 </Grid>
+                                <TextBlock Text="SYNC" Foreground="{DynamicResource DimBrush}" FontSize="10" FontWeight="SemiBold"
+                                           Margin="10,0,10,4"/>
+                                <TextBlock Text="Move profiles and roots to another machine" Foreground="{DynamicResource DimBrush}"
+                                           FontSize="10" Margin="10,0,10,4"/>
+                                <Grid Margin="10,0,10,12">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Button Grid.Column="0" Content="Export settings" Style="{StaticResource BtnStyle}"
+                                            Margin="0,0,4,0" Height="26" Command="{Binding ExportSettingsCommand}"/>
+                                    <Button Grid.Column="1" Content="Import settings" Style="{StaticResource BtnStyle}"
+                                            Margin="4,0,0,0" Height="26" Command="{Binding ImportSettingsCommand}"/>
+                                </Grid>
                                 <TextBlock Text="SHORTCUTS" Foreground="{DynamicResource DimBrush}" FontSize="10" FontWeight="SemiBold"
                                            Margin="10,0,10,6"/>
                                 <Grid Margin="10,0,10,0">

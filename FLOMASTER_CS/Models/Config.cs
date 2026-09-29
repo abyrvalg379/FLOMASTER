@@ -59,4 +59,20 @@ namespace FLOMASTER.Models
         // Text color on accent-colored surfaces (light accents need dark text). Default white.
         public string AccentText { get; set; } = "#FFFFFF";
     }
+
+    /// <summary>
+    /// Файл переноса настроек между машинами. Машино-специфичное (пути exe, пути OCIO)
+    /// сознательно НЕ экспортируется: пресеты матчатся по имени, пути остаются локальными.
+    /// </summary>
+    public class SettingsExport
+    {
+        public string App { get; set; } = "FLOMASTER";
+        public string ExportedAt { get; set; } = "";
+        public string Theme { get; set; } = "";
+        public bool AnimationEnabled { get; set; } = true;
+        public bool TopMostEnabled { get; set; } = false;
+        public bool CheckUpdates { get; set; } = true;
+        public List<Profile> Profiles { get; set; } = new();
+        public List<string> ProjectRoots { get; set; } = new();
+    }
 }
