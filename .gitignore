@@ -35,3 +35,7 @@ ref/
 original_config/
 test/*
 !test/smoke_flomaster.py
+
+# build artifacts anywhere
+bin/
+obj/
