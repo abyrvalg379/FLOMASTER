@@ -200,7 +200,8 @@ namespace FLOMASTER
         /// <summary>Активно и видно — спрятать; иначе показать и поднять поверх всего.</summary>
         private void ToggleWindow()
         {
-            if (IsVisible && IsActive)
+            Logger.Log("Hotkey", $"Toggle: visible={IsVisible} active={IsActive}", "info");
+            if (IsVisible)
             {
                 Hide();
                 return;
