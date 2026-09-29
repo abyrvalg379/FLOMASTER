@@ -372,6 +372,19 @@ namespace FLOMASTER.ViewModels
             StatusText = $"Added: {name}";
         }
 
+        /// <summary>Текущее переопределение роли пресета (null = значение из конфига). Для оверлея/пикера.</summary>
+        public string? GetRoleOverride(string roleName) =>
+            SelectedPreset?.RoleOverrides != null && SelectedPreset.RoleOverrides.TryGetValue(roleName, out var v) ? v : null;
+
+        /// <summary>Colorspaces выбранного конфига (имя -> family). Для пикера ролей.</summary>
+        public Dictionary<string, string> GetColorspaces()
+        {
+            var ocio = SelectedOcio;
+            if (ocio == null || string.IsNullOrEmpty(ocio.Path) || !File.Exists(ocio.Path))
+                return new Dictionary<string, string>();
+            return _ocio.Parse(ocio.Path).colorspaces;
+        }
+
         public bool IsProjectFile(string file) =>
             UiHelper.ProjectFileExtensions.Contains(Path.GetExtension(file).ToLowerInvariant());
 
@@ -809,6 +822,16 @@ namespace FLOMASTER.ViewModels
             // держим выбор корня валидным; смена триггерит RebuildBrowserFiles
             if (SelectedBrowserRoot == null || !ProjectRoots.Contains(SelectedBrowserRoot))
                 SelectedBrowserRoot = ProjectRoots.FirstOrDefault();
+        }
+
+        /// <summary>Плоский рекурсивный список проектных файлов корня (для оверлея и панели).</summary>
+        public List<string> GetProjectFiles(string root)
+        {
+            var acc = new List<string>();
+            if (string.IsNullOrEmpty(root) || !Directory.Exists(root)) return acc;
+            CollectProjectFiles(root, "", acc, 0);
+            acc.Sort(StringComparer.OrdinalIgnoreCase);
+            return acc;
         }
 
         private void RebuildBrowserFiles()

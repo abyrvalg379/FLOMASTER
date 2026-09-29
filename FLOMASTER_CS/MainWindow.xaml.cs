@@ -212,7 +212,7 @@ namespace FLOMASTER
                 return;
             }
             if (_viewModel == null) return;
-            _overlay = new OverlayWindow(_viewModel);
+            _overlay = new OverlayWindow(_viewModel, this);
             _overlay.Closed += (_, _) => _overlay = null;
             _overlay.Show();
             _overlay.Activate();
