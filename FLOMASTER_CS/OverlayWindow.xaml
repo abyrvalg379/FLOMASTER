@@ -13,11 +13,12 @@
 
     <Window.Resources>
         <SolidColorBrush x:Key="BrandRed" Color="#C82823"/>
-        <!-- Плитка приложения/профиля: панель + акцентная кромка слева -->
+
+        <!-- Плитка: иконка/монограмма слева + название -->
         <Style x:Key="TileButtonStyle" TargetType="Button">
-            <Setter Property="Width" Value="272"/>
-            <Setter Property="Height" Value="104"/>
-            <Setter Property="Margin" Value="0,0,16,16"/>
+            <Setter Property="Width" Value="330"/>
+            <Setter Property="Height" Value="132"/>
+            <Setter Property="Margin" Value="0,0,20,20"/>
             <Setter Property="Background" Value="{DynamicResource PanelBrush}"/>
             <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
             <Setter Property="Cursor" Value="Hand"/>
@@ -25,17 +26,12 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Border Name="Bd" Background="{TemplateBinding Background}" CornerRadius="8">
-                            <Grid>
-                                <Rectangle Name="Edge" Width="4" HorizontalAlignment="Left"
-                                           Fill="{DynamicResource BorderBrush}"/>
-                                <ContentPresenter Margin="20,0,12,0" VerticalAlignment="Center"/>
-                            </Grid>
+                        <Border Name="Bd" Background="{TemplateBinding Background}" CornerRadius="12">
+                            <ContentPresenter Margin="18,0,14,0" VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter TargetName="Bd" Property="Background" Value="{DynamicResource AccentHoverBrush}"/>
-                                <Setter TargetName="Edge" Property="Fill" Value="{DynamicResource AccentBrush}"/>
                                 <Setter Property="Foreground" Value="{DynamicResource AccentTextBrush}"/>
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
@@ -49,8 +45,8 @@
 
         <!-- Строка последних файлов -->
         <Style x:Key="RecentButtonStyle" TargetType="Button">
-            <Setter Property="Height" Value="40"/>
-            <Setter Property="Margin" Value="0,0,0,6"/>
+            <Setter Property="Height" Value="48"/>
+            <Setter Property="Margin" Value="0,0,0,8"/>
             <Setter Property="Background" Value="{DynamicResource PanelBrush}"/>
             <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
             <Setter Property="Cursor" Value="Hand"/>
@@ -58,7 +54,7 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Border Name="Bd" Background="{TemplateBinding Background}" CornerRadius="6" Padding="14,0">
+                        <Border Name="Bd" Background="{TemplateBinding Background}" CornerRadius="8" Padding="18,0">
                             <ContentPresenter VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
@@ -72,53 +68,43 @@
             </Setter>
         </Style>
 
-        <!-- Заголовок секции: акцентный штрих + капс -->
+        <!-- Заголовок секции -->
         <Style x:Key="SectionLabelStyle" TargetType="StackPanel">
             <Setter Property="Orientation" Value="Horizontal"/>
-            <Setter Property="Margin" Value="10,26,0,10"/>
+            <Setter Property="Margin" Value="10,0,0,18"/>
         </Style>
     </Window.Resources>
 
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <!-- Шапка: фирменный заголовок + подсказка -->
-        <Grid Grid.Row="0" Margin="36,28,36,14">
-            <StackPanel Orientation="Horizontal">
-                <TextBlock Text="FLOMASTER" Foreground="{DynamicResource AccentBrush}"
-                           FontSize="40" FontWeight="Bold"/>
-                <TextBlock Text="." Foreground="{StaticResource BrandRed}" FontSize="40" FontWeight="Bold" Margin="2,0,0,0"/>
-            </StackPanel>
-            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
-                <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
-                        CornerRadius="4" Padding="10,4" Margin="0,0,8,0">
-                    <TextBlock Text="ESC" Foreground="{DynamicResource TextBrush}" FontSize="12"
-                               FontFamily="Consolas"/>
-                </Border>
-                <TextBlock Text="закрыть" Foreground="{DynamicResource DimBrush}" FontSize="12"
-                           VerticalAlignment="Center"/>
-            </StackPanel>
-        </Grid>
+        <!-- Хиро: бренд по центру -->
+        <StackPanel Grid.Row="0" HorizontalAlignment="Center" Margin="0,64,0,40">
+            <TextBlock HorizontalAlignment="Center" FontSize="54" FontWeight="Bold">
+                <Run Text="FLOMASTER" Foreground="{DynamicResource AccentBrush}"/><Run Text="." Foreground="{StaticResource BrandRed}"/>
+            </TextBlock>
+            <TextBlock HorizontalAlignment="Center" Margin="0,10,0,0"
+                       Foreground="{DynamicResource DimBrush}" FontSize="13">
+                ЗАПУСТИТЕ ПРИЛОЖЕНИЕ В ЗАДАННОМ ЦВЕТОВОМ ПРОСТРАНСТВЕ
+            </TextBlock>
+        </StackPanel>
 
-        <!-- Фирменная акцентная линия -->
-        <Rectangle Grid.Row="1" Height="2" Fill="{DynamicResource AccentBrush}" Margin="36,0,36,0"/>
-
-        <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
-            <Grid MaxWidth="1660" HorizontalAlignment="Center" Margin="0,8,0,24">
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+            <Grid MaxWidth="1420" HorizontalAlignment="Center" VerticalAlignment="Top">
                 <StackPanel>
 
                     <!-- ПРИЛОЖЕНИЯ -->
                     <StackPanel Style="{StaticResource SectionLabelStyle}">
-                        <Rectangle Width="22" Height="3" Fill="{DynamicResource AccentBrush}"
-                                   VerticalAlignment="Center" Margin="0,0,10,0"/>
+                        <Rectangle Width="26" Height="3" Fill="{DynamicResource AccentBrush}"
+                                   VerticalAlignment="Center" Margin="0,0,12,0"/>
                         <TextBlock Text="ПРИЛОЖЕНИЯ" Foreground="{DynamicResource TextBrush}"
-                                   FontSize="14" FontWeight="SemiBold"/>
+                                   FontSize="15" FontWeight="SemiBold"/>
                     </StackPanel>
-                    <ItemsControl ItemsSource="{Binding Presets}">
+                    <ItemsControl ItemsSource="{Binding AppTiles}" Margin="10,0,0,10">
                         <ItemsControl.ItemsPanel>
                             <ItemsPanelTemplate>
                                 <WrapPanel/>
@@ -126,13 +112,17 @@
                         </ItemsControl.ItemsPanel>
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <Button Style="{StaticResource TileButtonStyle}" Click="PresetTile_Click">
-                                    <StackPanel>
-                                        <TextBlock Text="{Binding Name}" FontSize="18" FontWeight="SemiBold"
-                                                   TextTrimming="CharacterEllipsis"/>
-                                        <TextBlock Text="{Binding Exe}" FontSize="10"
-                                                   Foreground="{DynamicResource DimBrush}"
-                                                   TextTrimming="CharacterEllipsis" Margin="0,4,0,0"/>
+                                <Button Style="{StaticResource TileButtonStyle}" Click="Tile_Click" Tag="{Binding}">
+                                    <StackPanel Orientation="Horizontal">
+                                        <Image Source="{Binding Icon}" Width="44" Height="44"
+                                               RenderOptions.BitmapScalingMode="HighQuality" VerticalAlignment="Center"/>
+                                        <StackPanel Margin="16,0,0,0" VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding Title}" FontSize="16" FontWeight="SemiBold"
+                                                       TextTrimming="CharacterEllipsis"/>
+                                            <TextBlock Text="{Binding Subtitle}" FontSize="10.5"
+                                                       Foreground="{DynamicResource DimBrush}"
+                                                       TextTrimming="CharacterEllipsis" Margin="0,3,0,0"/>
+                                        </StackPanel>
                                     </StackPanel>
                                 </Button>
                             </DataTemplate>
@@ -140,13 +130,13 @@
                     </ItemsControl>
 
                     <!-- ПРОФИЛИ -->
-                    <StackPanel Style="{StaticResource SectionLabelStyle}">
-                        <Rectangle Width="22" Height="3" Fill="{DynamicResource AccentBrush}"
-                                   VerticalAlignment="Center" Margin="0,0,10,0"/>
+                    <StackPanel x:Name="ProfilesSection" Style="{StaticResource SectionLabelStyle}" Margin="10,14,0,18">
+                        <Rectangle Width="26" Height="3" Fill="{DynamicResource AccentBrush}"
+                                   VerticalAlignment="Center" Margin="0,0,12,0"/>
                         <TextBlock Text="ПРОФИЛИ" Foreground="{DynamicResource TextBrush}"
-                                   FontSize="14" FontWeight="SemiBold"/>
+                                   FontSize="15" FontWeight="SemiBold"/>
                     </StackPanel>
-                    <ItemsControl ItemsSource="{Binding Profiles}">
+                    <ItemsControl x:Name="ProfilesList" ItemsSource="{Binding ProfileTiles}" Margin="10,0,0,10">
                         <ItemsControl.ItemsPanel>
                             <ItemsPanelTemplate>
                                 <WrapPanel/>
@@ -154,36 +144,55 @@
                         </ItemsControl.ItemsPanel>
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <Button Style="{StaticResource TileButtonStyle}" Height="88" Click="ProfileTile_Click">
-                                    <StackPanel>
-                                        <TextBlock Text="{Binding Name}" FontSize="16" FontWeight="SemiBold"
-                                                   TextTrimming="CharacterEllipsis"/>
-                                        <TextBlock Text="{Binding PresetName}" FontSize="10"
-                                                   Foreground="{DynamicResource DimBrush}"
-                                                   TextTrimming="CharacterEllipsis" Margin="0,4,0,0"/>
+                                <Button Style="{StaticResource TileButtonStyle}" Height="112" Click="Tile_Click" Tag="{Binding}">
+                                    <StackPanel Orientation="Horizontal">
+                                        <Border Width="44" Height="44" CornerRadius="22"
+                                                Background="{DynamicResource AccentBrush}" VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding Monogram}" FontSize="19" FontWeight="Bold"
+                                                       Foreground="{DynamicResource AccentTextBrush}"
+                                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        </Border>
+                                        <StackPanel Margin="16,0,0,0" VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding Title}" FontSize="16" FontWeight="SemiBold"
+                                                       TextTrimming="CharacterEllipsis"/>
+                                            <TextBlock Text="{Binding Subtitle}" FontSize="10.5"
+                                                       Foreground="{DynamicResource DimBrush}"
+                                                       TextTrimming="CharacterEllipsis" Margin="0,3,0,0"/>
+                                        </StackPanel>
                                     </StackPanel>
                                 </Button>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
-                    <TextBlock x:Name="ProfilesEmpty" Text="Профилей пока нет — соберите связку «приложение + конфиг + аргументы» в панели Profiles лаунчера."
-                               Foreground="{DynamicResource DimBrush}" FontSize="12" FontStyle="Italic"
-                               Margin="10,0,0,0"/>
 
                     <!-- ПОСЛЕДНИЕ ФАЙЛЫ -->
-                    <StackPanel Style="{StaticResource SectionLabelStyle}">
-                        <Rectangle Width="22" Height="3" Fill="{DynamicResource AccentBrush}"
-                                   VerticalAlignment="Center" Margin="0,0,10,0"/>
+                    <StackPanel x:Name="RecentSection" Style="{StaticResource SectionLabelStyle}" Margin="10,14,0,18">
+                        <Rectangle Width="26" Height="3" Fill="{DynamicResource AccentBrush}"
+                                   VerticalAlignment="Center" Margin="0,0,12,0"/>
                         <TextBlock Text="ПОСЛЕДНИЕ ФАЙЛЫ" Foreground="{DynamicResource TextBrush}"
-                                   FontSize="14" FontWeight="SemiBold"/>
+                                   FontSize="15" FontWeight="SemiBold"/>
                     </StackPanel>
-                    <ItemsControl ItemsSource="{Binding RecentFiles}">
+                    <ItemsControl x:Name="RecentList" ItemsSource="{Binding RecentTiles}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <Button Style="{StaticResource RecentButtonStyle}" Click="RecentTile_Click"
-                                        ToolTip="{Binding}">
-                                    <TextBlock Text="{Binding}" FontSize="11.5" FontFamily="Consolas"
-                                               TextTrimming="CharacterEllipsis"/>
+                                <Button Style="{StaticResource RecentButtonStyle}" Click="Tile_Click" Tag="{Binding}"
+                                        ToolTip="{Binding FullPath}">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="{Binding Badge}" FontSize="10.5"
+                                                   FontFamily="Consolas" FontWeight="Bold"
+                                                   Foreground="{DynamicResource AccentBrush}"
+                                                   VerticalAlignment="Center" Margin="0,0,14,0"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding Title}" FontSize="12"
+                                                   FontFamily="Consolas" TextTrimming="CharacterEllipsis"/>
+                                        <TextBlock Grid.Column="2" Text="{Binding Dir}" FontSize="10.5"
+                                                   Foreground="{DynamicResource DimBrush}"
+                                                   VerticalAlignment="Center" Margin="24,0,0,0"/>
+                                    </Grid>
                                 </Button>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
@@ -191,12 +200,22 @@
                     <TextBlock x:Name="RecentEmpty" Text="Открытые файлы появятся здесь."
                                Foreground="{DynamicResource DimBrush}" FontSize="12" FontStyle="Italic"
                                Margin="10,0,0,0"/>
-
-                    <!-- Подвал -->
-                    <TextBlock Text="github.com/abyrvalg379/FLOMASTER" Foreground="{DynamicResource DimBrush}"
-                               FontSize="10" Margin="10,30,0,0"/>
                 </StackPanel>
             </Grid>
         </ScrollViewer>
+
+        <!-- Футер -->
+        <StackPanel Grid.Row="2" HorizontalAlignment="Center" Margin="0,10,0,26"
+                    Orientation="Horizontal">
+            <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                    CornerRadius="4" Padding="10,4" Margin="0,0,8,0">
+                <TextBlock Text="ESC" Foreground="{DynamicResource TextBrush}" FontSize="12"
+                           FontFamily="Consolas"/>
+            </Border>
+            <TextBlock Text="закрыть" Foreground="{DynamicResource DimBrush}" FontSize="12"
+                       VerticalAlignment="Center" Margin="0,0,18,0"/>
+            <TextBlock Text="github.com/abyrvalg379/FLOMASTER" Foreground="{DynamicResource DimBrush}"
+                       FontSize="11" VerticalAlignment="Center"/>
+        </StackPanel>
     </Grid>
 </Window>
