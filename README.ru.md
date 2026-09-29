@@ -88,8 +88,8 @@
 
 ```
 FLOMASTER.exe --list-profiles
-FLOMASTER.exe --launch "Show A" 
-FLOMASTER.exe --launch "Show A" --project "E:\shows\A\shot_042.blend"
+FLOMASTER.exe --launch "Проект А" 
+FLOMASTER.exe --launch "Проект А" --project "D:\projects\A\shot_042.blend"
 ```
 
 `--project` добавляет файл к аргументам профиля (или подставляется вместо плейсхолдера `{file}`, если он есть в профиле). Коды возврата: `0` — запущено, `2` — не найден профиль/пресет/файл, `1` — ошибка запуска — удобно для скриптов.
