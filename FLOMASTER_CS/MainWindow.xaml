@@ -173,7 +173,8 @@
                                 <Setter TargetName="Bd" Property="Background" Value="{DynamicResource AccentHoverBrush}"/>
                             </Trigger>
                             <Trigger Property="IsChecked" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource AccentPressBrush}"/>
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource AccentBrush}"/>
+                                <Setter Property="Foreground" Value="{DynamicResource AccentTextBrush}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -253,6 +254,7 @@
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
@@ -387,6 +389,12 @@
                         Command="{Binding LaunchCommand}"/>
             </Grid>
 
+            </StackPanel>
+
+            <!-- Панели: скролл, когда раскрыто слишком много; ARGUMENTS всегда видна снизу -->
+            <ScrollViewer Grid.Row="4" VerticalScrollBarVisibility="Auto">
+            <StackPanel>
+
             <!-- Roles toggle (первая в стеке по решению юзера) -->
             <Grid Margin="0,8,0,0">
                 <Grid.RowDefinitions>
@@ -397,8 +405,8 @@
                               Cursor="Hand" HorizontalAlignment="Left"
                               IsChecked="{Binding RolesPanelVisible}">
                     <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="&#x25B6;" FontSize="10" Foreground="{DynamicResource DimBrush}" Margin="0,0,6,0"/>
-                        <TextBlock Text="Roles" FontSize="11" Foreground="{DynamicResource DimBrush}"/>
+                        <TextBlock Text="&#x25B6;" FontSize="10" Margin="0,0,6,0"/>
+                        <TextBlock Text="Roles" FontSize="11"/>
                     </StackPanel>
                 </ToggleButton>
                 <StackPanel Grid.Row="1" Visibility="{Binding RolesPanelVisible, Converter={StaticResource BoolToVis}}" Margin="0,4,0,0">
@@ -444,8 +452,8 @@
                               Cursor="Hand" HorizontalAlignment="Left"
                               IsChecked="{Binding ProfilesPanelVisible}">
                     <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="&#x25B6;" FontSize="10" Foreground="{DynamicResource DimBrush}" Margin="0,0,6,0"/>
-                        <TextBlock Text="Profiles" FontSize="11" Foreground="{DynamicResource DimBrush}"/>
+                        <TextBlock Text="&#x25B6;" FontSize="10" Margin="0,0,6,0"/>
+                        <TextBlock Text="Profiles" FontSize="11"/>
                     </StackPanel>
                 </ToggleButton>
                 <StackPanel Grid.Row="1" Visibility="{Binding ProfilesPanelVisible, Converter={StaticResource BoolToVis}}" Margin="0,4,0,0">
@@ -500,8 +508,8 @@
                               Cursor="Hand" HorizontalAlignment="Left"
                               IsChecked="{Binding ProjectsPanelVisible}">
                     <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="&#x25B6;" FontSize="10" Foreground="{DynamicResource DimBrush}" Margin="0,0,6,0"/>
-                        <TextBlock Text="Projects" FontSize="11" Foreground="{DynamicResource DimBrush}"/>
+                        <TextBlock Text="&#x25B6;" FontSize="10" Margin="0,0,6,0"/>
+                        <TextBlock Text="Projects" FontSize="11"/>
                     </StackPanel>
                 </ToggleButton>
                 <StackPanel Grid.Row="1" Visibility="{Binding ProjectsPanelVisible, Converter={StaticResource BoolToVis}}" Margin="0,4,0,0">
@@ -512,8 +520,21 @@
                                      Background="{DynamicResource BgBrush}" Foreground="{DynamicResource TextBrush}"
                                      BorderBrush="{DynamicResource BorderBrush}" FontSize="11" Height="24" Padding="6,2"
                                      Text="{Binding BrowserSearchText, UpdateSourceTrigger=PropertyChanged}"/>
-                            <ComboBox Style="{StaticResource DarkComboStringStyle}" Height="26" FontSize="11"
-                                      ItemsSource="{Binding ProjectRoots}" SelectedItem="{Binding SelectedBrowserRoot}"/>
+                            <Grid Margin="0,0,0,4">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <ComboBox Grid.Column="0" Style="{StaticResource DarkComboStringStyle}" Height="26" FontSize="11" Margin="0,0,4,0"
+                                          ItemsSource="{Binding ProjectRoots}" SelectedItem="{Binding SelectedBrowserRoot}"/>
+                                <Button Grid.Column="1" Content="+" Style="{StaticResource BtnStyle}" Width="30" Height="26" Margin="0,0,2,0"
+                                        ToolTip="Add project folder" Command="{Binding AddProjectRootCommand}"/>
+                                <Button Grid.Column="2" Content="-" Style="{StaticResource BtnStyle}" Width="30" Height="26"
+                                        ToolTip="Remove selected folder"
+                                        Command="{Binding RemoveProjectRootCommand}"
+                                        CommandParameter="{Binding SelectedBrowserRoot, RelativeSource={RelativeSource AncestorType=Window}}"/>
+                            </Grid>
                             <ListBox ItemsSource="{Binding BrowserFiles}" MaxHeight="150"
                                      Background="Transparent" BorderThickness="0" Margin="0,4,0,0"
                                      ScrollViewer.VerticalScrollBarVisibility="Auto">
@@ -544,8 +565,8 @@
                               Cursor="Hand" HorizontalAlignment="Left"
                               IsChecked="{Binding RecentPanelVisible}">
                     <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="&#x25B6;" FontSize="10" Foreground="{DynamicResource DimBrush}" Margin="0,0,6,0"/>
-                        <TextBlock Text="Recent files" FontSize="11" Foreground="{DynamicResource DimBrush}"/>
+                        <TextBlock Text="&#x25B6;" FontSize="10" Margin="0,0,6,0"/>
+                        <TextBlock Text="Recent files" FontSize="11"/>
                     </StackPanel>
                 </ToggleButton>
                 <StackPanel Grid.Row="1" Visibility="{Binding RecentPanelVisible, Converter={StaticResource BoolToVis}}" Margin="0,4,0,0">
@@ -578,8 +599,8 @@
                               Cursor="Hand" HorizontalAlignment="Left"
                               IsChecked="{Binding SettingsPanelVisible}">
                     <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="&#x25B6;" FontSize="10" Foreground="{DynamicResource DimBrush}" Margin="0,0,6,0"/>
-                        <TextBlock Text="Settings" FontSize="11" Foreground="{DynamicResource DimBrush}"/>
+                        <TextBlock Text="&#x25B6;" FontSize="10" Margin="0,0,6,0"/>
+                        <TextBlock Text="Settings" FontSize="11"/>
                     </StackPanel>
                 </ToggleButton>
                 <StackPanel Grid.Row="1" Visibility="{Binding SettingsPanelVisible, Converter={StaticResource BoolToVis}}" Margin="0,4,0,0">
@@ -622,31 +643,6 @@
                                 <ComboBox DisplayMemberPath="Name" Margin="0,0,0,12"
                                           Style="{StaticResource DarkComboStyle}" Height="26"
                                           ItemsSource="{Binding OcioConfigs}" SelectedItem="{Binding DefaultOcio}"/>
-                                <TextBlock Text="PROJECT FOLDERS" Foreground="{DynamicResource DimBrush}" FontSize="10" FontWeight="SemiBold"
-                                           Margin="10,0,10,4"/>
-                                <TextBlock Text="Roots for the Projects browser" Foreground="{DynamicResource DimBrush}"
-                                           FontSize="10" Margin="10,0,10,4"/>
-                                <Button Content="Add project folder" Style="{StaticResource BtnStyle}"
-                                        Margin="10,0,10,4" Height="26" Command="{Binding AddProjectRootCommand}"/>
-                                <ItemsControl ItemsSource="{Binding ProjectRoots}" Margin="10,0,10,8">
-                                    <ItemsControl.ItemTemplate>
-                                        <DataTemplate>
-                                            <Grid Margin="0,1">
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="*"/>
-                                                    <ColumnDefinition Width="Auto"/>
-                                                </Grid.ColumnDefinitions>
-                                                <TextBlock Grid.Column="0" Text="{Binding}" Foreground="{DynamicResource DimBrush}"
-                                                           FontSize="10" FontFamily="Consolas" VerticalAlignment="Center"
-                                                           TextTrimming="CharacterEllipsis" ToolTip="{Binding}"/>
-                                                <Button Grid.Column="1" Content="&#xD7;" Style="{StaticResource BtnStyle}" Width="20" Height="20"
-                                                        Margin="3,0,0,0" FontSize="10"
-                                                        Command="{Binding DataContext.RemoveProjectRootCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                                                        CommandParameter="{Binding}"/>
-                                            </Grid>
-                                        </DataTemplate>
-                                    </ItemsControl.ItemTemplate>
-                                </ItemsControl>
                                 <TextBlock Text="SCAN PATHS" Foreground="{DynamicResource DimBrush}" FontSize="10" FontWeight="SemiBold"
                                            Margin="10,0,10,4"/>
                                 <TextBlock Text="Custom folders for DCC auto-scan" Foreground="{DynamicResource DimBrush}"
@@ -703,8 +699,8 @@
                               Cursor="Hand" HorizontalAlignment="Left"
                               IsChecked="{Binding ArgsPanelVisible}">
                     <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="&#x25B6;" FontSize="10" Foreground="{DynamicResource DimBrush}" Margin="0,0,6,0"/>
-                        <TextBlock Text="Quick commands" FontSize="11" Foreground="{DynamicResource DimBrush}"/>
+                        <TextBlock Text="&#x25B6;" FontSize="10" Margin="0,0,6,0"/>
+                        <TextBlock Text="Quick commands" FontSize="11"/>
                     </StackPanel>
                 </ToggleButton>
                 <StackPanel Grid.Row="1" Visibility="{Binding ArgsPanelVisible, Converter={StaticResource BoolToVis}}" Margin="0,4,0,0">
@@ -723,10 +719,13 @@
                 </StackPanel>
             </Grid>
 
-            <!-- Arguments -->
-            <TextBlock Text="ARGUMENTS" Foreground="{DynamicResource DimBrush}" FontSize="10" FontWeight="SemiBold"
+            </StackPanel>
+            </ScrollViewer>
+
+            <!-- Arguments (всегда видна) -->
+            <TextBlock Grid.Row="5" Text="ARGUMENTS" Foreground="{DynamicResource DimBrush}" FontSize="10" FontWeight="SemiBold"
                        Margin="0,8,0,4" FontFamily="Segoe UI"/>
-            <Grid>
+            <Grid Grid.Row="5">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
@@ -738,10 +737,9 @@
                 <Button Grid.Column="1" Content="x" Style="{StaticResource BtnStyle}" Width="30" Height="24"
                         Command="{Binding ClearArgsCommand}"/>
             </Grid>
-        </StackPanel>
 
         <!-- Status bar -->
-        <Border Grid.Row="5" Background="{DynamicResource PanelBrush}" Padding="20,6" Margin="0,14,0,0">
+        <Border Grid.Row="6" Background="{DynamicResource PanelBrush}" Padding="20,6" Margin="0,14,0,0">
             <TextBlock Text="{Binding StatusText}" Foreground="{DynamicResource DimBrush}" FontSize="11" FontFamily="Segoe UI"/>
         </Border>
     </Grid>
