@@ -164,8 +164,8 @@ namespace FLOMASTER
 
         private void ApplyScreenBounds()
         {
-            // Bounds физические (PMv2); WPF-координаты — DIP: делим на масштаб целевого монитора
-            var b = _screen.Bounds;
+            // WorkArea — минус панель задач: Normal-состояние оверлея = «всё видно, панель не перекрыта»
+            var b = _screen.WorkingArea;
             double k = ScaleOf(_screen);
             Left = b.Left / k; Top = b.Top / k;
             Width = b.Width / k; Height = b.Height / k;
@@ -419,8 +419,12 @@ namespace FLOMASTER
 
         private void CaptionMinimize_Click(object sender, RoutedEventArgs e) => WindowState = WindowState.Minimized;
 
-        private void CaptionMaximize_Click(object sender, RoutedEventArgs e) =>
+        private void CaptionMaximize_Click(object sender, RoutedEventArgs e)
+        {
+            // Maximized с WindowChrome уважает панель задач; Normal восстанавливается
+            // в WorkArea через ApplyScreenBounds (StateChanged)
             WindowState = WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized;
+        }
 
         private void CaptionClose_Click(object sender, RoutedEventArgs e) => Close();
 
