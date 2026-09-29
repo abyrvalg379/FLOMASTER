@@ -20,6 +20,7 @@ FLOMASTER smoke test (gate-скрипт, по образцу STUKACH smoke).
   14 Релизный zip: размер вменяемый, содержит exe и канонический конфиг, без вложенных zip
   15 Гигиена: нет файла `dist` в корне репо, .gitignore держит голый `dist`
   20 Юнит-тесты: dotnet test (OcioService + ConfigStore)
+  21 CLI: --list-profiles exit 0, негативный --launch exit 2
   16 Launch smoke: publish-exe стартует, жив через 5 с, конфиг %APPDATA% валиден
       (если FLOMASTER уже запущен — SKIP, чужой трей не трогаем)
   17 git status (только WARN, репо живое)
@@ -357,6 +358,21 @@ else:
     else:
         tail = "; ".join(out.strip().splitlines()[-3:])
         record("20 Юнит-тесты dotnet test", "FAIL", tail or f"exit {code}")
+
+# ------------------------------------------------------------ CLI
+
+section("CLI")
+
+cli_exe = PUBLISH / "FLOMASTER.exe"
+if not cli_exe.exists():
+    record("21 CLI --list-profiles / негативный --launch", "FAIL", "нет publish-exe")
+else:
+    out, code = run_cmd([str(cli_exe), "--list-profiles"], timeout=60)
+    neg, neg_code = run_cmd([str(cli_exe), "--launch", "__fl_no_such__"], timeout=60)
+    if code == 0 and neg_code == 2:
+        record("21 CLI --list-profiles / негативный --launch", "PASS", "exit 0 / exit 2")
+    else:
+        record("21 CLI --list-profiles / негативный --launch", "FAIL", f"list exit={code}, negative exit={neg_code}")
 
 # ------------------------------------------------------------ Launch smoke
 
