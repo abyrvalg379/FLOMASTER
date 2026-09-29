@@ -14,7 +14,7 @@ namespace FLOMASTER
     public partial class MainWindow : Window
     {
         private WinForms.NotifyIcon _trayIcon;
-        private const int BaseHeight = 540;
+        private const int BaseHeight = 508; // + 32px shapki = byvshie 540
 
         // ---- Глобальный хоткей Ctrl+Alt+F: показать/спрятать лаунчер поверх всего ----
         [DllImport("user32.dll")] private static extern bool RegisterHotKey(IntPtr hWnd, int id, uint fsModifiers, uint vk);
@@ -366,6 +366,10 @@ namespace FLOMASTER
             var quitItem = menu.Items.Add("Quit");
             quitItem.Click += (s, e) => { _trayIcon.Visible = false; _trayIcon.Dispose(); Close(); };
         }
+
+        private void CaptionMinimize_Click(object sender, RoutedEventArgs e) => WindowState = WindowState.Minimized;
+
+        private void CaptionClose_Click(object sender, RoutedEventArgs e) => Close();
 
         private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {

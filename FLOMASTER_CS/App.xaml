@@ -47,6 +47,9 @@
         <SolidColorBrush x:Key="AccentLightBrush" Color="#E87D0D"/>
         <SolidColorBrush x:Key="AccentDarkBrush" Color="#E87D0D"/>
 
+        <!-- Chrome: hover кнопки заголовка -->
+        <SolidColorBrush x:Key="CloseHoverBrush" Color="#E81123"/>
+
         <SolidColorBrush x:Key="{x:Static SystemColors.WindowBrushKey}" Color="#383838"/>
         <SolidColorBrush x:Key="{x:Static SystemColors.WindowTextBrushKey}" Color="#E0E0E0"/>
         <SolidColorBrush x:Key="{x:Static SystemColors.ControlBrushKey}" Color="#383838"/>
