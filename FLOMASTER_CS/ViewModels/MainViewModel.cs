@@ -291,6 +291,19 @@ namespace FLOMASTER.ViewModels
             Application.Current.Shutdown();
         }
 
+        /// <summary>Оверлей поверх всех окон (переключается в Settings и в оверлее).</summary>
+        public bool OverlayTopmost
+        {
+            get => _config.OverlayTopmost;
+            set
+            {
+                _config.OverlayTopmost = value;
+                _store.Save(_config);
+                OnPropertyChanged();
+                Logger.Log("Overlay", $"Topmost {(value ? "enabled" : "disabled")}", "info");
+            }
+        }
+
         /// <summary>Монитор оверлея (DeviceName): пишется при закрытии оверлея, читается при открытии.</summary>
         public string OverlayScreenDeviceName
         {

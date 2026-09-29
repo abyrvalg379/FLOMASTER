@@ -120,6 +120,13 @@ namespace FLOMASTER
             set => _vm.HotkeyEnabled = value;
         }
 
+        /// <summary>Оверлей поверх всех окон (наследует настройку лаунчера).</summary>
+        public bool OverlayTopmost
+        {
+            get => _vm.OverlayTopmost;
+            set => _vm.OverlayTopmost = value;
+        }
+
         // ---- Мониторы: открытие на мониторе лаунчера, слежение за перетаскиванием ----
 
         private void PositionOnOwnerScreen()

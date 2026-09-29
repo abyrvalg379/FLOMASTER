@@ -635,6 +635,8 @@
                                           FontSize="12" Margin="10,0,10,4" IsChecked="{Binding TopMostEnabled}"/>
                                 <CheckBox Content="Smooth animation" Foreground="{DynamicResource TextBrush}"
                                           FontSize="12" Margin="10,0,10,4" IsChecked="{Binding AnimationEnabled}"/>
+                                <CheckBox Content="Overlay on top (Ctrl+Alt+F)" Foreground="{DynamicResource TextBrush}"
+                                          FontSize="12" Margin="0,0,0,4" IsChecked="{Binding OverlayTopmost}"/>
                                 <CheckBox Content="Global hotkey (Ctrl+Alt+F)" Foreground="{DynamicResource TextBrush}"
                                           FontSize="12" Margin="10,0,10,12" IsChecked="{Binding HotkeyEnabled}"/>
                                 <TextBlock Text="DEFAULT OCIO" Foreground="{DynamicResource DimBrush}" FontSize="10" FontWeight="SemiBold"
