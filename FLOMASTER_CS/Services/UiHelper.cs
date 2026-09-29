@@ -30,6 +30,8 @@ namespace FLOMASTER.Services
                 SizeToContent = SizeToContent.Height,
                 WindowStartupLocation = WindowStartupLocation.CenterScreen,
                 ResizeMode = ResizeMode.NoResize,
+                WindowStyle = WindowStyle.None,
+                AllowsTransparency = true,
                 Background = Brushes.Transparent,
                 ShowInTaskbar = false
             };
@@ -97,6 +99,30 @@ namespace FLOMASTER.Services
             return confirmed ? input.Text : null;
         }
 
+        [System.Runtime.InteropServices.DllImport("dwmapi.dll")]
+        private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attr, ref int pref, int size);
+        private const int DwmwaWindowCornerPreference = 33;
+        private const int DwmwcpRound = 2;
+
+        /// <summary>Скругление углов окна (Windows 11): на Win10 API молча игнорируется.</summary>
+        public static void RoundCorners(Window w)
+        {
+            try
+            {
+                void Apply(object s, EventArgs e)
+                {
+                    var handle = new System.Windows.Interop.WindowInteropHelper(w).Handle;
+                    if (handle == IntPtr.Zero) return;
+                    int pref = DwmwcpRound;
+                    DwmSetWindowAttribute(handle, DwmwaWindowCornerPreference, ref pref, sizeof(int));
+                }
+                var existing = new System.Windows.Interop.WindowInteropHelper(w).Handle;
+                if (existing != IntPtr.Zero) Apply(null, null);   // handle уже есть (SourceInitialized уже сработал)
+                else w.SourceInitialized += Apply;
+            }
+            catch { /* Win10 и старше — просто острые углы */ }
+        }
+
         /// <summary>
         /// Окна-спутники в теме главного окна: своя полоса заголовка (название + крестик),
         /// без системной рамки, с тонкой обводкой. Контент переносится под полосу.
@@ -132,6 +158,9 @@ namespace FLOMASTER.Services
             close.Click += (_, _) => w.Close();
             caption.Children.Add(close);
 
+            w.AllowsTransparency = true;
+            RoundCorners(w);
+
             var chrome = new System.Windows.Shell.WindowChrome
             {
                 CaptionHeight = 32,
@@ -141,6 +170,7 @@ namespace FLOMASTER.Services
                 UseAeroCaptionButtons = false
             };
             System.Windows.Shell.WindowChrome.SetWindowChrome(w, chrome);
+            RoundCorners(w);
 
             var oldContent = w.Content;
             w.Content = null;
@@ -148,8 +178,12 @@ namespace FLOMASTER.Services
             {
                 BorderThickness = new Thickness(1),
                 BorderBrush = (Brush)Application.Current.Resources["BorderBrush"],
+                CornerRadius = new CornerRadius(10),
                 Child = oldContent as System.Windows.UIElement
             };
+            w.SizeChanged += (_, e) =>
+                border.Clip = new System.Windows.Media.RectangleGeometry(
+                    new Rect(0, 0, e.NewSize.Width, e.NewSize.Height), 10, 10);
             var dock = new DockPanel { LastChildFill = true };
             DockPanel.SetDock(caption, Dock.Top);
             dock.Children.Add(caption);
