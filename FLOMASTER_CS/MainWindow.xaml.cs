@@ -56,7 +56,8 @@ namespace FLOMASTER
                     e.PropertyName == nameof(viewModel.ArgsPanelVisible) ||
                     e.PropertyName == nameof(viewModel.SettingsPanelVisible) ||
                     e.PropertyName == nameof(viewModel.RolesPanelVisible) ||
-                    e.PropertyName == nameof(viewModel.ProfilesPanelVisible))
+                    e.PropertyName == nameof(viewModel.ProfilesPanelVisible) ||
+                    e.PropertyName == nameof(viewModel.ProjectsPanelVisible))
                 {
                     double h = BaseHeight;
                     if (viewModel.RecentPanelVisible) h += 200;
@@ -64,6 +65,7 @@ namespace FLOMASTER
                     if (viewModel.SettingsPanelVisible) h += 200;
                     if (viewModel.RolesPanelVisible) h += 220;
                     if (viewModel.ProfilesPanelVisible) h += 180;
+                    if (viewModel.ProjectsPanelVisible) h += 220;
                     AnimateToHeight(h, viewModel.AnimationEnabled);
                 }
             };

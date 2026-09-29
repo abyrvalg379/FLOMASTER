@@ -25,6 +25,9 @@ namespace FLOMASTER.ViewModels
         private bool _settingsPanelVisible;
         private bool _rolesPanelVisible;
         private bool _profilesPanelVisible;
+        private bool _projectsPanelVisible;
+        private string _browserSearchText = "";
+        private string _selectedBrowserRoot;
         private bool _autoStartEnabled;
         private bool _topMostEnabled;
         private bool _animationEnabled;
@@ -39,6 +42,7 @@ namespace FLOMASTER.ViewModels
         public ObservableCollection<Preset> Presets { get; } = new();
         public ObservableCollection<OcioConfig> OcioConfigs { get; } = new();
         public ObservableCollection<Profile> Profiles { get; } = new();
+        public ObservableCollection<string> ProjectRoots { get; } = new();
         public ObservableCollection<string> LogEntries { get; } = new();
         public ObservableCollection<string> RecentFiles { get; } = new();
 
@@ -61,6 +65,9 @@ namespace FLOMASTER.ViewModels
         public ICommand SaveProfileCommand { get; private set; }
         public ICommand ApplyProfileCommand { get; private set; }
         public ICommand DeleteProfileCommand { get; private set; }
+        public ICommand AddProjectRootCommand { get; private set; }
+        public ICommand RemoveProjectRootCommand { get; private set; }
+        public ICommand OpenProjectCommand { get; private set; }
 
         public MainViewModel()
         {
@@ -76,6 +83,7 @@ namespace FLOMASTER.ViewModels
             RefreshOcioConfigs();
             RefreshRecentFiles();
             RefreshProfiles();
+            RefreshProjectRoots();
 
             // Init themes
             foreach (var key in ThemeManager.ThemeOrder)
@@ -100,6 +108,9 @@ namespace FLOMASTER.ViewModels
             SaveProfileCommand = new RelayCommand(_ => SaveProfile());
             ApplyProfileCommand = new RelayCommand<Profile>(p => ApplyProfile(p));
             DeleteProfileCommand = new RelayCommand<Profile>(p => DeleteProfile(p));
+            AddProjectRootCommand = new RelayCommand(_ => AddProjectRoot());
+            RemoveProjectRootCommand = new RelayCommand<string>(p => RemoveProjectRoot(p));
+            OpenProjectCommand = new RelayCommand<string>(p => { if (p != null) OpenProjectFile(p); });
 
             // Init state
             _selectedTheme = ThemeManager.GetTheme(_config.Theme).Name;
@@ -158,6 +169,7 @@ namespace FLOMASTER.ViewModels
         public bool SettingsPanelVisible { get => _settingsPanelVisible; set => SetProperty(ref _settingsPanelVisible, value); }
         public bool RolesPanelVisible { get => _rolesPanelVisible; set => SetProperty(ref _rolesPanelVisible, value); }
         public bool ProfilesPanelVisible { get => _profilesPanelVisible; set => SetProperty(ref _profilesPanelVisible, value); }
+        public bool ProjectsPanelVisible { get => _projectsPanelVisible; set => SetProperty(ref _projectsPanelVisible, value); }
         public bool AutoStartEnabled
         {
             get => _autoStartEnabled;
@@ -346,11 +358,8 @@ namespace FLOMASTER.ViewModels
             StatusText = $"Added: {name}";
         }
 
-        private static readonly string[] ProjectExtensions =
-            { ".blend", ".spp", ".ma", ".mb", ".hip", ".hipl", ".hipnc", ".nk" };
-
         public bool IsProjectFile(string file) =>
-            ProjectExtensions.Contains(Path.GetExtension(file).ToLowerInvariant());
+            UiHelper.ProjectFileExtensions.Contains(Path.GetExtension(file).ToLowerInvariant());
 
         public void OpenProjectFile(string file)
         {
@@ -714,6 +723,110 @@ namespace FLOMASTER.ViewModels
             Logger.Log("Profile", $"Deleted '{profile.Name}'", "info");
         }
 
+        // ============ КОРНИ ПРОЕКТОВ для панели Projects (read-only, файловые операции вне скоупа) ============
+
+        // Файлы выбранного корня (плоский рекурсивный список, RelPath = путь от корня для метки)
+        public ObservableCollection<BrowserFile> BrowserFiles { get; } = new();
+
+        /// <summary>Выбранный в панели Projects корень.</summary>
+        public string SelectedBrowserRoot
+        {
+            get => _selectedBrowserRoot;
+            set { if (SetProperty(ref _selectedBrowserRoot, value)) RebuildBrowserFiles(); }
+        }
+
+        /// <summary>Поиск по имени внутри выбранного корня (пусто = все файлы).</summary>
+        public string BrowserSearchText
+        {
+            get => _browserSearchText;
+            set { if (SetProperty(ref _browserSearchText, value)) RebuildBrowserFiles(); }
+        }
+
+        private void RefreshProjectRoots()
+        {
+            ProjectRoots.Clear();
+            foreach (var r in _config.ProjectRoots) ProjectRoots.Add(r);
+            // держим выбор корня валидным; смена триггерит RebuildBrowserFiles
+            if (SelectedBrowserRoot == null || !ProjectRoots.Contains(SelectedBrowserRoot))
+                SelectedBrowserRoot = ProjectRoots.FirstOrDefault();
+        }
+
+        private void RebuildBrowserFiles()
+        {
+            BrowserFiles.Clear();
+            var root = SelectedBrowserRoot;
+            if (string.IsNullOrEmpty(root) || !Directory.Exists(root)) return;
+
+            var acc = new List<string>();
+            CollectProjectFiles(root, _browserSearchText?.Trim() ?? "", acc, 0);
+            // distinct по пути: junctions/reparse в дереве двоят файлы
+            acc = acc.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+            acc.Sort(StringComparer.OrdinalIgnoreCase);
+            foreach (var f in acc)
+            {
+                string rel;
+                try { rel = Path.GetRelativePath(root, f); } catch { rel = Path.GetFileName(f); }
+                BrowserFiles.Add(new BrowserFile { FullPath = f, RelPath = rel });
+            }
+        }
+
+        private static void CollectProjectFiles(string dir, string filter, List<string> acc, int depth)
+        {
+            if (depth > 6 || acc.Count >= 300) return;
+            try
+            {
+                foreach (var f in Directory.EnumerateFiles(dir))
+                    if (UiHelper.ProjectFileExtensions.Contains(Path.GetExtension(f).ToLowerInvariant()))
+                    {
+                        if (filter.Length == 0 || Path.GetFileName(f).Contains(filter, StringComparison.OrdinalIgnoreCase))
+                        {
+                            acc.Add(f);
+                            if (acc.Count >= 300) return;
+                        }
+                    }
+                foreach (var d in Directory.EnumerateDirectories(dir))
+                {
+                    bool skip;
+                    try
+                    {
+                        var attr = File.GetAttributes(d);
+                        // ReparsePoint (junction/symlink) пропускаем: зацикливание и дубли файлов
+                        skip = attr.HasFlag(FileAttributes.ReparsePoint) ||
+                               attr.HasFlag(FileAttributes.Hidden) || attr.HasFlag(FileAttributes.System);
+                    }
+                    catch { skip = true; }
+                    if (!skip) CollectProjectFiles(d, filter, acc, depth + 1);
+                }
+            }
+            catch (UnauthorizedAccessException) { }
+        }
+
+        private void AddProjectRoot()
+        {
+            var dialog = new System.Windows.Forms.FolderBrowserDialog { Description = "Select a folder containing projects" };
+            if (dialog.ShowDialog() != System.Windows.Forms.DialogResult.OK) return;
+            var path = dialog.SelectedPath;
+            if (_config.ProjectRoots.Contains(path)) { StatusText = "Project folder already added"; return; }
+            _config.ProjectRoots.Add(path);
+            ConfigManager.Save(_config);
+            RefreshProjectRoots();
+            StatusText = $"Project folder added: {Path.GetFileName(path)}";
+            Logger.Log("Browser", $"Project root added: {path}", "info");
+        }
+
+        private void RemoveProjectRoot(string? path)
+        {
+            if (path == null || !_config.ProjectRoots.Contains(path)) return;
+            var result = MessageBox.Show($"Remove project folder \"{path}\"?", "FLOMASTER",
+                MessageBoxButton.YesNo, MessageBoxImage.Question);
+            if (result != MessageBoxResult.Yes) return;
+            _config.ProjectRoots.Remove(path);
+            ConfigManager.Save(_config);
+            RefreshProjectRoots();
+            StatusText = "Project folder removed";
+        }
+
+
 
         private void RefreshRecentFiles()
         {
@@ -750,5 +863,12 @@ namespace FLOMASTER.ViewModels
     {
         public string Cmd { get; set; }
         public string Desc { get; set; }
+    }
+
+    /// <summary>Строка списка Projects: полный путь для открытия, относительный для метки.</summary>
+    public class BrowserFile
+    {
+        public string FullPath { get; set; } = "";
+        public string RelPath { get; set; } = "";
     }
 }

@@ -11,6 +11,7 @@ namespace FLOMASTER.Models
         public List<Profile> Profiles { get; set; } = new();
         public List<string> RecentFiles { get; set; } = new();
         public List<string> ScanPaths { get; set; } = new();
+        public List<string> ProjectRoots { get; set; } = new();
         public bool AnimationEnabled { get; set; } = true;
         public bool TopMostEnabled { get; set; } = false;
         public bool CheckUpdates { get; set; } = true;

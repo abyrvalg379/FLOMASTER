@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Media;
 using FLOMASTER.Models;
 
@@ -10,6 +11,12 @@ namespace FLOMASTER.Services
 {
     public static class UiHelper
     {
+        // Расширения файлов проектов: источник для drag&drop, Recent и панели Projects.
+        // Только родные форматы DCC. .fbx/.obj/.stl — обмен/выпечка, НЕ проекты (решение юзера;
+        // «STL» в пути E:\...\Pipeline\STL — это имя проекта, а не формат — не повторить мою путаницу).
+        public static readonly string[] ProjectFileExtensions =
+            { ".blend", ".spp", ".ma", ".mb", ".hip", ".hipl", ".hipnc", ".nk" };
+
         public static Window CreateLogWindow(string logContent, Window owner)
         {
             var logWindow = new Window
