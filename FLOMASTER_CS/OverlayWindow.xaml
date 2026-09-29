@@ -5,8 +5,8 @@
         WindowStyle="None"
         ResizeMode="CanResize"
         WindowStartupLocation="Manual"
-        Topmost="True"
         ShowInTaskbar="False"
+        Topmost="{Binding OverlayTopmost}"
         Background="{DynamicResource BgBrush}"
         PreviewKeyDown="Window_PreviewKeyDown">
 
@@ -134,10 +134,12 @@
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
+        <!-- Шапка -->
         <Grid Grid.Row="0" Margin="36,22,12,14">
             <StackPanel>
                 <TextBlock FontSize="38" FontWeight="Bold">
@@ -157,21 +159,7 @@
             </StackPanel>
         </Grid>
 
-        <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
-            <Grid MaxWidth="1780" HorizontalAlignment="Center" Margin="36,0,36,20">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="1.25*"/>
-                    <ColumnDefinition Width="1*"/>
-                    <ColumnDefinition Width="1*"/>
-                </Grid.ColumnDefinitions>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
-                </Grid.RowDefinitions>
-
-                <!-- ============ COLUMN 1: config + applications ============ -->
-                <StackPanel Grid.Column="0" Grid.Row="0" Margin="0,0,36,0">
-                            <!-- Поиск: фиксированная позиция, не двигается при фильтрации -->
+        <!-- Поиск: фиксированная позиция, не двигается при фильтрации -->
         <Grid Grid.Row="1" Margin="36,0,36,22">
             <TextBox x:Name="SearchBox" Height="44" FontSize="15" Padding="14,0"
                      VerticalContentAlignment="Center"
@@ -186,7 +174,21 @@
                        IsHitTestVisible="False"/>
         </Grid>
 
-<StackPanel Style="{StaticResource SectionLabelStyle}">
+        <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
+            <Grid MaxWidth="1780" HorizontalAlignment="Center" Margin="36,0,36,20">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="1.25*"/>
+                    <ColumnDefinition Width="1*"/>
+                    <ColumnDefinition Width="1*"/>
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <!-- ============ КОЛОНКА 1: конфиг + приложения ============ -->
+                <StackPanel Grid.Column="0" Grid.Row="0" Margin="0,0,36,0">
+                    <StackPanel Style="{StaticResource SectionLabelStyle}">
                         <Rectangle Width="26" Height="3" Fill="{DynamicResource AccentBrush}"
                                    VerticalAlignment="Center" Margin="0,0,12,0"/>
                         <TextBlock Text="COLOR CONFIG" Foreground="{DynamicResource TextBrush}"
@@ -207,16 +209,17 @@
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
 
-                    <StackPanel x:Name="AppsSection" Style="{StaticResource SectionLabelStyle}" Margin="0,20,0,14">
+                    <StackPanel Style="{StaticResource SectionLabelStyle}" Margin="0,20,0,14">
                         <Rectangle Width="26" Height="3" Fill="{DynamicResource AccentBrush}"
                                    VerticalAlignment="Center" Margin="0,0,12,0"/>
-                        <TextBlock Text="APPLICATIONS" Foreground="{DynamicResource TextBrush}"
+                        <TextBlock x:Name="AppsSection" Text="APPLICATIONS" Foreground="{DynamicResource TextBrush}"
                                    FontSize="14" FontWeight="SemiBold"/>
                     </StackPanel>
                     <ItemsControl ItemsSource="{Binding AppTiles}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <Button Style="{StaticResource TileButtonStyle}" Click="Tile_Click" Tag="{Binding}">
+                                <Button Style="{StaticResource TileButtonStyle}" Click="Tile_Click" Tag="{Binding}"
+                                        Visibility="{Binding TileVisibility}">
                                     <StackPanel Orientation="Horizontal">
                                         <Image Source="{Binding Icon}" Width="44" Height="44"
                                                RenderOptions.BitmapScalingMode="HighQuality" VerticalAlignment="Center"/>
@@ -232,14 +235,17 @@
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
+                    <TextBlock x:Name="AppsEmpty" Text="Nothing matches."
+                               Foreground="{DynamicResource DimBrush}" FontSize="12" FontStyle="Italic"
+                               Visibility="Collapsed"/>
                 </StackPanel>
 
-                <!-- ============ COLUMN 2: projects ============ -->
+                <!-- ============ КОЛОНКА 2: проекты ============ -->
                 <StackPanel Grid.Column="1" Grid.Row="0" Margin="0,0,36,0">
-                    <StackPanel x:Name="ProjectsSection" Style="{StaticResource SectionLabelStyle}">
+                    <StackPanel Style="{StaticResource SectionLabelStyle}">
                         <Rectangle Width="26" Height="3" Fill="{DynamicResource AccentBrush}"
                                    VerticalAlignment="Center" Margin="0,0,12,0"/>
-                        <TextBlock Text="PROJECTS" Foreground="{DynamicResource TextBrush}"
+                        <TextBlock x:Name="ProjectsSection" Text="PROJECTS" Foreground="{DynamicResource TextBrush}"
                                    FontSize="14" FontWeight="SemiBold"/>
                     </StackPanel>
                     <ItemsControl x:Name="RootsList" ItemsSource="{Binding RootChips}">
@@ -260,7 +266,8 @@
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
                                 <Button Style="{StaticResource RowButtonStyle}" Click="Tile_Click" Tag="{Binding}"
-                                        ToolTip="{Binding FullPath}">
+                                        ToolTip="{Binding FullPath}"
+                                        Visibility="{Binding TileVisibility}">
                                     <Grid>
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="Auto"/>
@@ -285,7 +292,7 @@
                                Foreground="{DynamicResource DimBrush}" FontSize="12" FontStyle="Italic"/>
                 </StackPanel>
 
-                <!-- ============ COLUMN 3: profiles + recent + roles ============ -->
+                <!-- ============ КОЛОНКА 3: профили + recent + роли ============ -->
                 <StackPanel Grid.Column="2" Grid.Row="0">
                     <StackPanel Style="{StaticResource SectionLabelStyle}">
                         <Rectangle Width="26" Height="3" Fill="{DynamicResource AccentBrush}"
@@ -296,7 +303,8 @@
                     <ItemsControl x:Name="ProfilesList" ItemsSource="{Binding ProfileTiles}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <Button Style="{StaticResource RowButtonStyle}" Click="Tile_Click" Tag="{Binding}">
+                                <Button Style="{StaticResource RowButtonStyle}" Click="Tile_Click" Tag="{Binding}"
+                                        Visibility="{Binding TileVisibility}">
                                     <StackPanel Orientation="Horizontal">
                                         <Border Width="30" Height="30" CornerRadius="15"
                                                 Background="{DynamicResource AccentBrush}" VerticalAlignment="Center">
@@ -319,17 +327,18 @@
                     <TextBlock x:Name="ProfilesEmpty" Text="No profiles yet — build one in the launcher's Profiles panel."
                                Foreground="{DynamicResource DimBrush}" FontSize="12" FontStyle="Italic"/>
 
-                    <StackPanel x:Name="RecentSection" Style="{StaticResource SectionLabelStyle}" Margin="0,22,0,14">
+                    <StackPanel Style="{StaticResource SectionLabelStyle}" Margin="0,22,0,14">
                         <Rectangle Width="26" Height="3" Fill="{DynamicResource AccentBrush}"
                                    VerticalAlignment="Center" Margin="0,0,12,0"/>
-                        <TextBlock Text="RECENT FILES" Foreground="{DynamicResource TextBrush}"
+                        <TextBlock x:Name="RecentSection" Text="RECENT FILES" Foreground="{DynamicResource TextBrush}"
                                    FontSize="14" FontWeight="SemiBold"/>
                     </StackPanel>
                     <ItemsControl x:Name="RecentList" ItemsSource="{Binding RecentTiles}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
                                 <Button Style="{StaticResource RowButtonStyle}" Click="Tile_Click" Tag="{Binding}"
-                                        ToolTip="{Binding FullPath}">
+                                        ToolTip="{Binding FullPath}"
+                                        Visibility="{Binding TileVisibility}">
                                     <Grid>
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="Auto"/>
@@ -353,10 +362,10 @@
                     <TextBlock x:Name="RecentEmpty" Text="Opened files will appear here."
                                Foreground="{DynamicResource DimBrush}" FontSize="12" FontStyle="Italic"/>
 
-                    <StackPanel x:Name="RolesSection" Style="{StaticResource SectionLabelStyle}" Margin="0,22,0,14">
+                    <StackPanel Style="{StaticResource SectionLabelStyle}" Margin="0,22,0,14">
                         <Rectangle Width="26" Height="3" Fill="{DynamicResource AccentBrush}"
                                    VerticalAlignment="Center" Margin="0,0,12,0"/>
-                        <TextBlock Text="OCIO ROLES" Foreground="{DynamicResource TextBrush}"
+                        <TextBlock x:Name="RolesSection" Text="OCIO ROLES" Foreground="{DynamicResource TextBrush}"
                                    FontSize="14" FontWeight="SemiBold"/>
                     </StackPanel>
                     <ItemsControl x:Name="RolesList" ItemsSource="{Binding RoleRows}">
@@ -376,7 +385,7 @@
             </Grid>
         </ScrollViewer>
 
-        <!-- Footer: arguments + quick settings -->
+        <!-- Низ: аргументы + настройки -->
         <Border Grid.Row="3" Background="{DynamicResource PanelBrush}" Padding="36,14,36,14">
             <Grid>
                 <Grid.ColumnDefinitions>
@@ -421,7 +430,9 @@
                     <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
                         <CheckBox Content="Always on top" IsChecked="{Binding TopMostEnabled}"
                                   Foreground="{DynamicResource TextBrush}" FontSize="12" Margin="0,0,22,0"/>
-                        <CheckBox Content="Ctrl+Alt+F hotkey" IsChecked="{Binding HotkeyEnabled}"
+                        <CheckBox Content="Overlay on top" IsChecked="{Binding OverlayTopmost}"
+                                  Foreground="{DynamicResource TextBrush}" FontSize="12" Margin="0,0,22,0"/>
+                        <CheckBox Content="Ctrl+Alt+F opens dashboard" IsChecked="{Binding HotkeyOpensDashboard}"
                                   Foreground="{DynamicResource TextBrush}" FontSize="12"/>
                     </StackPanel>
                 </StackPanel>
