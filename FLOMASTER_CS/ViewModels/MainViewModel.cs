@@ -291,6 +291,17 @@ namespace FLOMASTER.ViewModels
             Application.Current.Shutdown();
         }
 
+        /// <summary>Монитор оверлея (DeviceName): пишется при закрытии оверлея, читается при открытии.</summary>
+        public string OverlayScreenDeviceName
+        {
+            get => _config.OverlayScreenDeviceName;
+            set
+            {
+                _config.OverlayScreenDeviceName = value ?? "";
+                _store.Save(_config);
+            }
+        }
+
         /// <summary>Глобальный хоткей Ctrl+Alt+F (регистрация — в MainWindow, там hwnd).</summary>
         public bool HotkeyEnabled
         {
