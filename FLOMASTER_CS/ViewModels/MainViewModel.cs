@@ -291,6 +291,20 @@ namespace FLOMASTER.ViewModels
             Application.Current.Shutdown();
         }
 
+        /// <summary>Глобальный хоткей Ctrl+Alt+F (регистрация — в MainWindow, там hwnd).</summary>
+        public bool HotkeyEnabled
+        {
+            get => _config.HotkeyEnabled;
+            set
+            {
+                _config.HotkeyEnabled = value;
+                _store.Save(_config);
+                OnPropertyChanged();
+                StatusText = value ? "Global hotkey on (Ctrl+Alt+F)" : "Global hotkey off";
+                Logger.Log("Hotkey", $"Global hotkey {(value ? "enabled" : "disabled")}", "info");
+            }
+        }
+
         public bool AnimationEnabled
         {
             get => _animationEnabled;
@@ -349,7 +363,7 @@ namespace FLOMASTER.ViewModels
         {
             if (string.IsNullOrWhiteSpace(exePath) || !File.Exists(exePath)) { StatusText = "Executable not found"; return; }
             var defaultName = Path.GetFileNameWithoutExtension(exePath);
-            var name = Microsoft.VisualBasic.Interaction.InputBox("Preset name:", "FLOMASTER", defaultName);
+            var name = UiHelper.ShowInputDialog("New preset", "Preset name:", defaultName);
             if (string.IsNullOrWhiteSpace(name)) return;
             var preset = new Preset { Name = name, Exe = exePath };
             _config.Presets.Add(preset);
@@ -390,7 +404,7 @@ namespace FLOMASTER.ViewModels
             if (dialog.ShowDialog() != true) return;
             var ocioPath = dialog.FileName;
             var defaultName = Path.GetFileNameWithoutExtension(Path.GetDirectoryName(ocioPath)) + " " + Path.GetFileNameWithoutExtension(ocioPath);
-            var name = Microsoft.VisualBasic.Interaction.InputBox("OCIO config name:", "FLOMASTER", defaultName);
+            var name = UiHelper.ShowInputDialog("New OCIO config", "OCIO config name:", defaultName);
             if (string.IsNullOrWhiteSpace(name)) return;
             if (_ocio.AddOcioConfig(_config, name, ocioPath))
             {
@@ -664,7 +678,7 @@ namespace FLOMASTER.ViewModels
         private void SaveProfile()
         {
             if (SelectedPreset == null) { StatusText = "No app selected"; return; }
-            var name = Microsoft.VisualBasic.Interaction.InputBox("Profile name:", "FLOMASTER", $"{SelectedPreset.Name} profile");
+            var name = UiHelper.ShowInputDialog("New profile", "Profile name:", $"{SelectedPreset.Name} profile");
             if (string.IsNullOrWhiteSpace(name)) return;
 
             var existing = _config.Profiles.FirstOrDefault(p => p.Name == name);

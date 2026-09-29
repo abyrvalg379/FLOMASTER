@@ -15,6 +15,8 @@ namespace FLOMASTER.Models
         public bool AnimationEnabled { get; set; } = true;
         public bool TopMostEnabled { get; set; } = false;
         public bool CheckUpdates { get; set; } = true;
+        /// <summary>Глобальный хоткей Ctrl+Alt+F: показать/спрятать лаунчер поверх всего.</summary>
+        public bool HotkeyEnabled { get; set; } = true;
     }
 
     public class OcioConfig
@@ -72,6 +74,8 @@ namespace FLOMASTER.Models
         public bool AnimationEnabled { get; set; } = true;
         public bool TopMostEnabled { get; set; } = false;
         public bool CheckUpdates { get; set; } = true;
+        /// <summary>Глобальный хоткей Ctrl+Alt+F: показать/спрятать лаунчер поверх всего.</summary>
+        public bool HotkeyEnabled { get; set; } = true;
         public List<Profile> Profiles { get; set; } = new();
         public List<string> ProjectRoots { get; set; } = new();
     }

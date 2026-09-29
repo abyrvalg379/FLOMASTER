@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Linq;
 using System.Windows;
 using System.Windows.Media.Animation;
@@ -14,6 +15,18 @@ namespace FLOMASTER
     {
         private WinForms.NotifyIcon _trayIcon;
         private const int BaseHeight = 540;
+
+        // ---- Глобальный хоткей Ctrl+Alt+F: показать/спрятать лаунчер поверх всего ----
+        [DllImport("user32.dll")] private static extern bool RegisterHotKey(IntPtr hWnd, int id, uint fsModifiers, uint vk);
+        [DllImport("user32.dll")] private static extern bool UnregisterHotKey(IntPtr hWnd, int id);
+        [DllImport("user32.dll")] private static extern bool SetWindowPos(IntPtr hWnd, IntPtr after, int x, int y, int cx, int cy, uint flags);
+        private const int HOTKEY_ID = 0xF10;
+        private const int WM_HOTKEY = 0x0312;
+        private const uint MOD_ALT = 0x1, MOD_CONTROL = 0x2, MOD_NOREPEAT = 0x4000, VK_F = 0x46;
+        private static readonly IntPtr HwndTopmost = new IntPtr(-1);
+        private static readonly IntPtr HwndNotTopmost = new IntPtr(-2);
+        private const uint SwpNomove = 0x2, SwpNosize = 0x1, SwpShowwindow = 0x40;
+        private bool _hotkeyRegistered;
 
         public MainWindow()
         {
@@ -53,6 +66,10 @@ namespace FLOMASTER
                 if (e.PropertyName == nameof(viewModel.SelectedTheme))
                 {
                     ApplyTheme(viewModel.SelectedTheme);
+                }
+                else if (e.PropertyName == nameof(viewModel.HotkeyEnabled))
+                {
+                    ApplyHotkey(viewModel.HotkeyEnabled);
                 }
                 else if (e.PropertyName == nameof(viewModel.RecentPanelVisible) ||
                     e.PropertyName == nameof(viewModel.ArgsPanelVisible) ||
@@ -140,8 +157,61 @@ namespace FLOMASTER
                 };
             }
 
+            // Global hotkey: регистрация требует hwnd
+            SourceInitialized += (s, e) => ApplyHotkey(viewModel.HotkeyEnabled);
+
             // Setup tray
             SetupTray(viewModel);
+        }
+
+        private void ApplyHotkey(bool enabled)
+        {
+            var handle = new System.Windows.Interop.WindowInteropHelper(this).Handle;
+            if (handle == IntPtr.Zero) return;
+            if (_hotkeyRegistered)
+            {
+                UnregisterHotKey(handle, HOTKEY_ID);
+                _hotkeyRegistered = false;
+            }
+            if (enabled)
+            {
+                // MOD_NOREPEAT: автоповтор клавиатуры не дёргает тоггл
+                _hotkeyRegistered = RegisterHotKey(handle, HOTKEY_ID, MOD_CONTROL | MOD_ALT | MOD_NOREPEAT, VK_F);
+                if (_hotkeyRegistered)
+                {
+                    var source = System.Windows.Interop.HwndSource.FromHwnd(handle);
+                    source?.AddHook(WndProc);
+                    Logger.Log("Hotkey", "Registered Ctrl+Alt+F", "info");
+                }
+                else Logger.Log("Hotkey", "RegisterHotKey failed (combination busy?)", "warn");
+            }
+        }
+
+        private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
+        {
+            if (msg == WM_HOTKEY && wParam.ToInt32() == HOTKEY_ID)
+            {
+                ToggleWindow();
+                handled = true;
+            }
+            return IntPtr.Zero;
+        }
+
+        /// <summary>Активно и видно — спрятать; иначе показать и поднять поверх всего.</summary>
+        private void ToggleWindow()
+        {
+            if (IsVisible && IsActive)
+            {
+                Hide();
+                return;
+            }
+            Show();
+            WindowState = WindowState.Normal;
+            Activate();
+            // всплытие поверх DCC: Win32-topmost на мгновение, WPF-биндинг Topmost не трогаем
+            var handle = new System.Windows.Interop.WindowInteropHelper(this).Handle;
+            SetWindowPos(handle, HwndTopmost, 0, 0, 0, 0, SwpNomove | SwpNosize | SwpShowwindow);
+            SetWindowPos(handle, HwndNotTopmost, 0, 0, 0, 0, SwpNomove | SwpNosize);
         }
 
         private MainViewModel? _viewModel;
@@ -299,6 +369,7 @@ namespace FLOMASTER
 
         private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {
+            ApplyHotkey(false);
             if (_trayIcon != null)
             {
                 _trayIcon.Visible = false;
