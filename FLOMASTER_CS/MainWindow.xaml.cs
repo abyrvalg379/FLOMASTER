@@ -14,7 +14,7 @@ namespace FLOMASTER
     public partial class MainWindow : Window
     {
         private WinForms.NotifyIcon _trayIcon;
-        private const int BaseHeight = 508; // + 32px shapki = byvshie 540
+        private const int BaseHeight = 560; // свёрнутое окно вмещает весь стек вкладок + ARGUMENTS (32 из них — шапка)
 
         // ---- Глобальный хоткей Ctrl+Alt+F: показать/спрятать лаунчер поверх всего ----
         [DllImport("user32.dll")] private static extern bool RegisterHotKey(IntPtr hWnd, int id, uint fsModifiers, uint vk);
