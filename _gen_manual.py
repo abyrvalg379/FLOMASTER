@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*-
-r"""FLOMASTER - Руководство пользователя (RU + EN). Генератор DOCX. Версия V2.4.
+r'''FLOMASTER - Руководство пользователя (RU + EN). Генератор DOCX. Версия V2.5.
 
-Стиль - общий модуль _docstyle.py (язык обложек семьи), акцент FLOMASTER #E87D0D.
+Хелперы стиля наследуют семейства STUKACH/LAMPOCHKA/TOCHKA,
+акцент - фирменный оранжевый FLOMASTER #E87D0D.
 Запуск:  python _gen_manual.py
 Затем:   python finish_toc.py FLOMASTER_Manual_RU   (и то же для _EN)
 Выход:   work\docs\FLOMASTER_Manual_RU.docx/_EN.docx (+ .pdf после finish_toc)
-"""
+'''
 
 import json
 
@@ -24,7 +25,7 @@ def h2(doc, text):
 
 
 def p(doc, text, bullet=False, italic=False, grey=False):
-    return ds.p(doc, text, bullet=bullet, italic=italic, grey=False) if False else ds.p(doc, text, bullet=bullet, italic=italic, grey=grey)
+    return ds.p(doc, text, bullet=bullet, italic=italic, grey=grey)
 
 
 def kv_note(doc, text):
@@ -46,7 +47,7 @@ def _save(doc, out):
 
 def build_ru():
     ds.H1_REGISTRY.clear()
-    doc = ds.new_doc('FLOMASTER', 'Руководство пользователя', 'V2.4  -  WINDOWS 10/11')
+    doc = ds.new_doc('FLOMASTER', 'Руководство пользователя', 'V2.5  -  WINDOWS 10/11')
 
     p(doc, 'FLOMASTER - лаунчер для рабочих приложений трёхмерной графики: одна кнопка '
            'запускает Blender, Maya, Houdini, Nuke, DaVinci Resolve, Unreal Engine или '
@@ -67,7 +68,8 @@ def build_ru():
         'автоскан установленных приложений: реестр Windows, манифесты Epic Games и файловый поиск — Blender, K-Cycles, Maya, Houdini, Nuke, DaVinci Resolve, Unreal Engine, Substance Painter;',
         'пресеты запуска: своё имя, свой exe, свои аргументы запуска;',
         'профили запуска: именованные связки «приложение + OCIO-конфиг + аргументы», переключение проектов одним нажатием;',
-        'панель Projects: браузер файлов проектов по вашим папкам, открытие прямо в лаунчере;',
+        'полноэкранный дашборд по Ctrl+Alt+F: конфиг, приложения, проекты, профили и роли — поверх всего;',
+        'маршрутизация файлов проектов: .spp открывается в Substance Painter, .blend — в Blender, .hip — в Houdini;',
         'роли OCIO: переопределение цветовых ролей на уровне пресета без правки конфига;',
         'командная строка для батников и ферм;',
         'перенос настроек между машинами файлом;',
@@ -83,13 +85,11 @@ def build_ru():
         'Распакуйте архив в удобную папку (например, C:\\Program Files\\FLOMASTER).',
         'Запустите FLOMASTER.exe. Сборка самодостаточная: .NET 8 входит в комплект, ничего доустанавливать не нужно.',
         'Окно открывается в правом верхнем углу экрана. Пользовательские данные (настройки и журнал) создаются в %APPDATA%\\FLOMASTER\\.',
+        'Автообновление: при старте лаунчер сверяет свою версию с последним релизом на GitHub. Если вышла новая — она скачивается в фоне, без вашего участия; в Settings появится кнопка Restart and install.',
     ):
         p(doc, b, bullet=True)
 
     h2(doc, '2.1 Автообновление')
-    p(doc, 'При старте (через несколько секунд после запуска) лаунчер сверяет свою версию с '
-           'последним релизом на GitHub. Если вышла новая — она скачивается в фоне, без вашего '
-           'участия; в Settings появится кнопка Restart and install.')
     add_table(doc, [
         ('Этап', 'Что происходит'),
         ('Проверка при старте', 'через ~3 секунды после запуска версия сверяется с последним релизом на GitHub'),
@@ -112,7 +112,7 @@ def build_ru():
         'Проверьте в приложении палитру цветовых пространств (в Blender — Color Management в свойствах сцены).',
         'Раскройте панель Projects, добавьте папку с проектами кнопкой «+» и откройте файл кликом — он запустится в выбранном приложении.',
         'Нажмите Save current as profile в панели Profiles — текущая связка «приложение + конфиг + аргументы» сохранена под именем.',
-        'Ctrl+Alt+F прячет и возвращает лаунчер поверх любого приложения.',
+        'Ctrl+Alt+F открывает полноэкранный дашборд поверх всего: конфиг, приложения, проекты, профили и роли на одном экране.',
     ):
         p(doc, b, bullet=True)
 
@@ -152,21 +152,40 @@ def build_ru():
            'проводнике вы открываете нужный файл одним кликом.')
     for b in (
         'кнопкой «+» добавьте папку, где хранятся проекты (корень); «−» удаляет выбранный корень;',
-        'раскройте панель Projects: список показывает все проектные файлы корня рекурсивно, с относительными путями;',
-        'поле поиска фильтрует список по имени файла;',
-        'клик по файлу открывает его текущим приложением с OCIO-конфигом и добавляет в Recent.',
+        'список показывает все проектные файлы корня рекурсивно, с относительными путями;',
+        'клик по файлу открывает его в правильном приложении: .spp — в Substance Painter, .blend — в Blender, .hip — в Houdini (приложение подбирается по расширению, даже если в списке выбрано другое);',
+        'Recent — то же правило: недавние файлы переоткрываются в своих приложениях.',
     ):
         p(doc, b, bullet=True)
-    p(doc, 'В списке только родные форматы DCC: .blend, .spp, .ma, .mb, .hip, .hipl, .hipnc, '
-           '.nk. Экспортные форматы (.fbx, .obj, .stl) сознательно не показываются — это '
-           'выпечка, а не проекты.')
 
-    h1(doc, '7. Файлы проектов')
-    p(doc, 'Перетащите файл проекта на окно лаунчера — файл откроется в выбранном приложении с '
-           'применённым OCIO-конфигом. Те же файлы доступны в списке Recent — клик переоткрывает '
-           'их без проводника. Поддерживаются: .blend, .spp, .ma, .mb, .hip, .hipl, .hipnc, .nk.')
+    h1(doc, '7. Полноэкранный дашборд')
+    p(doc, 'Ctrl+Alt+F открывает лаунчер поверх всего окна: конфиг, приложения, проекты, '
+           'профили, роли и последние файлы — на одном экране. Повторное Ctrl+Alt+F или Esc '
+           'закрывает дашборд.')
+    for b in (
+        'ЦВЕТОВОЙ КОНФИГ: клик по чипу меняет конфиг для всех последующих запусков;',
+        'ПРИЛОЖЕНИЯ: плитки с иконками exe, клик = запуск;',
+        'ПРОЕКТЫ: чипы корней и файлы проектов, клик открывает файл в правильном приложении;',
+        'ПРОФИЛИ: клик применяет профиль и запускает приложение;',
+        'OCIO ROLES: клик по роли открывает пикер colorspaces, Reset возвращает значения конфига;',
+        'RECENT FILES: последние файлы, клик переоткрывает;',
+        'ARGUMENTS: аргументы, применяемые к запускам (в т.ч. из дашборда);',
+        'SETTINGS: тема, режим «поверх окон» и хоткей.',
+    ):
+        p(doc, b, bullet=True)
+    p(doc, 'Дашборд открывается на мониторе, где был закрыт в прошлый раз (запоминается в '
+           'настройках), и перетаскивается за шапку между мониторами — под каждый монитор '
+           'подстраиваются размеры. Если поверх окон не нужно — снимите галку Overlay on top '
+           'в настройках дашборда.')
 
-    h1(doc, '8. Роли OCIO')
+    h1(doc, '8. Файлы проектов')
+    p(doc, 'Перетащите файл проекта на окно лаунчера — файл откроется в правильном приложении с '
+           'применённым OCIO-конфигом: .spp — в Substance Painter, .blend — в Blender, .hip — в '
+           'Houdini (приложение подбирается по расширению, даже если в списке выбрано другое). '
+           'Поддерживаются: .blend, .spp, .ma, .mb, .hip, .hipl, .hipnc, .nk. Последние открытые '
+           'файлы доступны в списке Recent — клик переоткрывает их в своих приложениях.')
+
+    h1(doc, '9. Роли OCIO')
     p(doc, 'Панель Roles показывает, во что превращаются ключевые цветовые роли выбранного '
            'конфига (scene_linear, data, default_byte и другие) — и позволяет переопределить их '
            'на уровень пресета.')
@@ -178,7 +197,7 @@ def build_ru():
     ):
         p(doc, b, bullet=True)
 
-    h1(doc, '9. Как устроен OCIO')
+    h1(doc, '10. Как устроен OCIO')
     p(doc, 'Большинство приложений читают путь к конфигу из переменной окружения OCIO - лаунчер '
            'проставляет её при запуске. Unreal Engine переменную не читает: ему путь передаётся '
            'аргументом -ocio="путь" - лаунчер делает это сам.')
@@ -195,7 +214,7 @@ def build_ru():
     p(doc, 'Роли по умолчанию в комплектном конфиге настроены под типовой цикл текстур: '
            '8-битные изображения открываются как raw, float-изображения (EXR) - как acescg.')
 
-    h1(doc, '10. Темы и шапка окна')
+    h1(doc, '11. Темы и шапка окна')
     p(doc, 'Семь цветовых схем - по одной на приложение из пайплайна. Тема меняется в Settings '
            'и красит весь интерфейс: кнопки, галочки, скроллбар, выпадающие меню, полосу '
            'заголовка окна и состояние кнопки Launch при наведении.')
@@ -212,22 +231,23 @@ def build_ru():
     p(doc, 'Полоса заголовка окна — собственная, в цвете темы: слева имя приложения, справа '
            'кнопки свернуть и закрыть. Перетаскивание окна — за полосу заголовка.')
 
-    h1(doc, '11. Настройки')
+    h1(doc, '12. Настройки')
     add_table(doc, [
         ('Параметр', 'Что делает'),
         ('Check for updates on start', 'проверка автообновления при старте'),
         ('Theme', 'цветовая тема интерфейса'),
         ('Start with Windows', 'автозапуск свёрнутым в трей вместе с Windows'),
         ('Always on top', 'окно поверх всех'),
+        ('Overlay on top', 'полноэкранный дашборд поверх всех окон'),
+        ('Global hotkey (Ctrl+Alt+F)', 'глобальный хоткей: показать/спрятать дашборд'),
         ('Smooth animation', 'включить/выключить анимацию панелей'),
-        ('Global hotkey (Ctrl+Alt+F)', 'глобальный хоткей: показать/спрятать лаунчер поверх всего'),
         ('Default OCIO', 'конфиг по умолчанию для запусков из трея'),
         ('Scan paths', 'дополнительные папки для автоскана'),
         ('SYNC', 'экспорт/импорт настроек для переноса на другую машину'),
         ('Shortcuts', 'ярлыки в меню Пуск и на рабочем столе'),
     ], [6.0, 11.0])
 
-    h1(doc, '12. Трей и журнал')
+    h1(doc, '13. Трей и журнал')
     p(doc, 'Закрытие окна сворачивает лаунчер в системный трей - он продолжает работать. Меню '
            'трея: быстрый запуск пресетов, секция PROFILES (запуск профилей одной кнопкой) и '
            'показ окна.')
@@ -236,11 +256,11 @@ def build_ru():
            'конфиг OCIO, код возврата. Строка «Set OCIO=...» - маркер того, что конфиг реально '
            'передан. Файл журнала - %APPDATA%\\FLOMASTER\\flomaster.log.')
 
-    h1(doc, '13. Командная строка')
+    h1(doc, '14. Командная строка')
     p(doc, 'Лаунчер работает без окна - для батников, ферм и скриптов:')
     p(doc, 'FLOMASTER.exe --list-profiles', bullet=False, italic=True)
     p(doc, 'FLOMASTER.exe --launch "Профиль"', bullet=False, italic=True)
-    p(doc, 'FLOMASTER.exe --launch "Профиль" --project "D:\\projects\\A\\shot_042.blend"', bullet=False, italic=True)
+    p(doc, 'FLOMASTER.exe --launch "Профиль" --project "D:\\проекты\\А\\shot_042.blend"', bullet=False, italic=True)
     p(doc, 'Профиль разворачивается в приложение + OCIO-конфиг + аргументы - та же среда, что и '
            'ручной запуск. --project добавляет файл к аргументам профиля (или подставляется '
            'вместо плейсхолдера {file}, если он есть в аргументах профиля).')
@@ -253,7 +273,7 @@ def build_ru():
     p(doc, 'Вывод идёт в консоль, из которой запущен exe. Переменные окружения и OCIO передаются '
            'точно так же, как при запуске из окна.')
 
-    h1(doc, '14. Перенос на другую машину')
+    h1(doc, '15. Перенос на другую машину')
     p(doc, 'Настройки переносятся файлом: Settings → SYNC → Export settings сохраняет профили, '
            'корни проектов, тему и опции в файл flomaster_setup_дата.flomaster. На другой машине: '
            'установите лаунчер, нажмите Import settings и выберите этот файл.')
@@ -266,7 +286,7 @@ def build_ru():
     p(doc, 'Автоскан на новой машине подхватит установленные приложения из реестра и манифестов '
            'Epic — как правило, пресеты собираются сами.')
 
-    h1(doc, '15. Файлы и папки')
+    h1(doc, '16. Файлы и папки')
     add_table(doc, [
         ('Путь', 'Содержимое'),
         ('папка установки', 'FLOMASTER.exe, flomaster.ico, ocio/ (конфиг ACES 1.2 + luts/), LICENSE.txt'),
@@ -275,16 +295,18 @@ def build_ru():
     p(doc, 'Программа и пользовательские данные разделены намеренно: переустановка и обновление '
            'не трогают настройки, пресеты и журнал.')
 
-    h1(doc, '16. Сценарии')
+    h1(doc, '17. Сценарии')
     for t in (
         ('Единый цвет на старте дня',
          'Окно лаунчера → Launch у нужного приложения. Все приложения дня стартуют с одним и тем же '
          'конфигом - передавать файлы между ними можно без цветовых сюрпризов.'),
         ('Переключение между проектами',
          'Настройте профили по одному на проект и переключайте их в панели Profiles одним нажатием. '
-         'Из трея профиль запускается сразу, без окна лаунчера.'),
+         'Из трея профиль запускается сразу, без окна лаунчера. Полноэкранный дашборд (Ctrl+Alt+F) '
+         'показывает конфиг, приложения и файлы проектов на одном экране.'),
         ('Открыть файл проекта не выходя из задачи',
-         'Панель Projects → корень → клик по файлу. Поиск по имени находит файл в глубине папок.'),
+         'Панель Projects → корень → клик по файлу. Поиск по имени находит файл в глубине папок. '
+         'Файл откроется в правильном приложении — маршрутизация по расширению работает и в дашборде.'),
         ('Текстуры: что откроется и в чём',
          'Float-картинки (EXR) открываются как acescg - цветовой цикл корректен сразу. 8-битные - как '
          'raw: для служебных карт (нормали, маски, roughness) это нужный дефолт без ручных кликов. '
@@ -294,16 +316,17 @@ def build_ru():
          '--project "сцена.blend". Код возврата 0 — процесс ушёл.'),
         ('Несколько версий одного приложения',
          'Создайте по пресету на версию (перетаскивание exe + имя) - и запускайте нужную одним '
-         'нажатием; аргументы версии живут в Quick Commands пресета.'),
+         'нажатием; аргументы версии живут в Quick commands пресета.'),
     ):
         h2(doc, t[0])
         p(doc, t[1])
 
-    h1(doc, '17. Решение проблем')
+    h1(doc, '18. Решение проблем')
     add_table(doc, [
         ('Симптом', 'Причина', 'Что делать'),
         ('Приложение не появилось после установки', 'нестандартная папка установки', 'добавьте папку в Settings → Scan paths или создайте пресет перетаскиванием exe'),
         ('Ctrl+Alt+F ничего не делает', 'комбинация занята другим приложением', 'смотрите warn в журнале; освободите комбинацию или отключите/включите галку Global hotkey заново'),
+        ('Оверлей открылся не на том мониторе', 'память монитора обновляется при закрытии оверлея', 'перетащите оверлей за шапку на нужный монитор — он запомнится'),
         ('Профиль не запускается из командной строки, код 2', 'профиль/пресет/файл не найдены', 'проверьте имя профиля через --list-profiles; пресеты матчатся по имени'),
         ('Файл проекта не виден в панели Projects', 'показываются только родные форматы DCC (.blend, .spp, .ma, .mb, .hip, .hipl, .hipnc, .nk)', 'используйте поиск по имени или перетащите файл в окно напрямую'),
         ('Unreal запустился не с тем цветом', 'Unreal не читает переменную OCIO', 'не убирайте аргумент -ocio= в аргументах пресета - лаунчер передаёт конфиг именно им'),
@@ -311,8 +334,6 @@ def build_ru():
         ('Цветовая 8-битная карта открылась как raw', 'роль default_byte в конфиге = raw (дефолт под служебные карты)', 'назначьте этой карте colorspace вручную: 8-битному цвету - sRGB-пространство, float - acescg'),
         ('Окно журнала не видно', 'открывается сбоку от лаунчера, той же высоты', 'посмотрите левее/правее окна лаунчера'),
         ('Настройки и журнал «пропали» после переустановки', 'они живут не в папке программы', 'ищите в %APPDATA%\\FLOMASTER\\ - обновления их не трогают'),
-        ('После переноса настроек пресеты указывают не туда', 'пути exe машинно-специфичны и не переносятся', 'выполните Rescan на новой машине — пресеты найдутся в реестре'),
-        ('Кнопка Restart and install не появляется', 'версия уже актуальна, проверка отключена или загрузка ещё идёт', 'смотрите строки Update в журнале: Up to date — версия свежая; галка Check for updates on start включает проверку'),
     ], [4.6, 5.4, 7.0])
 
     _save(doc, OUT_RU)
@@ -324,7 +345,7 @@ def build_ru():
 
 def build_en():
     ds.H1_REGISTRY.clear()
-    doc = ds.new_doc('FLOMASTER', 'User Guide', 'V2.4  -  WINDOWS 10/11')
+    doc = ds.new_doc('FLOMASTER', 'User Guide', 'V2.5  -  WINDOWS 10/11')
 
     p(doc, 'FLOMASTER is a launcher for 3D graphics applications: one button starts Blender, '
            'Maya, Houdini, Nuke, DaVinci Resolve, Unreal Engine or Substance Painter with a '
@@ -345,7 +366,8 @@ def build_en():
         'auto-scan of installed applications from the Windows registry, Epic Games manifests and file search — Blender, K-Cycles, Maya, Houdini, Nuke, DaVinci Resolve, Unreal Engine, Substance Painter;',
         'launch presets: your own name, exe and launch arguments;',
         'launch profiles: named app + OCIO config + arguments bundles, one-click project switching;',
-        'Projects panel: a project file browser over your own folders, opening files right in the launcher;',
+        'fullscreen overlay dashboard by Ctrl+Alt+F: color config, applications, projects, profiles, roles and recent files — over everything;',
+        'project routing: .spp opens in Substance Painter, .blend in Blender, .hip in Houdini;',
         'OCIO roles: per-preset role overrides without touching the config;',
         'a command line for batch files and farms;',
         'settings transfer between machines via a file;',
@@ -361,13 +383,11 @@ def build_en():
         'Extract the archive to a folder of your choice (e.g. C:\\Program Files\\FLOMASTER).',
         'Run FLOMASTER.exe. The build is self-contained: .NET 8 is bundled, nothing else to install.',
         'The window opens in the top-right corner of the screen. User data (settings and the log) is created in %APPDATA%\\FLOMASTER\\.',
+        'Auto-update: on start the launcher compares its version against the latest release on GitHub. If a new one is out, it is downloaded in the background with no action on your side; a Restart and install button appears in Settings.',
     ):
         p(doc, b, bullet=True)
 
     h2(doc, '2.1 Auto-update')
-    p(doc, 'A few seconds after launch the launcher compares its version against the latest '
-           'release on GitHub. If a new one is out, it is downloaded in the background with no '
-           'action on your side; a Restart and install button appears in Settings.')
     add_table(doc, [
         ('Stage', 'What happens'),
         ('Check at startup', '~3 seconds after launch the version is compared against the latest GitHub release'),
@@ -388,9 +408,9 @@ def build_en():
         'Start FLOMASTER — the auto-scan finds installed applications.',
         'Pick an application in the APPLICATION list and click Launch — it starts with the OCIO config.',
         'Check the color spaces in the application (in Blender — the Color Management tab in scene properties).',
-        'Expand the Projects panel, add a project folder with the "+" button and open a file with a click — it starts in the selected application.',
+        'Expand the Projects panel, add a project folder with the "+" button and open a file with a click — it starts in the matching application.',
         'Press Save current as profile in the Profiles panel — the current app + config + arguments bundle is saved under a name.',
-        'Ctrl+Alt+F hides and restores the launcher above any application.',
+        'Ctrl+Alt+F opens the fullscreen dashboard over everything: color config, applications, projects, profiles and roles on one screen.',
     ):
         p(doc, b, bullet=True)
 
@@ -412,7 +432,7 @@ def build_en():
 
     h1(doc, '5. Launch profiles')
     p(doc, 'A profile is a named snapshot of a launch state: application + OCIO config + '
-           'arguments. It is the unit of task switching: "Project A" and "Project B" differ by one '
+           'arguments. It is the unit of task switching: "project A" and "project B" differ by one '
            'click instead of re-tuning three fields.')
     for b in (
         'set the application, OCIO config and arguments, expand the Profiles panel and press Save current as profile;',
@@ -427,36 +447,55 @@ def build_en():
 
     h1(doc, '6. Projects panel')
     p(doc, 'The Projects panel is a project file browser inside the launcher: instead of digging '
-           'through the file manager you open the file you need with one click.')
+           'through the file manager you open the needed file with one click.')
     for b in (
         'add the folder where your projects live with the "+" button (a root); "−" removes the selected root;',
-        'expand the Projects panel: the list shows every project file under the root recursively, with relative paths;',
-        'the search field filters the list by file name;',
-        'clicking a file opens it with the current application, OCIO config applied, and adds it to Recent.',
+        'the list shows every project file under the root recursively, with relative paths;',
+        'a click opens the file in the matching application: .spp — in Substance Painter, .blend — in Blender, .hip — in Houdini (the application is picked by extension, even if another one is selected in the list);',
+        'Recent — the same rule: recent files reopen in their applications.',
     ):
         p(doc, b, bullet=True)
-    p(doc, 'Only native DCC formats are listed: .blend, .spp, .ma, .mb, .hip, .hipl, .hipnc, '
-           '.nk. Export formats (.fbx, .obj, .stl) are deliberately hidden — those are exports, '
-           'not projects.')
 
-    h1(doc, '7. Project files')
-    p(doc, 'Drag a project file onto the launcher window — it opens in the selected application '
-           'with the OCIO config applied. The same files are available in the Recent list — a '
-           'click reopens them without the file manager. Supported: .blend, .spp, .ma, .mb, '
-           '.hip, .hipl, .hipnc, .nk.')
+    h1(doc, '7. The fullscreen dashboard')
+    p(doc, 'Ctrl+Alt+F opens the launcher over every window: color config, applications, projects, '
+           'profiles, roles and recent files — on one screen. Ctrl+Alt+F again or Esc closes the '
+           'dashboard.')
+    for b in (
+        'COLOR CONFIG: click a chip to switch the config for all subsequent launches;',
+        'APPLICATIONS: tiles with real exe icons, click = launch;',
+        'PROJECTS: root chips and project files, a click opens the file in the matching application;',
+        'PROFILES: a click applies the profile and launches the application;',
+        'OCIO ROLES: clicking a role opens the colorspace picker, Reset returns the config values;',
+        'RECENT FILES: recent files, a click reopens them;',
+        'ARGUMENTS: arguments applied to launches (including from the dashboard);',
+        'SETTINGS: theme, always-on-top mode and the hotkey.',
+    ):
+        p(doc, b, bullet=True)
+    p(doc, 'The dashboard opens on the monitor where it was last closed (remembered in the '
+           'settings) and can be dragged between monitors by its header — sizes adapt to each '
+           'monitor. If you do not need it above other windows — untick Overlay on top in the '
+           'dashboard settings.')
 
-    h1(doc, '8. OCIO roles')
+    h1(doc, '8. Project files')
+    p(doc, 'Drag a project file onto the launcher window — the file opens in the matching '
+           'application with the OCIO config applied: .spp — in Substance Painter, .blend — in '
+           'Blender, .hip — in Houdini (the application is picked by extension, even if another '
+           'one is selected in the list). Supported: .blend, .spp, .ma, .mb, .hip, .hipl, .hipnc, '
+           '.nk. Recently opened files are available in the Recent list — a click reopens them in '
+           'their applications.')
+
+    h1(doc, '9. OCIO roles')
     p(doc, 'The Roles panel shows what the key color roles of the selected config resolve to '
            '(scene_linear, data, default_byte and others) — and lets you override them per preset.')
     for b in (
         'clicking a role row opens the picker: colorspaces grouped by family, like the Color Space menu in Blender, with search;',
         'overrides are stored in the launcher config, and a derived config is built at launch — the original .ocio file is never modified;',
         'Reset returns all roles of the preset to the config values;',
-        'under the config selector a validation line highlights missing critical roles and broken references in advance.',
+        'under the config selector — a validation line: missing critical roles and broken references are highlighted in advance.',
     ):
         p(doc, b, bullet=True)
 
-    h1(doc, '9. How OCIO support works')
+    h1(doc, '10. How OCIO support works')
     p(doc, 'Most applications read the config path from the OCIO environment variable - the '
            'launcher sets it on launch. Unreal Engine ignores the variable: it receives the path '
            'as a -ocio="path" argument - the launcher does that for you.')
@@ -473,7 +512,7 @@ def build_en():
     p(doc, 'Default roles in the bundled config are tuned for a typical texture cycle: 8-bit '
            'images open as raw, float images (EXR) - as acescg.')
 
-    h1(doc, '10. Themes and the window chrome')
+    h1(doc, '11. Themes and the window chrome')
     p(doc, 'Seven color schemes - one per application in the pipeline. Switch the theme in '
            'Settings; the entire interface follows: buttons, checkboxes, the scrollbar, dropdown '
            'menus, the window title strip and the Launch button hover state.')
@@ -490,22 +529,23 @@ def build_en():
     p(doc, 'The title strip is drawn by the launcher itself, in the theme colors: the application '
            'name on the left, minimize and close buttons on the right. Drag the window by the strip.')
 
-    h1(doc, '11. Settings')
+    h1(doc, '12. Settings')
     add_table(doc, [
         ('Setting', 'What it does'),
         ('Check for updates on start', 'auto-update check at launch'),
         ('Theme', 'interface color theme'),
         ('Start with Windows', 'auto-start minimized to tray with Windows'),
         ('Always on top', 'window above all others'),
+        ('Overlay on top', 'fullscreen dashboard above all windows'),
+        ('Global hotkey (Ctrl+Alt+F)', 'global hotkey: show/hide the dashboard'),
         ('Smooth animation', 'enable/disable panel animation'),
-        ('Global hotkey (Ctrl+Alt+F)', 'global hotkey: show/hide the launcher above everything'),
         ('Default OCIO', 'default config for tray launches'),
         ('Scan paths', 'extra folders for the auto-scan'),
         ('SYNC', 'export/import settings to move them to another machine'),
         ('Shortcuts', 'Start Menu and desktop shortcuts'),
     ], [6.0, 11.0])
 
-    h1(doc, '12. Tray and log')
+    h1(doc, '13. Tray and log')
     p(doc, 'Closing the window minimizes the launcher to the system tray - it keeps running. The '
            'tray menu offers quick launch of presets, a PROFILES section (one-click profile '
            'launches) and the window itself.')
@@ -514,7 +554,7 @@ def build_en():
            'OCIO config, exit code. A "Set OCIO=..." line marks that the config was actually '
            'passed. The log file lives at %APPDATA%\\FLOMASTER\\flomaster.log.')
 
-    h1(doc, '13. Command line')
+    h1(doc, '14. Command line')
     p(doc, 'The launcher runs without a window - for batch files, farms and scripts:')
     p(doc, 'FLOMASTER.exe --list-profiles', bullet=False, italic=True)
     p(doc, 'FLOMASTER.exe --launch "Profile"', bullet=False, italic=True)
@@ -531,7 +571,7 @@ def build_en():
     p(doc, 'Output goes to the console the exe was started from. Environment variables and OCIO '
            'are passed exactly like a window launch.')
 
-    h1(doc, '14. Moving to another machine')
+    h1(doc, '15. Moving to another machine')
     p(doc, 'Settings travel as a file: Settings → SYNC → Export settings saves profiles, project '
            'roots, theme and options into a flomaster_setup_date.flomaster file. On another '
            'machine: install the launcher, press Import settings and pick the file.')
@@ -544,7 +584,7 @@ def build_en():
     p(doc, 'The auto-scan on a fresh machine picks up installed applications from the registry '
            'and Epic manifests — as a rule, presets assemble themselves.')
 
-    h1(doc, '15. Files and folders')
+    h1(doc, '16. Files and folders')
     add_table(doc, [
         ('Path', 'Contents'),
         ('installation folder', 'FLOMASTER.exe, flomaster.ico, ocio/ (ACES 1.2 config + luts/), LICENSE.txt'),
@@ -553,16 +593,18 @@ def build_en():
     p(doc, 'The program and user data are deliberately separated: reinstalling and updating '
            'never touch settings, presets or the log.')
 
-    h1(doc, '16. Workflows')
+    h1(doc, '17. Workflows')
     for t in (
         ('One color from the start of the day',
          'Launcher window → Launch on the application you need. Everything you start that day '
          'runs on the same config - files travel between applications without color surprises.'),
         ('Switching between projects',
          'Set up one profile per project and switch them in the Profiles panel with a single click. '
-         'From the tray a profile launches right away, without the launcher window.'),
+         'From the tray a profile launches right away, without the launcher window. The fullscreen '
+         'dashboard (Ctrl+Alt+F) shows the config, applications and project files on one screen.'),
         ('Open a project file without leaving the task',
-         'Projects panel → root → click the file. Name search finds files deep inside folders.'),
+         'Projects panel → root → click the file. Name search finds files deep inside folders. '
+         'The file opens in the right application — extension routing works in the dashboard too.'),
         ('Textures: what opens and where',
          'Float images (EXR) open as acescg - the color cycle is correct right away. 8-bit images '
          'open as raw: the right default for data maps (normals, masks, roughness) with no manual '
@@ -577,11 +619,12 @@ def build_en():
         h2(doc, t[0])
         p(doc, t[1])
 
-    h1(doc, '17. Troubleshooting')
+    h1(doc, '18. Troubleshooting')
     add_table(doc, [
         ('Symptom', 'Cause', 'What to do'),
         ('Application missing after installation', 'non-standard install folder', 'add the folder in Settings → Scan paths or create a preset by dragging the exe'),
         ('Ctrl+Alt+F does nothing', 'the combination is taken by another application', 'check for a warn line in the log; free the combination or toggle the Global hotkey checkbox off and on'),
+        ('The dashboard opened on the wrong monitor', 'monitor memory is updated when the dashboard closes', 'drag the dashboard by its header to the monitor you need — it will be remembered'),
         ('Profile does not start from the command line, exit code 2', 'profile/preset/file not found', 'check the profile name with --list-profiles; presets match by name'),
         ('Project file is not visible in the Projects panel', 'only native DCC formats are listed (.blend, .spp, .ma, .mb, .hip, .hipl, .hipnc, .nk)', 'use name search or drag the file into the window directly'),
         ('Unreal started with the wrong color', 'Unreal does not read the OCIO variable', 'keep the -ocio= argument in the preset arguments - that is how the launcher passes the config'),
@@ -589,8 +632,6 @@ def build_en():
         ('A color 8-bit map opened as raw', 'the default_byte role in the config is raw (the default for data maps)', 'assign a colorspace manually to that map: sRGB space for 8-bit color, acescg for float'),
         ('Log window is nowhere to be seen', 'it opens beside the launcher, at the same height', 'look to the left/right of the launcher window'),
         ('Settings and log "disappeared" after reinstall', 'they do not live in the program folder', 'look in %APPDATA%\\FLOMASTER\\ - updates never touch them'),
-        ('After moving settings the presets point to wrong places', 'exe paths are machine-specific and are not exported', 'run Rescan on the new machine — presets will be found in the registry'),
-        ('The Restart and install button never appears', 'the version is already current, the check is disabled, or the download is still running', 'look for Update lines in the log: Up to date means the version is fresh; the Check for updates on start checkbox turns the check on'),
     ], [4.6, 5.4, 7.0])
 
     _save(doc, OUT_EN)
