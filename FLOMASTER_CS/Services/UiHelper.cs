@@ -23,7 +23,6 @@ namespace FLOMASTER.Services
         /// </summary>
         public static string ShowInputDialog(string title, string prompt, string defaultValue = "")
         {
-            string result = null;
             var dlg = new Window
             {
                 Title = title,
@@ -93,8 +92,69 @@ namespace FLOMASTER.Services
             content.Children.Add(buttons);
             dlg.Content = content;
 
+            ApplySatelliteChrome(dlg, title);
             dlg.ShowDialog();
             return confirmed ? input.Text : null;
+        }
+
+        /// <summary>
+        /// Окна-спутники в теме главного окна: своя полоса заголовка (название + крестик),
+        /// без системной рамки, с тонкой обводкой. Контент переносится под полосу.
+        /// </summary>
+        private static void ApplySatelliteChrome(Window w, string title)
+        {
+            w.WindowStyle = WindowStyle.None;
+            w.ResizeMode = ResizeMode.NoResize;
+
+            var caption = new Grid { Height = 32, Background = (Brush)Application.Current.Resources["PanelBrush"] };
+            var label = new TextBlock
+            {
+                Text = title,
+                VerticalAlignment = VerticalAlignment.Center,
+                Margin = new Thickness(12, 0, 0, 0),
+                FontSize = 10
+            };
+            label.SetResourceReference(TextBlock.ForegroundProperty, "DimBrush");
+            caption.Children.Add(label);
+
+            var close = new Button
+            {
+                Content = "\uE8BB",
+                FontFamily = new System.Windows.Media.FontFamily("Segoe MDL2 Assets"),
+                FontSize = 10,
+                Width = 40,
+                Height = 32,
+                HorizontalAlignment = HorizontalAlignment.Right
+            };
+            close.SetResourceReference(Button.BackgroundProperty, "PanelBrush");
+            close.SetResourceReference(Button.ForegroundProperty, "TextBrush");
+            System.Windows.Shell.WindowChrome.SetIsHitTestVisibleInChrome(close, true);
+            close.Click += (_, _) => w.Close();
+            caption.Children.Add(close);
+
+            var chrome = new System.Windows.Shell.WindowChrome
+            {
+                CaptionHeight = 32,
+                GlassFrameThickness = new Thickness(0),
+                CornerRadius = new CornerRadius(0),
+                ResizeBorderThickness = new Thickness(0),
+                UseAeroCaptionButtons = false
+            };
+            System.Windows.Shell.WindowChrome.SetWindowChrome(w, chrome);
+
+            var oldContent = w.Content;
+            w.Content = null;
+            var border = new System.Windows.Controls.Border
+            {
+                BorderThickness = new Thickness(1),
+                BorderBrush = (Brush)Application.Current.Resources["BorderBrush"],
+                Child = oldContent as System.Windows.UIElement
+            };
+            var dock = new DockPanel { LastChildFill = true };
+            DockPanel.SetDock(caption, Dock.Top);
+            dock.Children.Add(caption);
+            if (border.Child != null) dock.Children.Add(border);
+            w.Content = dock;
         }
 
         public static Window CreateLogWindow(string logContent, Window owner)
@@ -126,6 +186,7 @@ namespace FLOMASTER.Services
             };
 
             logWindow.Content = textBox;
+            ApplySatelliteChrome(logWindow, "FLOMASTER — Log");
             return logWindow;
         }
 
@@ -282,6 +343,7 @@ namespace FLOMASTER.Services
 
             search.TextChanged += (_, _) => Fill(search.Text);
             Fill("");
+            ApplySatelliteChrome(picker, "Colorspace — " + roleName);
             return picker;
         }
     }

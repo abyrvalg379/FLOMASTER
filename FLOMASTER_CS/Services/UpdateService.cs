@@ -18,6 +18,29 @@ namespace FLOMASTER.Services
         public static Version CurrentVersion =>
             Assembly.GetEntryAssembly()?.GetName().Version ?? new Version(0, 0, 0);
 
+        /// <summary>
+        /// Чистое сравнение: тег релиза (v2.4.1 / 2.4.1) новее локальной версии?
+        /// Сравнение по Major.Minor.Build (ревизия сборки не участвует).
+        /// Неразборчивый тег — обновления нет.
+        /// </summary>
+        private static Version Normalize3(Version v)
+        {
+            // "2.5" и "2" парсятся с Build/Minor = -1 — добиваем нулями до трёх компонентов
+            if (v.Build < 0) return new Version(v.Major, Math.Max(v.Minor, 0), 0);
+            return new Version(Math.Max(v.Major, 0), v.Minor, v.Build);
+        }
+
+        public static bool IsUpdateAvailable(string tag, Version current)
+        {
+            var clean = (tag ?? "").TrimStart('v');
+            if (!Version.TryParse(clean, out var parsed)) return false;
+
+            // обе стороны режутся до Major.Minor.Build — ревизия сборки не участвует
+            var remote = Normalize3(parsed);
+            var local = Normalize3(current);
+            return remote > local;
+        }
+
         /// <summary>Тег и URL на FLOMASTER.exe из вложений последнего релиза, если он новее текущего.</summary>
         public static async Task<(string? tag, string? exeUrl)> CheckAsync()
         {
@@ -25,11 +48,7 @@ namespace FLOMASTER.Services
             var json = await Http.GetStringAsync(ReleasesApi).ConfigureAwait(false);
 
             var tag = Regex.Match(json, "\"tag_name\"\\s*:\\s*\"v?([^\"]+)\"").Groups[1].Value;
-            if (!Version.TryParse(tag, out var remote)) return (null, null);
-
-            var cur = CurrentVersion;
-            var local = new Version(Math.Max(cur.Major, 0), cur.Minor, cur.Build);
-            if (remote <= local) return (null, null);
+            if (!IsUpdateAvailable(tag, CurrentVersion)) return (null, null);
 
             // обновляем точечной заменой exe, поэтому качаем именно exe-вложение
             var url = Regex.Match(json, "\"browser_download_url\"\\s*:\\s*\"([^\"]*/FLOMASTER\\.exe)\"").Groups[1].Value;
