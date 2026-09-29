@@ -130,6 +130,39 @@
             <Setter Property="Margin" Value="0,0,0,14"/>
         </Style>
 
+        <!-- Чекбокс в теме лаунчера (копия стиля MainWindow) -->
+        <Style TargetType="CheckBox">
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="CheckBox">
+                        <StackPanel Orientation="Horizontal" Background="Transparent">
+                            <Border Name="Box" Width="16" Height="16" CornerRadius="3"
+                                    Background="{DynamicResource BgBrush}"
+                                    BorderBrush="{DynamicResource BorderBrush}"
+                                    BorderThickness="1" VerticalAlignment="Center">
+                                <Path Name="Check" Data="M 2,6 L 5,9 L 10,2" Stroke="{DynamicResource AccentTextBrush}" StrokeThickness="2"
+                                      Stretch="Uniform" Margin="2" Visibility="Collapsed"/>
+                            </Border>
+                            <ContentPresenter VerticalAlignment="Center" Margin="8,0,0,0"/>
+                        </StackPanel>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="Box" Property="Background" Value="{DynamicResource AccentBrush}"/>
+                                <Setter TargetName="Box" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                                <Setter TargetName="Check" Property="Visibility" Value="Visible"/>
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Box" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
         <!-- Тёмный комбобокс (квик-команды) -->
         <Style TargetType="ComboBox">
             <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
@@ -142,9 +175,25 @@
                         <Grid>
                             <ToggleButton x:Name="Toggle" Focusable="False"
                                           IsChecked="{Binding IsDropDownOpen, RelativeSource={RelativeSource TemplatedParent}}"
-                                          Background="{TemplateBinding Background}"
-                                          BorderBrush="{TemplateBinding BorderBrush}"
-                                          BorderThickness="1"/>
+                                          Background="Transparent"
+                                          BorderThickness="0"
+                                          Cursor="Hand">
+                                <ToggleButton.Template>
+                                    <ControlTemplate TargetType="ToggleButton">
+                                        <Border Name="Bd" Background="{TemplateBinding Background}"
+                                                BorderBrush="{DynamicResource BorderBrush}"
+                                                BorderThickness="1" CornerRadius="4">
+                                            <ContentPresenter/>
+                                        </Border>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource AccentHoverBrush}"/>
+                                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </ToggleButton.Template>
+                            </ToggleButton>
                             <TextBlock Text="{TemplateBinding SelectionBoxItem}" Margin="8,0,26,0"
                                        VerticalAlignment="Center" IsHitTestVisible="False"
                                        TextTrimming="CharacterEllipsis"/>
@@ -168,16 +217,18 @@
             <Setter Property="ItemContainerStyle">
                 <Setter.Value>
                     <Style TargetType="ComboBoxItem">
+                        <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
                         <Setter Property="Padding" Value="10,6"/>
                         <Setter Property="Template">
                             <Setter.Value>
                                 <ControlTemplate TargetType="ComboBoxItem">
                                     <Border Name="Bd" Background="Transparent" Padding="{TemplateBinding Padding}">
-                                        <ContentPresenter/>
+                                        <ContentPresenter TextElement.Foreground="{DynamicResource TextBrush}"/>
                                     </Border>
                                     <ControlTemplate.Triggers>
                                         <Trigger Property="IsHighlighted" Value="True">
                                             <Setter TargetName="Bd" Property="Background" Value="{DynamicResource AccentHoverBrush}"/>
+                                            <Setter Property="Foreground" Value="{DynamicResource AccentTextBrush}"/>
                                         </Trigger>
                                     </ControlTemplate.Triggers>
                                 </ControlTemplate>
