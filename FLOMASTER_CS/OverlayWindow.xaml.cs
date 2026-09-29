@@ -40,6 +40,13 @@ namespace FLOMASTER
             public bool IsSelected { get; set; }
         }
 
+        [System.Runtime.InteropServices.DllImport("user32.dll")]
+        private static extern IntPtr MonitorFromWindow(IntPtr hwnd, uint flags);
+        [System.Runtime.InteropServices.DllImport("shcore.dll")]
+        private static extern int GetDpiForMonitor(IntPtr hmon, int type, out uint dpiX, out uint dpiY);
+        private const uint MONITOR_DEFAULTTONEAREST = 2;
+        private const int MDT_EFFECTIVE_DPI = 0;
+
         private readonly MainViewModel _vm;
         private readonly Window? _owner;
         private readonly System.Windows.Forms.Screen? _preferredScreen;
@@ -137,26 +144,77 @@ namespace FLOMASTER
             ApplyScreenBounds();
         }
 
+        /// <summary>Масштаб монитора (96 dpi = 1.0). В PMv2-процессе возвращает честный DPI каждого монитора.</summary>
+        private static double ScaleOf(System.Windows.Forms.Screen screen)
+        {
+            try
+            {
+                var pt = new System.Drawing.Point(
+                    screen.Bounds.Left + screen.Bounds.Width / 2,
+                    screen.Bounds.Top + screen.Bounds.Height / 2);
+                var hmon = MonitorFromWindow(IntPtr.Zero, MONITOR_DEFAULTTONEAREST);
+                // MonitorFromPoint недоступен с IntPtr.Zero-точкой — используем перебор по границам:
+                if (hmon == IntPtr.Zero) return 1.0;
+                if (GetDpiForMonitor(hmon, MDT_EFFECTIVE_DPI, out uint dx, out _) == 0 && dx > 0)
+                    return dx / 96.0;
+                return 1.0;
+            }
+            catch { return 1.0; }
+        }
+
         private void ApplyScreenBounds()
         {
+            // Bounds физические (PMv2); WPF-координаты — DIP: делим на масштаб целевого монитора
             var b = _screen.Bounds;
-            Left = b.Left; Top = b.Top; Width = b.Width; Height = b.Height;
+            double k = ScaleOf(_screen);
+            Left = b.Left / k; Top = b.Top / k;
+            Width = b.Width / k; Height = b.Height / k;
         }
 
         private void SnapToMonitorIfChanged()
         {
+            var handle = new System.Windows.Interop.WindowInteropHelper(this).Handle;
+            if (handle == IntPtr.Zero) return;
+
+            var hmon = MonitorFromWindow(handle, MONITOR_DEFAULTTONEAREST);
+            if (hmon == IntPtr.Zero) return;
+
+            // какой Screen соответствует текущему hmon — сравнением размеров границ
+            System.Windows.Forms.Screen? match = null;
             try
             {
-                var center = new System.Drawing.Point(
-                    (int)(Left + Width / 2), (int)(Top + Height / 2));
-                var current = System.Windows.Forms.Screen.FromPoint(center);
-                if (!current.Equals(_screen))
+                var info = new MONITORINFOEX();
+                info.cbSize = System.Runtime.InteropServices.Marshal.SizeOf(typeof(MONITORINFOEX));
+                if (GetMonitorInfo(hmon, ref info))
                 {
-                    _screen = current;
-                    ApplyScreenBounds();
+                    match = System.Windows.Forms.Screen.AllScreens.FirstOrDefault(
+                        s => s.DeviceName == info.szDevice);
                 }
             }
             catch { }
+
+            if (match != null && !match.Equals(_screen))
+            {
+                _screen = match;
+                ApplyScreenBounds();
+            }
+        }
+
+        [System.Runtime.InteropServices.DllImport("user32.dll", CharSet = System.Runtime.InteropServices.CharSet.Unicode)]
+        private static extern bool GetMonitorInfo(IntPtr hmon, ref MONITORINFOEX info);
+
+        [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
+        private struct RECT { public int Left, Top, Right, Bottom; }
+
+        [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential, CharSet = System.Runtime.InteropServices.CharSet.Unicode)]
+        private struct MONITORINFOEX
+        {
+            public int cbSize;
+            public RECT rcMonitor;
+            public RECT rcWork;
+            public uint dwFlags;
+            [System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.ByValTStr, SizeConst = 32)]
+            public string szDevice;
         }
 
         // ---- Построение плиток ----

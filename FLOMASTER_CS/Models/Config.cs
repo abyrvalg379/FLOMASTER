@@ -17,6 +17,9 @@ namespace FLOMASTER.Models
         public bool CheckUpdates { get; set; } = true;
         /// <summary>Глобальный хоткей Ctrl+Alt+F: показать/спрятать лаунчер поверх всего.</summary>
         public bool HotkeyEnabled { get; set; } = true;
+
+        /// <summary>DeviceName монитора, на котором оверлей был закрыт последний раз.</summary>
+        public string OverlayScreenDeviceName { get; set; } = "";
     }
 
     public class OcioConfig

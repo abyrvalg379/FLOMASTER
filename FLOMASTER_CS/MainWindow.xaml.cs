@@ -213,7 +213,26 @@ namespace FLOMASTER
                 return;
             }
             if (_viewModel == null) return;
-            _overlay = new OverlayWindow(_viewModel, this, _lastOverlayScreen);
+
+            // приоритет монитора: конфиг (переживает рестарт) -> сессия -> монитор лаунчера
+            System.Windows.Forms.Screen? preferred = null;
+            var saved = _viewModel.OverlayScreenDeviceName;
+            if (!string.IsNullOrEmpty(saved))
+                preferred = System.Windows.Forms.Screen.AllScreens
+                    .FirstOrDefault(s => s.DeviceName == saved)
+                    ?? _lastOverlayScreen;
+            preferred ??= _lastOverlayScreen;
+
+            _overlay = new OverlayWindow(_viewModel, this, preferred);
+            _overlay.Closing += (_, _) =>
+            {
+                try
+                {
+                    _viewModel.OverlayScreenDeviceName = System.Windows.Forms.Screen.FromHandle(
+                        new System.Windows.Interop.WindowInteropHelper(_overlay).Handle).DeviceName;
+                }
+                catch { }
+            };
             _overlay.Closed += (_, _) => _overlay = null;
             _overlay.Show();
             _overlay.Activate();
