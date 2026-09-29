@@ -2,7 +2,7 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:local="clr-namespace:FLOMASTER.Converters"
-        Title="FLOMASTER v2.3.4" Height="540" Width="440" MinHeight="540" MaxHeight="940"
+        Title="FLOMASTER v2.3.5" Height="540" Width="440" MinHeight="540" MaxHeight="940"
         WindowStartupLocation="CenterScreen" ResizeMode="CanMinimize"
         Topmost="{Binding TopMostEnabled}"
         AllowDrop="True" Closing="Window_Closing">
@@ -338,7 +338,7 @@
                         Command="{Binding RescanCommand}"/>
                 <Button Grid.Column="2" Name="LogBtn" Content="Log" Style="{StaticResource BtnStyle}" Margin="0,0,3,0" Width="45"
                         Command="{Binding ViewLogCommand}"/>
-                <Button Grid.Column="4" Content="Launch" Style="{StaticResource BtnLaunchStyle}" Width="90"
+                <Button Grid.Column="5" Content="Launch" Style="{StaticResource BtnLaunchStyle}" Width="90"
                         Command="{Binding LaunchCommand}"/>
             </Grid>
 
@@ -445,6 +445,50 @@
                 </StackPanel>
             </Grid>
 
+            <!-- Projects panel (встроена в окно по решению юзера: привязка, тема, hover — как у всех панелей) -->
+            <Grid Margin="0,8,0,0">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                <ToggleButton Grid.Row="0" Style="{StaticResource ToggleStyle}"
+                              Cursor="Hand" HorizontalAlignment="Left"
+                              IsChecked="{Binding ProjectsPanelVisible}">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="&#x25B6;" FontSize="10" Foreground="{DynamicResource DimBrush}" Margin="0,0,6,0"/>
+                        <TextBlock Text="Projects" FontSize="11" Foreground="{DynamicResource DimBrush}"/>
+                    </StackPanel>
+                </ToggleButton>
+                <StackPanel Grid.Row="1" Visibility="{Binding ProjectsPanelVisible, Converter={StaticResource BoolToVis}}" Margin="0,4,0,0">
+                    <Border Background="{DynamicResource PanelBrush}" BorderBrush="{DynamicResource BorderBrush}"
+                            BorderThickness="1" CornerRadius="4" Padding="6">
+                        <StackPanel>
+                            <TextBox Margin="0,0,0,4"
+                                     Background="{DynamicResource BgBrush}" Foreground="{DynamicResource TextBrush}"
+                                     BorderBrush="{DynamicResource BorderBrush}" FontSize="11" Height="24" Padding="6,2"
+                                     Text="{Binding BrowserSearchText, UpdateSourceTrigger=PropertyChanged}"/>
+                            <ComboBox Style="{StaticResource DarkComboStringStyle}" Height="26" FontSize="11"
+                                      ItemsSource="{Binding ProjectRoots}" SelectedItem="{Binding SelectedBrowserRoot}"/>
+                            <ListBox ItemsSource="{Binding BrowserFiles}" MaxHeight="150"
+                                     Background="Transparent" BorderThickness="0" Margin="0,4,0,0"
+                                     ScrollViewer.VerticalScrollBarVisibility="Auto">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <Button Style="{StaticResource BtnStyle}" Height="22" Margin="0,1"
+                                                HorizontalContentAlignment="Left" Padding="8,0"
+                                                Command="{Binding DataContext.OpenProjectCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                CommandParameter="{Binding FullPath}" ToolTip="{Binding FullPath}">
+                                            <TextBlock Text="{Binding RelPath}" FontSize="10" FontFamily="Consolas"
+                                                       TextTrimming="CharacterEllipsis"/>
+                                        </Button>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </Grid>
+
             <!-- Recent files toggle -->
             <Grid Margin="0,8,0,0">
                 <Grid.RowDefinitions>
@@ -531,6 +575,31 @@
                                 <ComboBox DisplayMemberPath="Name" Margin="0,0,0,12"
                                           Style="{StaticResource DarkComboStyle}" Height="26"
                                           ItemsSource="{Binding OcioConfigs}" SelectedItem="{Binding DefaultOcio}"/>
+                                <TextBlock Text="PROJECT FOLDERS" Foreground="{DynamicResource DimBrush}" FontSize="10" FontWeight="SemiBold"
+                                           Margin="10,0,10,4"/>
+                                <TextBlock Text="Roots for the Projects browser" Foreground="{DynamicResource DimBrush}"
+                                           FontSize="10" Margin="10,0,10,4"/>
+                                <Button Content="Add project folder" Style="{StaticResource BtnStyle}"
+                                        Margin="10,0,10,4" Height="26" Command="{Binding AddProjectRootCommand}"/>
+                                <ItemsControl ItemsSource="{Binding ProjectRoots}" Margin="10,0,10,8">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Grid Margin="0,1">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock Grid.Column="0" Text="{Binding}" Foreground="{DynamicResource DimBrush}"
+                                                           FontSize="10" FontFamily="Consolas" VerticalAlignment="Center"
+                                                           TextTrimming="CharacterEllipsis" ToolTip="{Binding}"/>
+                                                <Button Grid.Column="1" Content="&#xD7;" Style="{StaticResource BtnStyle}" Width="20" Height="20"
+                                                        Margin="3,0,0,0" FontSize="10"
+                                                        Command="{Binding DataContext.RemoveProjectRootCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                        CommandParameter="{Binding}"/>
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
                                 <TextBlock Text="SCAN PATHS" Foreground="{DynamicResource DimBrush}" FontSize="10" FontWeight="SemiBold"
                                            Margin="10,0,10,4"/>
                                 <TextBlock Text="Custom folders for DCC auto-scan" Foreground="{DynamicResource DimBrush}"
