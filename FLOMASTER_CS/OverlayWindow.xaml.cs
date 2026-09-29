@@ -42,15 +42,23 @@ namespace FLOMASTER
 
         private readonly MainViewModel _vm;
         private readonly Window? _owner;
+        private readonly System.Windows.Forms.Screen? _preferredScreen;
         private System.Windows.Forms.Screen _screen = System.Windows.Forms.Screen.PrimaryScreen
             ?? System.Windows.Forms.Screen.AllScreens[0];
 
-        public OverlayWindow(MainViewModel viewModel, Window owner)
+        /// <summary>Монитор, на котором оверлей был закрыт последний раз (сессионная память).</summary>
+        public static System.Windows.Forms.Screen? LastScreen;
+
+        public OverlayWindow(MainViewModel viewModel, Window owner,
+            System.Windows.Forms.Screen? preferredScreen = null)
         {
             InitializeComponent();
             _vm = viewModel;
             _owner = owner;
+            _preferredScreen = preferredScreen;
             DataContext = this;
+
+            Closed += (_, _) => LastScreen = _screen;
 
             BuildAppAndProfileTiles();
             RebuildOcioChips();
@@ -79,6 +87,7 @@ namespace FLOMASTER
         public ICommand ResetRolesCommand => _vm.ResetRolesCommand;
         public ICommand ClearArgsCommand => _vm.ClearArgsCommand;
         public ObservableCollection<string> Themes => _vm.Themes;
+        public ObservableCollection<QuickCommand> QuickCommands => _vm.QuickCommands;
 
         public string ArgsText
         {
@@ -108,6 +117,14 @@ namespace FLOMASTER
 
         private void PositionOnOwnerScreen()
         {
+            // приоритет: монитор, где оверлей был закрыт в прошлый раз -> монитор лаунчера -> primary
+            if (_preferredScreen != null &&
+                System.Windows.Forms.Screen.AllScreens.Any(s => s.DeviceName == _preferredScreen.DeviceName))
+            {
+                _screen = _preferredScreen;
+                ApplyScreenBounds();
+                return;
+            }
             try
             {
                 if (_owner != null)
@@ -348,6 +365,17 @@ namespace FLOMASTER
             WindowState = WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized;
 
         private void CaptionClose_Click(object sender, RoutedEventArgs e) => Close();
+
+        /// <summary>Квик-команда из комбобокса: дописывается к аргументам.</summary>
+        private void QuickCombo_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
+        {
+            if (QuickCombo.SelectedItem is QuickCommand qc)
+            {
+                var current = ArgsText.Trim();
+                ArgsText = string.IsNullOrEmpty(current) ? qc.Cmd : $"{current} {qc.Cmd}";
+                QuickCombo.SelectedIndex = -1;
+            }
+        }
 
         private void Window_PreviewKeyDown(object sender, KeyEventArgs e)
         {

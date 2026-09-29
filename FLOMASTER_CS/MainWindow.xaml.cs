@@ -15,6 +15,7 @@ namespace FLOMASTER
     {
         private WinForms.NotifyIcon _trayIcon;
         private OverlayWindow? _overlay;
+        private System.Windows.Forms.Screen? _lastOverlayScreen;
         private const int BaseHeight = 560; // свёрнутое окно вмещает весь стек вкладок + ARGUMENTS (32 из них — шапка)
 
         // ---- Глобальный хоткей Ctrl+Alt+F: показать/спрятать лаунчер поверх всего ----
@@ -212,7 +213,7 @@ namespace FLOMASTER
                 return;
             }
             if (_viewModel == null) return;
-            _overlay = new OverlayWindow(_viewModel, this);
+            _overlay = new OverlayWindow(_viewModel, this, _lastOverlayScreen);
             _overlay.Closed += (_, _) => _overlay = null;
             _overlay.Show();
             _overlay.Activate();
