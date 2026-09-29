@@ -5,7 +5,8 @@
         Title="FLOMASTER v2.4.2" Height="560" Width="440" MinHeight="560" MaxHeight="940"
         WindowStartupLocation="CenterScreen" ResizeMode="CanMinimize"
         WindowStyle="None"
-        Background="{DynamicResource PanelBrush}"
+        AllowsTransparency="True"
+        Background="Transparent"
         Topmost="{Binding TopMostEnabled}"
         AllowDrop="True" Closing="Window_Closing">
     <WindowChrome.WindowChrome>
@@ -246,7 +247,7 @@
         </Style>
     </Window.Resources>
 
-    <Border BorderThickness="1" BorderBrush="{DynamicResource BorderBrush}">
+    <Border x:Name="RootBorder" BorderThickness="1" BorderBrush="{DynamicResource BorderBrush}" CornerRadius="10" Background="{DynamicResource PanelBrush}">
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="32"/>

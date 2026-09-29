@@ -160,6 +160,11 @@ namespace FLOMASTER
             // Global hotkey: регистрация требует hwnd
             SourceInitialized += (s, e) => ApplyHotkey(viewModel.HotkeyEnabled);
 
+            // WindowStyle=None отключает системное скругление Windows 11 — DWM-атрибут + клип бордера
+            SourceInitialized += (s, e) => UiHelper.RoundCorners(this);
+            Loaded += (s, e) => ClipRootBorder();
+            SizeChanged += (s, e) => ClipRootBorder();
+
             // Setup tray
             SetupTray(viewModel);
         }
@@ -366,6 +371,13 @@ namespace FLOMASTER
             showItem.Click += (s, e) => { Show(); WindowState = WindowState.Normal; Activate(); };
             var quitItem = menu.Items.Add("Quit");
             quitItem.Click += (s, e) => { _trayIcon.Visible = false; _trayIcon.Dispose(); Close(); };
+        }
+
+        /// <summary>Клип контента по скруглению корневого бордера (после AllowsTransparency).</summary>
+        private void ClipRootBorder()
+        {
+            RootBorder.Clip = new System.Windows.Media.RectangleGeometry(
+                new Rect(0, 0, RootBorder.ActualWidth, RootBorder.ActualHeight), 10, 10);
         }
 
         private void CaptionMinimize_Click(object sender, RoutedEventArgs e) => WindowState = WindowState.Minimized;
