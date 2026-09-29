@@ -375,27 +375,35 @@ namespace FLOMASTER.ViewModels
         public bool IsProjectFile(string file) =>
             UiHelper.ProjectFileExtensions.Contains(Path.GetExtension(file).ToLowerInvariant());
 
-        public void OpenProjectFile(string file)
+        // расширение -> маркер семейства приложений (ищем в имени пресета и пути exe)
+        private static readonly Dictionary<string, string> ExtToAppFamily = new()
         {
-            if (!File.Exists(file)) { StatusText = "File not found"; return; }
-            if (SelectedPreset == null) { StatusText = "Select an app first"; return; }
-            if (!File.Exists(SelectedPreset.Exe)) { StatusText = "App not found"; return; }
+            [".blend"] = "blender",
+            [".spp"] = "painter",
+            [".ma"] = "maya",
+            [".mb"] = "maya",
+            [".hip"] = "houdini",
+            [".hipl"] = "houdini",
+            [".hipnc"] = "houdini",
+            [".nk"] = "nuke",
+        };
 
-            try
+        /// <summary>
+        /// Подбирает пресет под расширение файла (прощёлка .spp не уедет в блендер).
+        /// Ищем маркер семейства в имени пресета и пути exe. Нет кандидата — null.
+        /// </summary>
+        public static Preset FindPresetForExtension(IEnumerable<Preset> presets, string file)
+        {
+            var ext = Path.GetExtension(file ?? "").ToLowerInvariant();
+            if (!ExtToAppFamily.TryGetValue(ext, out var family)) return null;
+            return presets.FirstOrDefault(p =>
             {
-                var psi = new ProcessStartInfo { FileName = SelectedPreset.Exe, UseShellExecute = false, Arguments = $"\"{file}\"" };
-                _ocio.ApplyOcio(psi, SelectedOcio, SelectedPreset.Exe);
-                Process.Start(psi);
-
-                Logger.Log(SelectedPreset.Name, SelectedPreset.Exe, SelectedOcio?.Name ?? "", $"open: {file}");
-                AddRecentFile(file);
-                StatusText = $"Opened: {Path.GetFileName(file)}";
-            }
-            catch (Exception ex)
-            {
-                StatusText = $"Open error: {ex.Message}";
-                Logger.Log("Open", ex.Message, "error");
-            }
+                var exe = (p.Exe ?? "").ToLowerInvariant();
+                var name = (p.Name ?? "").ToLowerInvariant();
+                return family == "painter"
+                    ? exe.Contains("painter") || exe.Contains("substance") || name.Contains("substance")
+                    : exe.Contains(family) || name.Contains(family);
+            });
         }
 
         private void AddOcioConfig()
@@ -505,6 +513,44 @@ namespace FLOMASTER.ViewModels
                 StatusText = "Desktop shortcut created";
             }
             catch (Exception ex) { StatusText = $"Shortcut error: {ex.Message}"; }
+        }
+
+        public void OpenProjectFile(string filePath)
+        {
+            if (!File.Exists(filePath)) { StatusText = "File not found"; return; }
+
+            // маршрутизация по расширению: .spp уходит в Painter, .blend — в Blender
+            var target = FindPresetForExtension(Presets, filePath);
+            var routed = target != null && !ReferenceEquals(target, SelectedPreset);
+            if (target == null)
+            {
+                target = SelectedPreset;
+                if (target == null) { StatusText = "Select an app first"; return; }
+                if (!File.Exists(target.Exe)) { StatusText = "App not found"; return; }
+            }
+            else if (routed)
+            {
+                SelectedPreset = target; // видно в интерфейсе, чем открыли
+            }
+            if (!File.Exists(target.Exe)) { StatusText = "App not found"; return; }
+
+            try
+            {
+                var psi = new ProcessStartInfo { FileName = target.Exe, UseShellExecute = false, Arguments = $"\"{filePath}\"" };
+                _ocio.ApplyOcio(psi, SelectedOcio, target.Exe);
+                Process.Start(psi);
+
+                Logger.Log(target.Name, target.Exe, SelectedOcio?.Name ?? "", $"open: {filePath}");
+                AddRecentFile(filePath);
+                StatusText = routed
+                    ? $"Opened: {Path.GetFileName(filePath)} → {target.Name}"
+                    : $"Opened: {Path.GetFileName(filePath)}";
+            }
+            catch (Exception ex)
+            {
+                StatusText = $"Open error: {ex.Message}";
+                Logger.Log("Open", ex.Message, "error");
+            }
         }
 
         public void OpenRecentFile(string filePath)
