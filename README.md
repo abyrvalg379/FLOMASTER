@@ -38,8 +38,16 @@
 
 ---
 
-## What's New in v2.4
+## What's New in v2.5
 
+- **Fullscreen overlay dashboard** (`Ctrl+Alt+F`): color config chips, application tiles with real exe icons, projects (root chips + routed file rows), profiles, OCIO roles with the colorspace picker, recent files, arguments and quick settings — over everything, draggable between monitors with auto-fit, remembers the last screen
+- **Project routing** — .spp → Substance Painter, .blend → Blender, .hip → Houdini from the Projects panel, Recent and drag & drop
+- **PerMonitorV2** — crisp rendering on scaled monitors
+
+### [v2.4.2](https://github.com/abyrvalg379/FLOMASTER/releases/tag/v2.4.2) — project file routing
+An .spp opens in Substance Painter, a .blend in Blender, a .hip in Houdini — regardless of the selected app. Works in the Projects panel, Recent and drag & drop.
+
+### [v2.4.1](https://github.com/abyrvalg379/FLOMASTER/releases/tag/v2.4.1) — polish patch
 - **Projects panel** — point it at your project folders and open any project file without digging through Explorer: flat recursive list with relative paths and a name filter; a click opens it with the current preset + OCIO and fills Recent
 - **Command line** — `--launch "Profile" [--project file]` and `--list-profiles`: headless, exit codes, same environment as a manual launch. For batch files and farms
 - **Multi-machine** — export/import settings as a file (profiles, roots, theme); presets match by name while exe paths stay machine-local. Preset discovery now scans the registry and Epic manifests
