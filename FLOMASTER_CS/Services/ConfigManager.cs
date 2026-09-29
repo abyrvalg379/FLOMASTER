@@ -5,12 +5,26 @@ using FLOMASTER.Models;
 
 namespace FLOMASTER.Services
 {
-    public static class ConfigManager
+    /// <summary>Хранилище конфига. Папка инъектится: тесты работают на temp, приложение — на %APPDATA%.</summary>
+    public interface IConfigStore
     {
-        private static readonly string ConfigDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "FLOMASTER");
-        private static readonly string ConfigPath = Path.Combine(ConfigDir, "launcher_config.json");
+        Config Load();
+        void Save(Config config);
+    }
 
-        public static Config Load()
+    public class ConfigManager : IConfigStore
+    {
+        private readonly string _dir;
+        private string ConfigPath => Path.Combine(_dir, "launcher_config.json");
+
+        public ConfigManager() : this(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "FLOMASTER")) { }
+
+        public ConfigManager(string dir)
+        {
+            _dir = dir;
+        }
+
+        public Config Load()
         {
             if (!File.Exists(ConfigPath))
             {
@@ -56,7 +70,7 @@ namespace FLOMASTER.Services
             }
         }
 
-        public static void Save(Config config)
+        public void Save(Config config)
         {
             try
             {
@@ -66,8 +80,8 @@ namespace FLOMASTER.Services
                     PropertyNamingPolicy = JsonNamingPolicy.CamelCase
                 });
 
-                if (!Directory.Exists(ConfigDir))
-                    Directory.CreateDirectory(ConfigDir);
+                if (!Directory.Exists(_dir))
+                    Directory.CreateDirectory(_dir);
 
                 File.WriteAllText(ConfigPath, json);
             }
@@ -81,7 +95,7 @@ namespace FLOMASTER.Services
             }
         }
 
-        private static void BackupCorruptedConfig()
+        private void BackupCorruptedConfig()
         {
             try
             {
@@ -95,7 +109,7 @@ namespace FLOMASTER.Services
             }
         }
 
-        private static Config GetDefault()
+        private Config GetDefault()
         {
             var ocioPath = FindOcioConfig();
 
@@ -138,7 +152,7 @@ namespace FLOMASTER.Services
             return null;
         }
 
-        private static void NormalizePaths(Config config)
+        private void NormalizePaths(Config config)
         {
             foreach (var ocio in config.OcioConfigs)
             {

@@ -69,9 +69,17 @@ namespace FLOMASTER.ViewModels
         public ICommand RemoveProjectRootCommand { get; private set; }
         public ICommand OpenProjectCommand { get; private set; }
 
-        public MainViewModel()
+        private readonly IConfigStore _store;
+        private readonly IOcioService _ocio;
+        private readonly ILaunchService _launch;
+
+        /// <summary>Ручной DI без контейнеров: composition root — MainWindow.</summary>
+        public MainViewModel(IConfigStore store, IOcioService ocio, ILaunchService launch)
         {
-            _config = ConfigManager.Load();
+            _store = store;
+            _ocio = ocio;
+            _launch = launch;
+            _config = _store.Load();
             Logger.Log("ViewModel", "Config loaded", "info");
             UpdateService.CleanupOldInstall();
             StartUpdateCheck();
@@ -156,7 +164,7 @@ namespace FLOMASTER.ViewModels
                         if (ThemeManager.Themes[key].Name == value)
                         {
                             _config.Theme = key;
-                            ConfigManager.Save(_config);
+                            _store.Save(_config);
                             Logger.Log("Theme", $"Changed to: {value}", "info");
                             break;
                         }
@@ -191,7 +199,7 @@ namespace FLOMASTER.ViewModels
                 if (SetProperty(ref _topMostEnabled, value))
                 {
                     _config.TopMostEnabled = value;
-                    ConfigManager.Save(_config);
+                    _store.Save(_config);
                     StatusText = value ? "Always on top" : "Normal mode";
                 }
             }
@@ -213,7 +221,7 @@ namespace FLOMASTER.ViewModels
             set
             {
                 _config.CheckUpdates = value;
-                ConfigManager.Save(_config);
+                _store.Save(_config);
                 OnPropertyChanged();
                 Logger.Log("Update", $"Auto-check {(value ? "enabled" : "disabled")}", "info");
                 if (value) StartUpdateCheck();
@@ -287,7 +295,7 @@ namespace FLOMASTER.ViewModels
                 if (SetProperty(ref _animationEnabled, value))
                 {
                     _config.AnimationEnabled = value;
-                    ConfigManager.Save(_config);
+                    _store.Save(_config);
                 }
             }
         }
@@ -304,37 +312,25 @@ namespace FLOMASTER.ViewModels
         private void LaunchSelectedApp()
         {
             if (SelectedPreset == null) { StatusText = "No app selected"; return; }
-            if (!File.Exists(SelectedPreset.Exe)) { StatusText = "App not found"; return; }
 
-            try
+            var args = ArgsText?.Trim() ?? "";
+            var error = _launch.Launch(SelectedPreset.Exe, SelectedPreset.Name, SelectedOcio, SelectedPreset.RoleOverrides, args);
+            if (error != null)
             {
-                var ocio = SelectedOcio;
-                var psi = new ProcessStartInfo { FileName = SelectedPreset.Exe, UseShellExecute = false };
-                var args = ArgsText?.Trim() ?? "";
-                if (!string.IsNullOrEmpty(args)) psi.Arguments = args;
-
-                // переопределения ролей пресета -> вариант конфига в %APPDATA% (канон не трогается)
-                string? variantPath = null;
-                if (ocio != null && SelectedPreset.RoleOverrides is { Count: > 0 })
-                    variantPath = OcioService.BuildVariant(ocio.Path, SelectedPreset.RoleOverrides, SelectedPreset.Name);
-                OcioService.ApplyOcio(psi, ocio, SelectedPreset.Exe, variantPath);
-                Process.Start(psi);
-
-                Logger.Log(SelectedPreset.Name, SelectedPreset.Exe, ocio?.Name ?? "", args);
-                StatusText = string.IsNullOrEmpty(args) ? $"Launched: {SelectedPreset.Name}" : $"Launched: {SelectedPreset.Name} + {args}";
-
-                // Add to recent if file opened
-                if (!string.IsNullOrEmpty(args) && args.Contains("\""))
-                {
-                    var match = System.Text.RegularExpressions.Regex.Match(args, @"""([^""]+)""");
-                    if (match.Success && File.Exists(match.Groups[1].Value))
-                        AddRecentFile(match.Groups[1].Value);
-                }
+                StatusText = error == "App not found" ? error : $"Launch error: {error}";
+                Logger.Log("Launch", error, "error");
+                return;
             }
-            catch (Exception ex)
+
+            Logger.Log(SelectedPreset.Name, SelectedPreset.Exe, SelectedOcio?.Name ?? "", args);
+            StatusText = string.IsNullOrEmpty(args) ? $"Launched: {SelectedPreset.Name}" : $"Launched: {SelectedPreset.Name} + {args}";
+
+            // Add to recent if file opened
+            if (!string.IsNullOrEmpty(args) && args.Contains("\""))
             {
-                StatusText = $"Launch error: {ex.Message}";
-                Logger.Log("Launch", ex.Message, "error");
+                var match = System.Text.RegularExpressions.Regex.Match(args, "\"([^\"]+)\"");
+                if (match.Success && File.Exists(match.Groups[1].Value))
+                    AddRecentFile(match.Groups[1].Value);
             }
         }
 
@@ -353,7 +349,7 @@ namespace FLOMASTER.ViewModels
             if (string.IsNullOrWhiteSpace(name)) return;
             var preset = new Preset { Name = name, Exe = exePath };
             _config.Presets.Add(preset);
-            ConfigManager.Save(_config);
+            _store.Save(_config);
             Presets.Add(preset);
             StatusText = $"Added: {name}";
         }
@@ -370,7 +366,7 @@ namespace FLOMASTER.ViewModels
             try
             {
                 var psi = new ProcessStartInfo { FileName = SelectedPreset.Exe, UseShellExecute = false, Arguments = $"\"{file}\"" };
-                OcioService.ApplyOcio(psi, SelectedOcio, SelectedPreset.Exe);
+                _ocio.ApplyOcio(psi, SelectedOcio, SelectedPreset.Exe);
                 Process.Start(psi);
 
                 Logger.Log(SelectedPreset.Name, SelectedPreset.Exe, SelectedOcio?.Name ?? "", $"open: {file}");
@@ -392,9 +388,9 @@ namespace FLOMASTER.ViewModels
             var defaultName = Path.GetFileNameWithoutExtension(Path.GetDirectoryName(ocioPath)) + " " + Path.GetFileNameWithoutExtension(ocioPath);
             var name = Microsoft.VisualBasic.Interaction.InputBox("OCIO config name:", "FLOMASTER", defaultName);
             if (string.IsNullOrWhiteSpace(name)) return;
-            if (OcioService.AddOcioConfig(_config, name, ocioPath))
+            if (_ocio.AddOcioConfig(_config, name, ocioPath))
             {
-                ConfigManager.Save(_config);
+                _store.Save(_config);
                 RefreshOcioConfigs();
                 StatusText = $"Added OCIO: {name}";
             }
@@ -406,9 +402,9 @@ namespace FLOMASTER.ViewModels
             if (SelectedOcio == null || OcioConfigs.Count <= 1) return;
             var result = MessageBox.Show($"Remove \"{SelectedOcio.Name}\"?", "FLOMASTER", MessageBoxButton.YesNo, MessageBoxImage.Question);
             if (result != MessageBoxResult.Yes) return;
-            if (OcioService.RemoveOcioConfig(_config, SelectedOcio))
+            if (_ocio.RemoveOcioConfig(_config, SelectedOcio))
             {
-                ConfigManager.Save(_config);
+                _store.Save(_config);
                 RefreshOcioConfigs();
                 StatusText = $"Removed: {SelectedOcio.Name}";
             }
@@ -423,7 +419,7 @@ namespace FLOMASTER.ViewModels
                 if (!_config.ScanPaths.Contains(path))
                 {
                     _config.ScanPaths.Add(path);
-                    ConfigManager.Save(_config);
+                    _store.Save(_config);
                     StatusText = $"Scan path added: {Path.GetFileName(path)}";
                 }
             }
@@ -434,7 +430,7 @@ namespace FLOMASTER.ViewModels
             _config.Presets.Clear();
             var scanned = DccScanner.Scan(_config.ScanPaths);
             foreach (var app in scanned) _config.Presets.Add(app);
-            ConfigManager.Save(_config);
+            _store.Save(_config);
             RefreshPresets();
             StatusText = $"Found {scanned.Count} applications";
             Logger.Log("Rescan", $"Found {scanned.Count} applications", "info");
@@ -500,7 +496,7 @@ namespace FLOMASTER.ViewModels
             if (!File.Exists(SelectedPreset.Exe)) { StatusText = "App not found"; return; }
             var ocio = SelectedOcio;
             var psi = new ProcessStartInfo { FileName = SelectedPreset.Exe, Arguments = $"\"{filePath}\"", UseShellExecute = false };
-            OcioService.ApplyOcio(psi, ocio, SelectedPreset.Exe);
+            _ocio.ApplyOcio(psi, ocio, SelectedPreset.Exe);
             Process.Start(psi);
             Logger.Log(SelectedPreset.Name, SelectedPreset.Exe, ocio?.Name ?? "", $"open: {filePath}");
             StatusText = $"Opened: {Path.GetFileName(filePath)}";
@@ -518,7 +514,7 @@ namespace FLOMASTER.ViewModels
             {
                 _config.RecentFiles.Insert(0, filePath);
                 if (_config.RecentFiles.Count > 20) _config.RecentFiles.RemoveAt(_config.RecentFiles.Count - 1);
-                ConfigManager.Save(_config);
+                _store.Save(_config);
                 RefreshRecentFiles();
             }
         }
@@ -526,7 +522,7 @@ namespace FLOMASTER.ViewModels
         private void ClearRecentFiles()
         {
             _config.RecentFiles.Clear();
-            ConfigManager.Save(_config);
+            _store.Save(_config);
             RefreshRecentFiles();
             StatusText = "Recent files cleared";
         }
@@ -579,7 +575,7 @@ namespace FLOMASTER.ViewModels
                 OcioWarningsText = "";
                 return;
             }
-            var report = OcioService.Validate(ocio.Path);
+            var report = _ocio.Validate(ocio.Path);
             OcioWarningsText = report.WarningsLine;
         }
 
@@ -591,7 +587,7 @@ namespace FLOMASTER.ViewModels
             var hasConfig = SelectedOcio != null && !string.IsNullOrEmpty(SelectedOcio.Path) && File.Exists(SelectedOcio.Path);
             if (!hasConfig) { UpdateOcioOverrideWarnings(); return; }
 
-            var (roles, colorspaces) = OcioService.Parse(SelectedOcio.Path);
+            var (roles, colorspaces) = _ocio.Parse(SelectedOcio.Path);
             foreach (var role in RoleUiOrder)
             {
                 var effective = roles.FirstOrDefault(r => r.Key == role).Value;
@@ -622,7 +618,7 @@ namespace FLOMASTER.ViewModels
             else ov[row.RoleName] = name;
             if (ov.Count == 0) preset.RoleOverrides = null;
 
-            ConfigManager.Save(_config);
+            _store.Save(_config);
             Logger.Log("OCIO", $"Preset '{preset.Name}': role {row.RoleName} -> {(name ?? "(config default)")}", "info");
             StatusText = $"Roles saved: {preset.Name}";
             RebuildRoleRows();
@@ -632,7 +628,7 @@ namespace FLOMASTER.ViewModels
         {
             if (SelectedOcio == null || string.IsNullOrEmpty(SelectedOcio.Path) || !File.Exists(SelectedOcio.Path))
             { OcioOverrideWarnings = ""; return; }
-            var (_, colorspaces) = OcioService.Parse(SelectedOcio.Path);
+            var (_, colorspaces) = _ocio.Parse(SelectedOcio.Path);
             var warns = new List<string>();
             var ov = SelectedPreset?.RoleOverrides;
             if (ov != null)
@@ -646,7 +642,7 @@ namespace FLOMASTER.ViewModels
         {
             if (SelectedPreset == null) return;
             SelectedPreset.RoleOverrides = null;
-            ConfigManager.Save(_config);
+            _store.Save(_config);
             RebuildRoleRows();
             Logger.Log("OCIO", $"Preset '{SelectedPreset.Name}': role overrides reset", "info");
             StatusText = $"Roles reset: {SelectedPreset.Name}";
@@ -681,7 +677,7 @@ namespace FLOMASTER.ViewModels
             profile.Args = ArgsText?.Trim() ?? "";
             if (existing == null) _config.Profiles.Add(profile);
 
-            ConfigManager.Save(_config);
+            _store.Save(_config);
             RefreshProfiles();
             StatusText = $"Profile saved: {name}";
             Logger.Log("Profile", $"Saved '{name}': {profile.PresetName}, OCIO '{profile.OcioName}', args '{profile.Args}'", "info");
@@ -717,7 +713,7 @@ namespace FLOMASTER.ViewModels
                 MessageBoxButton.YesNo, MessageBoxImage.Question);
             if (result != MessageBoxResult.Yes) return;
             _config.Profiles.RemoveAll(p => p.Name == profile.Name);
-            ConfigManager.Save(_config);
+            _store.Save(_config);
             RefreshProfiles();
             StatusText = $"Profile deleted: {profile.Name}";
             Logger.Log("Profile", $"Deleted '{profile.Name}'", "info");
@@ -808,7 +804,7 @@ namespace FLOMASTER.ViewModels
             var path = dialog.SelectedPath;
             if (_config.ProjectRoots.Contains(path)) { StatusText = "Project folder already added"; return; }
             _config.ProjectRoots.Add(path);
-            ConfigManager.Save(_config);
+            _store.Save(_config);
             RefreshProjectRoots();
             StatusText = $"Project folder added: {Path.GetFileName(path)}";
             Logger.Log("Browser", $"Project root added: {path}", "info");
@@ -821,7 +817,7 @@ namespace FLOMASTER.ViewModels
                 MessageBoxButton.YesNo, MessageBoxImage.Question);
             if (result != MessageBoxResult.Yes) return;
             _config.ProjectRoots.Remove(path);
-            ConfigManager.Save(_config);
+            _store.Save(_config);
             RefreshProjectRoots();
             StatusText = "Project folder removed";
         }

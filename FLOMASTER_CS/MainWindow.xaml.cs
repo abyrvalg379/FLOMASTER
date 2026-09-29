@@ -19,8 +19,10 @@ namespace FLOMASTER
         {
             InitializeComponent();
 
-            // Set ViewModel as DataContext
-            var viewModel = new MainViewModel();
+            // Set ViewModel as DataContext (composition root: ручной DI без контейнеров)
+            var ocio = new OcioService();
+            _ocioService = ocio;
+            var viewModel = new MainViewModel(new ConfigManager(), ocio, new LaunchService(ocio));
             DataContext = viewModel;
             _viewModel = viewModel;
 
@@ -143,6 +145,7 @@ namespace FLOMASTER
         }
 
         private MainViewModel? _viewModel;
+        private OcioService? _ocioService;
 
         private void RolePick_Click(object sender, RoutedEventArgs e)
         {
@@ -151,7 +154,7 @@ namespace FLOMASTER
             if (ocio == null || string.IsNullOrEmpty(ocio.Path) || !File.Exists(ocio.Path)) return;
             if (_viewModel == null) return;
 
-            var (_, colorspaces) = OcioService.Parse(ocio.Path);
+            var (_, colorspaces) = _ocioService.Parse(ocio.Path);
             string? current = null;
             if (_viewModel.SelectedPreset?.RoleOverrides != null &&
                 _viewModel.SelectedPreset.RoleOverrides.TryGetValue(row.RoleName, out var v))

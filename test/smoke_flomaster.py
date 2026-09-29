@@ -19,6 +19,7 @@ FLOMASTER smoke test (gate-скрипт, по образцу STUKACH smoke).
   13 Версии exe: publish == out == Program Files == csproj
   14 Релизный zip: размер вменяемый, содержит exe и канонический конфиг, без вложенных zip
   15 Гигиена: нет файла `dist` в корне репо, .gitignore держит голый `dist`
+  20 Юнит-тесты: dotnet test (OcioService + ConfigStore)
   16 Launch smoke: publish-exe стартует, жив через 5 с, конфиг %APPDATA% валиден
       (если FLOMASTER уже запущен — SKIP, чужой трей не трогаем)
   17 git status (только WARN, репо живое)
@@ -339,6 +340,23 @@ if git_out.strip():
     record("17 git status", "WARN", f"{len(git_out.strip().splitlines())} изменений, напр.: {first}")
 else:
     record("17 git status", "PASS", "чисто")
+
+# ------------------------------------------------------------ Юнит-тесты
+
+section("Юнит-тесты")
+
+tests_dir = WORK / "tests" / "FLOMASTER.Tests"
+if not tests_dir.exists():
+    record("20 Юнит-тесты dotnet test", "FAIL", "нет tests/FLOMASTER.Tests")
+else:
+    out, code = run_cmd(["dotnet", "test", str(tests_dir), "--nologo", "-v", "q"], timeout=240, cwd=WORK)
+    if code == 0:
+        import re as _re
+        m = _re.search(r"пройдено\s+(\d+),\s+пропущено", out) or _re.search(r"Passed!.*?(\d+) passed", out)
+        record("20 Юнит-тесты dotnet test", "PASS", f"{m.group(1)} passed" if m else "exit 0")
+    else:
+        tail = "; ".join(out.strip().splitlines()[-3:])
+        record("20 Юнит-тесты dotnet test", "FAIL", tail or f"exit {code}")
 
 # ------------------------------------------------------------ Launch smoke
 

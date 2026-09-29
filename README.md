@@ -4,7 +4,7 @@
 
 [![Release](https://img.shields.io/github/v/release/abyrvalg379/FLOMASTER)](https://github.com/abyrvalg379/FLOMASTER/releases/latest)
 [![Windows](https://img.shields.io/badge/Windows-10%2F11-0078D6?logo=windows11&logoColor=white)](https://github.com/abyrvalg379/FLOMASTER#quick-start)
-[![smoke](https://img.shields.io/badge/smoke-19%2F19%20passing-brightgreen)](test/smoke_flomaster.py)
+[![smoke](https://img.shields.io/badge/smoke-20%2F20%20passing-brightgreen)](test/smoke_flomaster.py)
 
 **OCIO Launcher** — a unified launch point for DCC applications with custom ACES 1.2 color space support.
 
