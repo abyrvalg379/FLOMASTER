@@ -87,6 +87,19 @@ fuzzy-поиск по пресетам (их 5–15).
 
 ## История решений (кратко)
 
+- **2026-09-29 (ночь): п.2 выполнен — декомпозиция + ручной DI + юнит-тесты.**
+  `IConfigStore`/`IOcioService`/`ILaunchService` — инстансы с конструкторной инъекцией,
+  composition root = MainWindow (контейнеров нет, по плану). MainViewModel перестал
+  звать статику (17× ConfigManager.Save → _store и т.д.), механика запуска уехала в
+  LaunchService. Мёртвые GetActiveOcio/GetDefaultOcio удалены (прецедент
+  LogProcessExit). Тест-проект tests/FLOMASTER.Tests (xunit, 17 тестов): парсер
+  ocio/роли, BuildVariant (канон байт-в-байт не трогает, EOL, drops, добавление роли),
+  ApplyOcio (env var vs UE -ocio=), ConfigStore (нет файла / битый JSON → бэкап+дефолт,
+  round-trip новых полей, аддитивность старого конфига). Смоук +чек 20 (dotnet test,
+  счётчик passed из вывода; NB StringDictionary кидает на отсутствующем ключе, регекс
+  счёта — хвост «пройдено N, пропущено», иначе берёт 0 из «не пройдено 0»). Плашки
+  README 19/19 → 20/20. CLI теперь разблокирован (следующий пункт).
+- 
 - **2026-09-29 (вечер): v2.3.5 ОПУБЛИКОВАНА** (https://github.com/abyrvalg379/FLOMASTER/releases/tag/v2.3.5,
   коммит 68f2977) — Projects panel: браузер проектов ВСТРОЕН в главное окно как панель
   (позиция в каноне стека: Roles → Profiles → Projects → Recent → Settings → Quick →

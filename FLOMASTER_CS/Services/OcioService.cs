@@ -24,20 +24,19 @@ namespace FLOMASTER.Services
         private static string Short(string v) => v.Length <= 26 ? v : v[..23] + "...";
     }
 
-    public static class OcioService
+    public interface IOcioService
     {
-        public static OcioConfig GetActiveOcio(Config config, object selectedItem)
-        {
-            if (selectedItem is OcioConfig ocio)
-            {
-                if (!string.IsNullOrEmpty(ocio.Path) && File.Exists(ocio.Path))
-                    return ocio;
-                Logger.Log("OCIO", $"OCIO path not found: {ocio.Path}", "warn");
-            }
-            return null;
-        }
+        (List<KeyValuePair<string, string>> roles, Dictionary<string, string> colorspaces) Parse(string ocioPath);
+        OcioValidationReport Validate(string ocioPath);
+        string? BuildVariant(string basePath, Dictionary<string, string> overrides, string presetName);
+        void ApplyOcio(ProcessStartInfo psi, OcioConfig ocio, string exePath, string? variantPath = null);
+        bool AddOcioConfig(Config config, string name, string path);
+        bool RemoveOcioConfig(Config config, OcioConfig selected);
+    }
 
-        public static void ApplyOcio(ProcessStartInfo psi, OcioConfig ocio, string exePath, string? variantPath = null)
+    public class OcioService : IOcioService
+    {
+        public void ApplyOcio(ProcessStartInfo psi, OcioConfig ocio, string exePath, string? variantPath = null)
         {
             if (ocio == null || string.IsNullOrEmpty(ocio.Path))
             {
@@ -67,7 +66,7 @@ namespace FLOMASTER.Services
             }
         }
 
-        public static bool AddOcioConfig(Config config, string name, string path)
+        public bool AddOcioConfig(Config config, string name, string path)
         {
             if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(path))
             {
@@ -92,7 +91,7 @@ namespace FLOMASTER.Services
             return true;
         }
 
-        public static bool RemoveOcioConfig(Config config, OcioConfig selected)
+        public bool RemoveOcioConfig(Config config, OcioConfig selected)
         {
             if (selected == null) return false;
 
@@ -114,21 +113,11 @@ namespace FLOMASTER.Services
             return true;
         }
 
-        public static OcioConfig GetDefaultOcio(Config config)
-        {
-            return config.OcioConfigs.FirstOrDefault(o => o.Name == config.DefaultOcio);
-        }
-
-        /// <summary>
-        /// Разбирает config.ocio: секция roles + все объявленные colorspace.
-        /// Предупреждает про отсутствующие критичные роли (дефолты Blender) и
-        /// роли, цели которых не объявлены как colorspace (опечатки, битые конфиги).
-        /// </summary>
         /// <summary>
         /// Разбирает config.ocio: секция roles + все объявленные colorspace (имя -> family).
         /// Общий парсер для Validate, UI-настройки ролей и пикера с группировкой по family.
         /// </summary>
-        public static (List<KeyValuePair<string, string>> roles, Dictionary<string, string> colorspaces) Parse(string ocioPath)
+        public (List<KeyValuePair<string, string>> roles, Dictionary<string, string> colorspaces) Parse(string ocioPath)
         {
             var lines = File.ReadAllLines(ocioPath);
             var roles = new List<KeyValuePair<string, string>>();
@@ -167,7 +156,7 @@ namespace FLOMASTER.Services
         /// <summary>
         /// Проверяет конфиг: критичные роли, дефолты Blender, битые ссылки ролей.
         /// </summary>
-        public static OcioValidationReport Validate(string ocioPath)
+        public OcioValidationReport Validate(string ocioPath)
         {
             var report = new OcioValidationReport();
             try
@@ -213,7 +202,7 @@ namespace FLOMASTER.Services
         /// результат пишется в %APPDATA%\FLOMASTER\variants\.
         /// Возвращает путь варианта или null (нет переопределений / нечего применять).
         /// </summary>
-        public static string? BuildVariant(string basePath, Dictionary<string, string> overrides, string presetName)
+        public string? BuildVariant(string basePath, Dictionary<string, string> overrides, string presetName)
         {
             try
             {
