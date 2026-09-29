@@ -88,8 +88,8 @@ Launch without the window — profiles resolve to an app + OCIO config + argumen
 
 ```
 FLOMASTER.exe --list-profiles
-FLOMASTER.exe --launch "Show A" 
-FLOMASTER.exe --launch "Show A" --project "E:\shows\A\shot_042.blend"
+FLOMASTER.exe --launch "Project A" 
+FLOMASTER.exe --launch "Project A" --project "E:\shows\A\shot_042.blend"
 ```
 
 `--project` appends the file to the profile arguments (or substitutes a `{file}` placeholder if the profile has one). Exit codes: `0` launched, `2` profile/preset/file not found, `1` launch error — script-friendly.

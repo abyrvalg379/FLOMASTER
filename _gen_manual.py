@@ -66,7 +66,7 @@ def build_ru():
     for b in (
         'автоскан установленных приложений: реестр Windows, манифесты Epic Games и файловый поиск — Blender, K-Cycles, Maya, Houdini, Nuke, DaVinci Resolve, Unreal Engine, Substance Painter;',
         'пресеты запуска: своё имя, свой exe, свои аргументы запуска;',
-        'профили запуска: именованные связки «приложение + OCIO-конфиг + аргументы», переключение шоу одним нажатием;',
+        'профили запуска: именованные связки «приложение + OCIO-конфиг + аргументы», переключение проектов одним нажатием;',
         'панель Projects: браузер файлов проектов по вашим папкам, открытие прямо в лаунчере;',
         'роли OCIO: переопределение цветовых ролей на уровне пресета без правки конфига;',
         'командная строка для батников и ферм;',
@@ -117,7 +117,7 @@ def build_ru():
 
     h1(doc, '5. Профили запуска')
     p(doc, 'Профиль - именованный слепок состояния запуска: приложение + OCIO-конфиг + '
-           'аргументы. Это единица переключения между задачами: «шоу А» и «шоу Б» отличаются '
+           'аргументы. Это единица переключения между задачами: «проект А» и «проект Б» отличаются '
            'одним нажатием, а не перенастройкой трёх полей.')
     for b in (
         'настройте приложение, OCIO-конфиг и аргументы, раскройте панель Profiles и нажмите Save current as profile;',
@@ -126,7 +126,7 @@ def build_ru():
         'в меню трея есть секция PROFILES — запуск профиля прямо из трея, без окна.',
     ):
         p(doc, b, bullet=True)
-    p(doc, 'Типовой набор: по профилю на шоу (разные OCIO-конфиги), на версию приложения, на '
+    p(doc, 'Типовой набор: по профилю на проект (разные OCIO-конфиги), на версию приложения, на '
            'фоновый рендер (аргументы запекания). Профили переезжают между машинами вместе с '
            'настройками — см. раздел «Перенос на другую машину».')
 
@@ -223,7 +223,7 @@ def build_ru():
     p(doc, 'Лаунчер работает без окна - для батников, ферм и скриптов:')
     p(doc, 'FLOMASTER.exe --list-profiles', bullet=False, italic=True)
     p(doc, 'FLOMASTER.exe --launch "Профиль"', bullet=False, italic=True)
-    p(doc, 'FLOMASTER.exe --launch "Профиль" --project "D:\\shows\\A\\shot_042.blend"', bullet=False, italic=True)
+    p(doc, 'FLOMASTER.exe --launch "Профиль" --project "D:\\projects\\A\\shot_042.blend"', bullet=False, italic=True)
     p(doc, 'Профиль разворачивается в приложение + OCIO-конфиг + аргументы - та же среда, что и '
            'ручной запуск. --project добавляет файл к аргументам профиля (или подставляется '
            'вместо плейсхолдера {file}, если он есть в аргументах профиля).')
@@ -263,8 +263,8 @@ def build_ru():
         ('Единый цвет на старте дня',
          'Окно лаунчера → Launch у нужного приложения. Все приложения дня стартуют с одним и тем же '
          'конфигом - передавать файлы между ними можно без цветовых сюрпризов.'),
-        ('Переключение между шоу',
-         'Настройте профили по одному на шоу и переключайте их в панели Profiles одним нажатием. '
+        ('Переключение между проектами',
+         'Настройте профили по одному на проект и переключайте их в панели Profiles одним нажатием. '
          'Из трея профиль запускается сразу, без окна лаунчера.'),
         ('Открыть файл проекта не выходя из задачи',
          'Панель Projects → корень → клик по файлу. Поиск по имени находит файл в глубине папок.'),
@@ -326,7 +326,7 @@ def build_en():
     for b in (
         'auto-scan of installed applications from the Windows registry, Epic Games manifests and file search — Blender, K-Cycles, Maya, Houdini, Nuke, DaVinci Resolve, Unreal Engine, Substance Painter;',
         'launch presets: your own name, exe and launch arguments;',
-        'launch profiles: named app + OCIO config + arguments bundles, one-click show switching;',
+        'launch profiles: named app + OCIO config + arguments bundles, one-click project switching;',
         'Projects panel: a project file browser over your own folders, opening files right in the launcher;',
         'OCIO roles: per-preset role overrides without touching the config;',
         'a command line for batch files and farms;',
@@ -377,7 +377,7 @@ def build_en():
 
     h1(doc, '5. Launch profiles')
     p(doc, 'A profile is a named snapshot of a launch state: application + OCIO config + '
-           'arguments. It is the unit of task switching: "show A" and "show B" differ by one '
+           'arguments. It is the unit of task switching: "Project A" and "Project B" differ by one '
            'click instead of re-tuning three fields.')
     for b in (
         'set the application, OCIO config and arguments, expand the Profiles panel and press Save current as profile;',
@@ -386,7 +386,7 @@ def build_en():
         'the tray menu has a PROFILES section — launch a profile straight from the tray, no window needed.',
     ):
         p(doc, b, bullet=True)
-    p(doc, 'A typical set: one profile per show (different OCIO configs), one per application '
+    p(doc, 'A typical set: one profile per project (different OCIO configs), one per application '
            'version, one for background rendering (bake arguments). Profiles travel between '
            'machines with your settings — see "Moving to another machine".')
 
@@ -483,7 +483,7 @@ def build_en():
     p(doc, 'The launcher runs without a window - for batch files, farms and scripts:')
     p(doc, 'FLOMASTER.exe --list-profiles', bullet=False, italic=True)
     p(doc, 'FLOMASTER.exe --launch "Profile"', bullet=False, italic=True)
-    p(doc, 'FLOMASTER.exe --launch "Profile" --project "D:\\shows\\A\\shot_042.blend"', bullet=False, italic=True)
+    p(doc, 'FLOMASTER.exe --launch "Profile" --project "D:\\projects\\A\\shot_042.blend"', bullet=False, italic=True)
     p(doc, 'A profile resolves to application + OCIO config + arguments - the same environment as '
            'a manual launch. --project appends the file to the profile arguments (or substitutes '
            'the {file} placeholder if the profile has one).')
@@ -523,8 +523,8 @@ def build_en():
         ('One color from the start of the day',
          'Launcher window → Launch on the application you need. Everything you start that day '
          'runs on the same config - files travel between applications without color surprises.'),
-        ('Switching between shows',
-         'Set up one profile per show and switch them in the Profiles panel with a single click. '
+        ('Switching between projects',
+         'Set up one profile per project and switch them in the Profiles panel with a single click. '
          'From the tray a profile launches right away, without the launcher window.'),
         ('Open a project file without leaving the task',
          'Projects panel → root → click the file. Name search finds files deep inside folders.'),
