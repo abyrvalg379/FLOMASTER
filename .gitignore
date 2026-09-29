@@ -39,3 +39,4 @@ test/*
 # build artifacts anywhere
 bin/
 obj/
+__pycache__/
