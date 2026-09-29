@@ -83,10 +83,27 @@ def build_ru():
         'Распакуйте архив в удобную папку (например, C:\\Program Files\\FLOMASTER).',
         'Запустите FLOMASTER.exe. Сборка самодостаточная: .NET 8 входит в комплект, ничего доустанавливать не нужно.',
         'Окно открывается в правом верхнем углу экрана. Пользовательские данные (настройки и журнал) создаются в %APPDATA%\\FLOMASTER\\.',
-        'Автообновление: при старте лаунчер проверяет GitHub на новую версию, скачивает её в фоне и показывает в Settings кнопку «Restart and install» — замена происходит в один клик (один запрос UAC). Проверку можно отключить галкой Check for updates on start.',
-        'Ручное обновление: закройте лаунчер (в том числе из трея), замените файлы, запустите заново. Настройки и журнал живут отдельно от программы и переживают обновление.',
     ):
         p(doc, b, bullet=True)
+
+    h2(doc, '2.1 Автообновление')
+    p(doc, 'При старте (через несколько секунд после запуска) лаунчер сверяет свою версию с '
+           'последним релизом на GitHub. Если вышла новая — она скачивается в фоне, без вашего '
+           'участия; в Settings появится кнопка Restart and install.')
+    add_table(doc, [
+        ('Этап', 'Что происходит'),
+        ('Проверка при старте', 'через ~3 секунды после запуска версия сверяется с последним релизом на GitHub'),
+        ('Фоновая загрузка', 'новый exe качается во временную папку, прогресс виден в Settings'),
+        ('Restart and install', 'кнопка в Settings: один запрос UAC — лаунчер закроется, заменит exe и запустится уже новой версией'),
+        ('Отключение', 'галка Check for updates on start в Settings'),
+    ], [5.0, 12.0])
+    p(doc, 'Обновляется только exe: настройки, профили и журнал в %APPDATA% остаются как были. '
+           'До нажатия кнопки ничего не устанавливается — скачивание идёт в фоне и ни на что '
+           'не влияет.')
+
+    h2(doc, '2.2 Ручное обновление')
+    p(doc, 'Закройте лаунчер (в том числе из трея), замените файлы, запустите заново. Настройки '
+           'и журнал живут отдельно от программы и переживают обновление.')
 
     h1(doc, '3. Быстрый старт')
     for b in (
@@ -295,6 +312,7 @@ def build_ru():
         ('Окно журнала не видно', 'открывается сбоку от лаунчера, той же высоты', 'посмотрите левее/правее окна лаунчера'),
         ('Настройки и журнал «пропали» после переустановки', 'они живут не в папке программы', 'ищите в %APPDATA%\\FLOMASTER\\ - обновления их не трогают'),
         ('После переноса настроек пресеты указывают не туда', 'пути exe машинно-специфичны и не переносятся', 'выполните Rescan на новой машине — пресеты найдутся в реестре'),
+        ('Кнопка Restart and install не появляется', 'версия уже актуальна, проверка отключена или загрузка ещё идёт', 'смотрите строки Update в журнале: Up to date — версия свежая; галка Check for updates on start включает проверку'),
     ], [4.6, 5.4, 7.0])
 
     _save(doc, OUT_RU)
@@ -343,10 +361,27 @@ def build_en():
         'Extract the archive to a folder of your choice (e.g. C:\\Program Files\\FLOMASTER).',
         'Run FLOMASTER.exe. The build is self-contained: .NET 8 is bundled, nothing else to install.',
         'The window opens in the top-right corner of the screen. User data (settings and the log) is created in %APPDATA%\\FLOMASTER\\.',
-        'Auto-update: on start the launcher checks GitHub for a new version, downloads it in the background and shows a "Restart and install" button in Settings — one click, one UAC prompt. Disable it with the Check for updates on start checkbox.',
-        'Manual update: close the launcher (including the tray), replace the files, start it again. Settings and the log live apart from the program and survive updates.',
     ):
         p(doc, b, bullet=True)
+
+    h2(doc, '2.1 Auto-update')
+    p(doc, 'A few seconds after launch the launcher compares its version against the latest '
+           'release on GitHub. If a new one is out, it is downloaded in the background with no '
+           'action on your side; a Restart and install button appears in Settings.')
+    add_table(doc, [
+        ('Stage', 'What happens'),
+        ('Check at startup', '~3 seconds after launch the version is compared against the latest GitHub release'),
+        ('Background download', 'the new exe is downloaded to a temp folder, progress is visible in Settings'),
+        ('Restart and install', 'button in Settings: one UAC prompt — the launcher closes, replaces its exe and restarts on the new version'),
+        ('Disable', 'the Check for updates on start checkbox in Settings'),
+    ], [5.0, 12.0])
+    p(doc, 'Only the exe is updated: settings, profiles and the log in %APPDATA% stay exactly as '
+           'they were. Nothing is installed until you press the button — the download is a '
+           'background operation with no side effects.')
+
+    h2(doc, '2.2 Manual update')
+    p(doc, 'Close the launcher (including the tray), replace the files, start it again. Settings '
+           'and the log live apart from the program and survive updates.')
 
     h1(doc, '3. Quick start')
     for b in (
@@ -555,6 +590,7 @@ def build_en():
         ('Log window is nowhere to be seen', 'it opens beside the launcher, at the same height', 'look to the left/right of the launcher window'),
         ('Settings and log "disappeared" after reinstall', 'they do not live in the program folder', 'look in %APPDATA%\\FLOMASTER\\ - updates never touch them'),
         ('After moving settings the presets point to wrong places', 'exe paths are machine-specific and are not exported', 'run Rescan on the new machine — presets will be found in the registry'),
+        ('The Restart and install button never appears', 'the version is already current, the check is disabled, or the download is still running', 'look for Update lines in the log: Up to date means the version is fresh; the Check for updates on start checkbox turns the check on'),
     ], [4.6, 5.4, 7.0])
 
     _save(doc, OUT_EN)

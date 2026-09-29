@@ -91,6 +91,12 @@ def new_doc(name, subtitle, version, gh='GITHUB.COM/ABYRVALG379'):
     c.top_margin = c.bottom_margin = c.left_margin = c.right_margin = 0
     c.header_distance = c.footer_distance = 0
     c.footer.is_linked_to_previous = False
+    # пустой футер обложки сжимаем: LibreOffice резервирует его высоту строки
+    # и даёт белую полосу ~18px внизу чёрного полотна
+    _fp = c.footer.paragraphs[0]
+    _fp.paragraph_format.space_before = Pt(0)
+    _fp.paragraph_format.space_after = Pt(0)
+    _fp.paragraph_format.line_spacing = Pt(1)
 
     tbl = doc.add_table(rows=1, cols=1)
     tbl.autofit = False
@@ -141,6 +147,21 @@ def new_doc(name, subtitle, version, gh='GITHUB.COM/ABYRVALG379'):
     _run(gh_p, gh, font=HEAD_FONT, size=7.5, color=DIM, caps=True, tracking=60)
 
     inner = doc.add_section(WD_SECTION.NEW_PAGE)
+
+    # Параграф-носитель sectPr обложки сжимаем до нуля: его высота строки (~260 twips)
+    # вычитается LibreOffice из чёрного полотна и даёт белую полосу ~18px внизу обложки.
+    from docx.oxml.ns import qn as _qn
+    from docx.text.paragraph import Paragraph as _Paragraph
+    _body = doc.element.body
+    for _p in _body.findall(_qn('w:p')):
+        _ppr = _p.find(_qn('w:pPr'))
+        if _ppr is not None and _ppr.find(_qn('w:sectPr')) is not None:
+            _para = _Paragraph(_p, None)
+            _para.paragraph_format.space_before = Pt(0)
+            _para.paragraph_format.space_after = Pt(0)
+            _para.paragraph_format.line_spacing = Pt(1)
+            break
+
     inner.top_margin = inner.bottom_margin = Cm(2)
     inner.left_margin = inner.right_margin = Cm(2.2)
     normal = doc.styles['Normal']
