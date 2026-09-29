@@ -18,6 +18,10 @@ namespace FLOMASTER
             InitializeComponent();
             _vm = viewModel;
             DataContext = viewModel;
+
+            // пустые состояния секций
+            ProfilesEmpty.Visibility = viewModel.Profiles.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+            RecentEmpty.Visibility = viewModel.RecentFiles.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
         }
 
         private void PresetTile_Click(object sender, RoutedEventArgs e)
