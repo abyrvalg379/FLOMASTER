@@ -38,11 +38,14 @@
 
 ---
 
-## What's New in v2.3.4
+## What's New in v2.3.5
 
-- **Launch profiles** — save the current app + OCIO config + arguments as a named snapshot; apply with a click or launch straight from the tray *PROFILES* section. Profiles reference apps and configs by name, so edits keep working; **the original .ocio file is never modified**
-- **Recent files — fixed** — clicking a recent file now opens it with the selected app (the handler had been silently lost in an old refactor); project files dropped onto the window populate the list
-- **Panel order** — Roles → Profiles → Recent files → Settings → Quick commands → Arguments
+- **Projects panel** — point it at your project folders and open any project file without digging through Explorer: flat list of every file inside, relative paths, name filter; a click opens it with the current preset + OCIO and fills Recent
+- **Built into the launcher** — same window, same theme, same hover highlights, same expand animation; roots stored additively in the config
+- **Native formats only** — `.blend .spp .ma .mb .hip .hipl .hipnc .nk`; exports and bakes (`.fbx .obj .stl`) are intentionally not listed
+
+### [v2.3.4](https://github.com/abyrvalg379/FLOMASTER/releases/tag/v2.3.4) — launch profiles + recent files fix
+Named app + OCIO + arguments snapshots with tray quick-launch; recent files click repaired (handler had been silently lost); panels reordered Roles → Profiles → Recent → Settings → Quick → Arguments.
 
 ### [v2.3.3](https://github.com/abyrvalg379/FLOMASTER/releases/tag/v2.3.3) — OCIO role picker + auto-update
 Per-preset role overrides with a Blender-style family-grouped picker; auto-update check on start with one-click install. Original config untouched.
