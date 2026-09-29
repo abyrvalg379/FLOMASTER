@@ -17,6 +17,86 @@ namespace FLOMASTER.Services
         public static readonly string[] ProjectFileExtensions =
             { ".blend", ".spp", ".ma", ".mb", ".hip", ".hipl", ".hipnc", ".nk" };
 
+        /// <summary>
+        /// Тематический диалог ввода (замена серого VB InputBox). Возвращает строку
+        /// или null при отмене. Enter = OK, Esc = отмена.
+        /// </summary>
+        public static string ShowInputDialog(string title, string prompt, string defaultValue = "")
+        {
+            string result = null;
+            var dlg = new Window
+            {
+                Title = title,
+                Width = 380,
+                SizeToContent = SizeToContent.Height,
+                WindowStartupLocation = WindowStartupLocation.CenterScreen,
+                ResizeMode = ResizeMode.NoResize,
+                Background = Brushes.Transparent,
+                ShowInTaskbar = false
+            };
+            dlg.SetResourceReference(Window.BackgroundProperty, "BgBrush");
+
+            var input = new TextBox
+            {
+                Text = defaultValue,
+                Margin = new Thickness(0, 0, 0, 12),
+                Padding = new Thickness(6, 4, 6, 4),
+                FontSize = 12
+            };
+            input.SetResourceReference(TextBox.ForegroundProperty, "TextBrush");
+            input.SetResourceReference(TextBox.BackgroundProperty, "BgBrush");
+            input.SetResourceReference(TextBox.BorderBrushProperty, "BorderBrush");
+            input.SetResourceReference(TextBox.CaretBrushProperty, "TextBrush");
+
+            TextBlock Label(string key)
+            {
+                var tb = new TextBlock { FontSize = 11 };
+                tb.SetResourceReference(TextBlock.ForegroundProperty, key);
+                return tb;
+            }
+
+            var promptLabel = Label("DimBrush");
+            promptLabel.Text = prompt;
+
+            // BtnStyle живёт на уровне приложения — диалогам он доступен так же, как MainWindow
+            var btnStyle = (Style)Application.Current.Resources["BtnStyle"];
+            var ok = new Button { Content = "OK", Width = 90, Style = btnStyle };
+            var cancel = new Button { Content = "Cancel", Width = 90, Style = btnStyle };
+
+            bool confirmed = false;
+            void Confirm()
+            {
+                confirmed = true;
+                dlg.Close();
+            }
+
+            ok.Click += (_, _) => Confirm();
+            cancel.Click += (_, _) => dlg.Close();
+            input.KeyDown += (_, e) =>
+            {
+                if (e.Key == Key.Enter) { Confirm(); e.Handled = true; }
+            };
+            dlg.PreviewKeyDown += (_, e) =>
+            {
+                if (e.Key == Key.Escape) dlg.Close();
+            };
+            dlg.Loaded += (_, _) => { input.Focus(); input.SelectAll(); };
+
+            var buttons = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right };
+            buttons.Children.Add(ok);
+            buttons.Children.Add(cancel);
+            cancel.Margin = new Thickness(8, 0, 0, 0);
+
+            var content = new StackPanel { Margin = new Thickness(16) };
+            content.Children.Add(promptLabel);
+            content.Children.Add(input);
+            content.Children.Add(buttons);
+            dlg.Content = content;
+
+            dlg.ShowDialog();
+            return confirmed ? input.Text : null;
+        }
+
         public static Window CreateLogWindow(string logContent, Window owner)
         {
             var logWindow = new Window

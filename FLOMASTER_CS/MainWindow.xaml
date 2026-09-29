@@ -208,33 +208,6 @@
 
         <!-- Скроллбар переехал в App.xaml (уровень приложения) -->
 
-        <!-- Button style -->
-        <Style TargetType="Button" x:Key="BtnStyle">
-            <Setter Property="Background" Value="{DynamicResource BorderBrush}"/>
-            <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
-            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
-            <Setter Property="Height" Value="30"/>
-            <Setter Property="FontSize" Value="12"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border Name="Bd" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
-                                BorderThickness="1" CornerRadius="4" Padding="10,0">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource PanelBrush}"/>
-                            </Trigger>
-                            <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource BgBrush}"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-
         <!-- Launch button style -->
         <Style TargetType="Button" x:Key="BtnLaunchStyle">
             <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
@@ -567,7 +540,9 @@
                                 <CheckBox Content="Always on top" Foreground="{DynamicResource TextBrush}"
                                           FontSize="12" Margin="10,0,10,4" IsChecked="{Binding TopMostEnabled}"/>
                                 <CheckBox Content="Smooth animation" Foreground="{DynamicResource TextBrush}"
-                                          FontSize="12" Margin="10,0,10,12" IsChecked="{Binding AnimationEnabled}"/>
+                                          FontSize="12" Margin="10,0,10,4" IsChecked="{Binding AnimationEnabled}"/>
+                                <CheckBox Content="Global hotkey (Ctrl+Alt+F)" Foreground="{DynamicResource TextBrush}"
+                                          FontSize="12" Margin="10,0,10,12" IsChecked="{Binding HotkeyEnabled}"/>
                                 <TextBlock Text="DEFAULT OCIO" Foreground="{DynamicResource DimBrush}" FontSize="10" FontWeight="SemiBold"
                                            Margin="10,0,10,4"/>
                                 <TextBlock Text="Used when launching from tray" Foreground="{DynamicResource DimBrush}"
