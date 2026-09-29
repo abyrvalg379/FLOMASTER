@@ -304,6 +304,19 @@ namespace FLOMASTER.ViewModels
             }
         }
 
+        /// <summary>Ctrl+Alt+F открывает полноэкранный дашборд (false — маленькое окно).</summary>
+        public bool HotkeyOpensDashboard
+        {
+            get => _config.HotkeyOpensDashboard;
+            set
+            {
+                _config.HotkeyOpensDashboard = value;
+                _store.Save(_config);
+                OnPropertyChanged();
+                Logger.Log("Hotkey", $"Opens {(value ? "dashboard" : "window")}", "info");
+            }
+        }
+
         /// <summary>Монитор оверлея (DeviceName): пишется при закрытии оверлея, читается при открытии.</summary>
         public string OverlayScreenDeviceName
         {
@@ -848,7 +861,6 @@ namespace FLOMASTER.ViewModels
                 SelectedBrowserRoot = ProjectRoots.FirstOrDefault();
         }
 
-        /// <summary>Плоский рекурсивный список проектных файлов корня (для оверлея и панели).</summary>
         public List<string> GetProjectFiles(string root)
         {
             var acc = new List<string>();

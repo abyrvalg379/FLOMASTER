@@ -202,7 +202,8 @@ namespace FLOMASTER
         {
             if (msg == WM_HOTKEY && wParam.ToInt32() == HOTKEY_ID)
             {
-                ToggleOverlay();
+                if (_viewModel.HotkeyOpensDashboard) ToggleOverlay();
+                else ToggleMainWindow();
                 handled = true;
             }
             return IntPtr.Zero;
@@ -256,6 +257,23 @@ namespace FLOMASTER
         }
 
         private MainViewModel? _viewModel;
+
+        /// <summary>Маленькое окно: видно и активно — спрятать; иначе — показать и поднять.</summary>
+        private void ToggleMainWindow()
+        {
+            if (IsVisible && IsActive)
+            {
+                Hide();
+                return;
+            }
+            Show();
+            WindowState = WindowState.Normal;
+            Activate();
+            // всплытие поверх DCC: Win32-topmost на миг, WPF-биндинг Topmost не трогаем
+            var handle = new System.Windows.Interop.WindowInteropHelper(this).Handle;
+            SetWindowPos(handle, HwndTopmost, 0, 0, 0, 0, SwpNomove | SwpNosize | SwpShowwindow);
+            SetWindowPos(handle, HwndNotTopmost, 0, 0, 0, 0, SwpNomove | SwpNosize);
+        }
         private OcioService? _ocioService;
 
         private void RolePick_Click(object sender, RoutedEventArgs e)

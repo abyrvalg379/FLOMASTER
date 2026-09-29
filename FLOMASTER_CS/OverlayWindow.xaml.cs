@@ -9,6 +9,7 @@ using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Threading;
 using FLOMASTER.Models;
 using FLOMASTER.Services;
 using FLOMASTER.ViewModels;
@@ -24,8 +25,12 @@ namespace FLOMASTER
     public partial class OverlayWindow : Window
     {
         /// <summary>Плитка: полезная нагрузка (Preset/Profile/строка-файл) + данные отображения.</summary>
-        public class OverlayTile
+        public class OverlayTile : INotifyPropertyChanged
         {
+            private Visibility _tileVisibility = Visibility.Visible;
+
+            public event PropertyChangedEventHandler? PropertyChanged;
+
             public string Title { get; set; } = "";
             public string Subtitle { get; set; } = "";
             public ImageSource? Icon { get; set; }
@@ -33,6 +38,13 @@ namespace FLOMASTER
             public string Badge { get; set; } = "";
             public string Dir { get; set; } = "";
             public object? Payload { get; set; }
+
+            /// <summary>Видимость плитки при поиске (INPC — без пересборки контейнеров, без дрожи).</summary>
+            public Visibility TileVisibility
+            {
+                get => _tileVisibility;
+                set { _tileVisibility = value; PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(TileVisibility))); }
+            }
         }
 
         /// <summary>Чип выбора (конфиг/корень проектов).</summary>
@@ -48,6 +60,11 @@ namespace FLOMASTER
         private readonly System.Windows.Forms.Screen? _preferredScreen;
         private System.Windows.Forms.Screen _screen = System.Windows.Forms.Screen.PrimaryScreen
             ?? System.Windows.Forms.Screen.AllScreens[0];
+
+        /// <summary>Монитор, на котором оверлей был закрыт последний раз (сессионная память).</summary>
+        public static System.Windows.Forms.Screen? LastScreen;
+
+        private readonly System.Windows.Threading.DispatcherTimer _searchDebounce;
 
         public OverlayWindow(MainViewModel viewModel, Window owner,
             System.Windows.Forms.Screen? preferredScreen = null)
@@ -69,6 +86,16 @@ namespace FLOMASTER
             LocationChanged += (_, _) => SnapToMonitorIfChanged();
             StateChanged += (_, _) => { if (WindowState == WindowState.Normal) ApplyScreenBounds(); };
 
+            // debounce поиска: 250 мс после последнего нажатия — без дрожи при быстром наборе
+            _searchDebounce = new System.Windows.Threading.DispatcherTimer
+            {
+                Interval = TimeSpan.FromMilliseconds(250)
+            };
+            _searchDebounce.Tick += (_, _) =>
+            {
+                _searchDebounce.Stop();
+                ApplySearchFilter(SearchBox.Text.Trim());
+            };
             SearchBox.Focus();
         }
 
@@ -124,6 +151,14 @@ namespace FLOMASTER
 
         private void PositionOnOwnerScreen()
         {
+            // приоритет: монитор, где оверлей был закрыт в прошлый раз -> монитор лаунчера -> primary
+            if (_preferredScreen != null &&
+                System.Windows.Forms.Screen.AllScreens.Any(s => s.DeviceName == _preferredScreen.DeviceName))
+            {
+                _screen = _preferredScreen;
+                ApplyScreenBounds();
+                return;
+            }
             try
             {
                 if (_owner != null)
@@ -177,12 +212,12 @@ namespace FLOMASTER
 
         [System.Runtime.InteropServices.DllImport("user32.dll")]
         private static extern IntPtr MonitorFromWindow(IntPtr hwnd, uint flags);
-        [System.Runtime.InteropServices.DllImport("user32.dll")]
-        private static extern IntPtr MonitorFromPoint(System.Drawing.Point pt, uint flags);
         [System.Runtime.InteropServices.DllImport("shcore.dll")]
         private static extern int GetDpiForMonitor(IntPtr hmon, int type, out uint dpiX, out uint dpiY);
         [System.Runtime.InteropServices.DllImport("user32.dll", CharSet = System.Runtime.InteropServices.CharSet.Unicode)]
         private static extern bool GetMonitorInfo(IntPtr hmon, ref MONITORINFOEX info);
+        [System.Runtime.InteropServices.DllImport("user32.dll")]
+        private static extern IntPtr MonitorFromPoint(System.Drawing.Point pt, uint flags);
         private const uint MONITOR_DEFAULTTONEAREST = 2;
         private const int MDT_EFFECTIVE_DPI = 0;
 
@@ -276,14 +311,6 @@ namespace FLOMASTER
                 });
         }
 
-        private void OcioChip_Click(object sender, RoutedEventArgs e)
-        {
-            if (sender is not FrameworkElement { DataContext: OverlayChip chip }) return;
-            var match = _vm.OcioConfigs.FirstOrDefault(o => o.Name == chip.Name);
-            if (match != null) _vm.SelectedOcio = match;
-            RebuildOcioChips();
-        }
-
         // ---- Проекты: корни + файлы ----
 
         private void RebuildRootChips()
@@ -317,15 +344,6 @@ namespace FLOMASTER
                 });
             }
             ProjectsEmpty.Visibility = ProjectFileTiles.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
-        }
-
-        private void RootChip_Click(object sender, RoutedEventArgs e)
-        {
-            if (sender is not FrameworkElement { DataContext: OverlayChip chip }) return;
-            var match = _vm.ProjectRoots.FirstOrDefault(r => r == chip.Path);
-            if (match != null) _vm.SelectedBrowserRoot = match;
-            RebuildRootChips();
-            RebuildProjectFiles();
         }
 
         // ---- Recent ----
@@ -378,34 +396,34 @@ namespace FLOMASTER
             catch { return root; }
         }
 
-        // ---- Поиск: фильтрует плитки всех колонок ----
+        // ---- Поиск: фильтрует плитки всех колонок (через Visibility — без пересборки контейнеров) ----
 
-        private void SearchBox_TextChanged(object sender, System.Windows.Controls.TextChangedEventArgs e)
+        private void ApplySearchFilter(string query)
         {
-            var q = SearchBox.Text.Trim().ToLowerInvariant();
-            SearchHint.Visibility = q == "" ? Visibility.Visible : Visibility.Collapsed;
+            var q = query.ToLowerInvariant();
 
-            ApplyFilter(CollectionViewSource.GetDefaultView(AppTiles),
-                o => q == "" || Match((OverlayTile)o, q));
-            AppsSection.Visibility = VisibleCount(AppTiles) > 0 || q == "" ? Visibility.Visible : Visibility.Collapsed;
+            ApplyTileFilter(AppTiles, q);
+            ApplyTileFilter(ProjectFileTiles, q);
+            ApplyTileFilter(RecentTiles, q);
 
-            ApplyFilter(CollectionViewSource.GetDefaultView(ProjectFileTiles),
-                o => q == "" || Match((OverlayTile)o, q));
-            ProjectFilesList.Visibility = VisibleCount(ProjectFileTiles) > 0 || q == "" ? Visibility.Visible : Visibility.Collapsed;
+            var appsVisible = VisibleCount(AppTiles) > 0;
+            var projectsVisible = VisibleCount(ProjectFileTiles) > 0;
+            var recentVisible = VisibleCount(RecentTiles) > 0;
 
-            ApplyFilter(CollectionViewSource.GetDefaultView(RecentTiles),
-                o => q == "" || Match((OverlayTile)o, q));
-            RecentList.Visibility = VisibleCount(RecentTiles) > 0 || q == "" ? Visibility.Visible : Visibility.Collapsed;
+            AppsSection.Visibility = appsVisible || q == "" ? Visibility.Visible : Visibility.Collapsed;
+            ProjectsSection.Visibility = projectsVisible || q == "" ? Visibility.Visible : Visibility.Collapsed;
+            RecentSection.Visibility = recentVisible || q == "" ? Visibility.Visible : Visibility.Collapsed;
+            RolesSection.Visibility = q == "" ? Visibility.Visible : Visibility.Collapsed;
         }
 
-        private static bool Match(OverlayTile tile, string q) =>
-            tile.Title.ToLowerInvariant().Contains(q) || tile.Subtitle.ToLowerInvariant().Contains(q);
-
-        private static void ApplyFilter(System.ComponentModel.ICollectionView view, Predicate<object> filter)
+        private static void ApplyTileFilter(ObservableCollection<OverlayTile> tiles, string q)
         {
-            if (view == null) return;
-            view.Filter = filter;
-            view.Refresh();
+            foreach (var t in tiles)
+                t.TileVisibility = q == "" ||
+                    t.Title.ToLowerInvariant().Contains(q) ||
+                    t.Subtitle.ToLowerInvariant().Contains(q)
+                    ? Visibility.Visible
+                    : Visibility.Collapsed;
         }
 
         private static int VisibleCount(ObservableCollection<OverlayTile> collection)
@@ -414,15 +432,24 @@ namespace FLOMASTER
             return view == null ? collection.Count : view.Cast<OverlayTile>().Count();
         }
 
+        private void SearchBox_TextChanged(object sender, System.Windows.Controls.TextChangedEventArgs e)
+        {
+            // debounce: таймер перезапускается на каждое нажатие
+            _searchDebounce.Stop();
+            _searchDebounce.Start();
+        }
+
         private void SearchBox_KeyDown(object sender, KeyEventArgs e)
         {
             if (e.Key != Key.Enter) return;
 
-            // первый видимый кандидат: приложение -> файл проекта -> recent
-            foreach (var collection in new[] { AppTiles, ProjectFileTiles, RecentTiles })
+            var q = SearchBox.Text.Trim().ToLowerInvariant();
+
+            // первый видимый кандидат: приложение -> профиль -> файл проекта -> recent
+            foreach (var collection in new[] { AppTiles, ProfileTiles, ProjectFileTiles, RecentTiles })
             {
                 var view = CollectionViewSource.GetDefaultView(collection);
-                var first = view.Cast<OverlayTile>().FirstOrDefault();
+                var first = view?.Cast<OverlayTile>().FirstOrDefault(t => t.TileVisibility == Visibility.Visible);
                 if (first == null) continue;
 
                 switch (first.Payload)
@@ -445,7 +472,7 @@ namespace FLOMASTER
             e.Handled = true;
         }
 
-        // ---- Клик по плитке/строке/роли ----
+        // ---- Клик по плитке/строке/роли/чипу ----
 
         private void Tile_Click(object sender, RoutedEventArgs e)
         {
@@ -479,6 +506,25 @@ namespace FLOMASTER
                 name => _vm.ApplyRolePick(row, name));
             picker.ShowDialog();
         }
+
+        private void OcioChip_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is not FrameworkElement { DataContext: OverlayChip chip }) return;
+            var match = _vm.OcioConfigs.FirstOrDefault(o => o.Name == chip.Name);
+            if (match != null) _vm.SelectedOcio = match;
+            RebuildOcioChips();
+        }
+
+        private void RootChip_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is not FrameworkElement { DataContext: OverlayChip chip }) return;
+            var match = _vm.ProjectRoots.FirstOrDefault(r => r == chip.Path);
+            if (match != null) _vm.SelectedBrowserRoot = match;
+            RebuildRootChips();
+            RebuildProjectFiles();
+        }
+
+        // ---- Кнопки окна ----
 
 
         private void CaptionMinimize_Click(object sender, RoutedEventArgs e) => WindowState = WindowState.Minimized;

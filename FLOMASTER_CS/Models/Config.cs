@@ -23,6 +23,9 @@ namespace FLOMASTER.Models
 
         /// <summary>Оверлей поверх всех окон (отключается, если мешает).</summary>
         public bool OverlayTopmost { get; set; } = true;
+
+        /// <summary>Ctrl+Alt+F открывает полноэкранный дашборд (false — маленькое окно).</summary>
+        public bool HotkeyOpensDashboard { get; set; } = true;
     }
 
     public class OcioConfig
