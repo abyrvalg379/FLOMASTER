@@ -38,11 +38,17 @@
 
 ---
 
-## What's New in v2.3.5
+## What's New in v2.4
 
-- **Projects panel** — point it at your project folders and open any project file without digging through Explorer: flat list of every file inside, relative paths, name filter; a click opens it with the current preset + OCIO and fills Recent
-- **Built into the launcher** — same window, same theme, same hover highlights, same expand animation; roots stored additively in the config
-- **Native formats only** — `.blend .spp .ma .mb .hip .hipl .hipnc .nk`; exports and bakes (`.fbx .obj .stl`) are intentionally not listed
+- **Projects panel** — point it at your project folders and open any project file without digging through Explorer: flat recursive list with relative paths and a name filter; a click opens it with the current preset + OCIO and fills Recent
+- **Command line** — `--launch "Profile" [--project file]` and `--list-profiles`: headless, exit codes, same environment as a manual launch. For batch files and farms
+- **Multi-machine** — export/import settings as a file (profiles, roots, theme); presets match by name while exe paths stay machine-local. Preset discovery now scans the registry and Epic manifests
+- **Global hotkey** — `Ctrl+Alt+F` shows/hides the launcher over everything
+- **Themed title bar** — the system chrome is replaced by a caption strip in your theme (minimize/close in accent colors)
+- Also: themed input dialogs, full-accent toggle highlights, pinned ARGUMENTS row
+
+### [v2.3.5](https://github.com/abyrvalg379/FLOMASTER/releases/tag/v2.3.5) — Projects panel prototype + recent files fix
+First take of the project browser; recent files click repaired.
 
 ### [v2.3.4](https://github.com/abyrvalg379/FLOMASTER/releases/tag/v2.3.4) — launch profiles + recent files fix
 Named app + OCIO + arguments snapshots with tray quick-launch; recent files click repaired (handler had been silently lost); panels reordered Roles → Profiles → Recent → Settings → Quick → Arguments.
