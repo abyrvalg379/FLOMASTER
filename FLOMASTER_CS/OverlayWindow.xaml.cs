@@ -1,9 +1,12 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
 using FLOMASTER.Models;
@@ -40,21 +43,11 @@ namespace FLOMASTER
             public bool IsSelected { get; set; }
         }
 
-        [System.Runtime.InteropServices.DllImport("user32.dll")]
-        private static extern IntPtr MonitorFromWindow(IntPtr hwnd, uint flags);
-        [System.Runtime.InteropServices.DllImport("shcore.dll")]
-        private static extern int GetDpiForMonitor(IntPtr hmon, int type, out uint dpiX, out uint dpiY);
-        private const uint MONITOR_DEFAULTTONEAREST = 2;
-        private const int MDT_EFFECTIVE_DPI = 0;
-
         private readonly MainViewModel _vm;
         private readonly Window? _owner;
         private readonly System.Windows.Forms.Screen? _preferredScreen;
         private System.Windows.Forms.Screen _screen = System.Windows.Forms.Screen.PrimaryScreen
             ?? System.Windows.Forms.Screen.AllScreens[0];
-
-        /// <summary>Монитор, на котором оверлей был закрыт последний раз (сессионная память).</summary>
-        public static System.Windows.Forms.Screen? LastScreen;
 
         public OverlayWindow(MainViewModel viewModel, Window owner,
             System.Windows.Forms.Screen? preferredScreen = null)
@@ -64,8 +57,6 @@ namespace FLOMASTER
             _owner = owner;
             _preferredScreen = preferredScreen;
             DataContext = this;
-
-            Closed += (_, _) => LastScreen = _screen;
 
             BuildAppAndProfileTiles();
             RebuildOcioChips();
@@ -77,6 +68,8 @@ namespace FLOMASTER
             PositionOnOwnerScreen();
             LocationChanged += (_, _) => SnapToMonitorIfChanged();
             StateChanged += (_, _) => { if (WindowState == WindowState.Normal) ApplyScreenBounds(); };
+
+            SearchBox.Focus();
         }
 
         // ---- Коллекции плиток/чипов ----
@@ -131,14 +124,6 @@ namespace FLOMASTER
 
         private void PositionOnOwnerScreen()
         {
-            // приоритет: монитор, где оверлей был закрыт в прошлый раз -> монитор лаунчера -> primary
-            if (_preferredScreen != null &&
-                System.Windows.Forms.Screen.AllScreens.Any(s => s.DeviceName == _preferredScreen.DeviceName))
-            {
-                _screen = _preferredScreen;
-                ApplyScreenBounds();
-                return;
-            }
             try
             {
                 if (_owner != null)
@@ -151,27 +136,10 @@ namespace FLOMASTER
             ApplyScreenBounds();
         }
 
-        /// <summary>Масштаб монитора (96 dpi = 1.0). В PMv2-процессе возвращает честный DPI каждого монитора.</summary>
-        private static double ScaleOf(System.Windows.Forms.Screen screen)
-        {
-            try
-            {
-                var pt = new System.Drawing.Point(
-                    screen.Bounds.Left + screen.Bounds.Width / 2,
-                    screen.Bounds.Top + screen.Bounds.Height / 2);
-                var hmon = MonitorFromWindow(IntPtr.Zero, MONITOR_DEFAULTTONEAREST);
-                // MonitorFromPoint недоступен с IntPtr.Zero-точкой — используем перебор по границам:
-                if (hmon == IntPtr.Zero) return 1.0;
-                if (GetDpiForMonitor(hmon, MDT_EFFECTIVE_DPI, out uint dx, out _) == 0 && dx > 0)
-                    return dx / 96.0;
-                return 1.0;
-            }
-            catch { return 1.0; }
-        }
-
         private void ApplyScreenBounds()
         {
-            // WorkArea — минус панель задач: Normal-состояние оверлея = «всё видно, панель не перекрыта»
+            // WorkArea — минус панель задач: Normal-состояние оверлея = «всё видно, панель не перекрыта».
+            // Bounds физические (PMv2); WPF-координаты — DIP: делим на масштаб целевого монитора
             var b = _screen.WorkingArea;
             double k = ScaleOf(_screen);
             Left = b.Left / k; Top = b.Top / k;
@@ -186,7 +154,7 @@ namespace FLOMASTER
             var hmon = MonitorFromWindow(handle, MONITOR_DEFAULTTONEAREST);
             if (hmon == IntPtr.Zero) return;
 
-            // какой Screen соответствует текущему hmon — сравнением размеров границ
+            // какой Screen соответствует текущему hmon — сравнением DeviceName
             System.Windows.Forms.Screen? match = null;
             try
             {
@@ -207,8 +175,16 @@ namespace FLOMASTER
             }
         }
 
+        [System.Runtime.InteropServices.DllImport("user32.dll")]
+        private static extern IntPtr MonitorFromWindow(IntPtr hwnd, uint flags);
+        [System.Runtime.InteropServices.DllImport("user32.dll")]
+        private static extern IntPtr MonitorFromPoint(System.Drawing.Point pt, uint flags);
+        [System.Runtime.InteropServices.DllImport("shcore.dll")]
+        private static extern int GetDpiForMonitor(IntPtr hmon, int type, out uint dpiX, out uint dpiY);
         [System.Runtime.InteropServices.DllImport("user32.dll", CharSet = System.Runtime.InteropServices.CharSet.Unicode)]
         private static extern bool GetMonitorInfo(IntPtr hmon, ref MONITORINFOEX info);
+        private const uint MONITOR_DEFAULTTONEAREST = 2;
+        private const int MDT_EFFECTIVE_DPI = 0;
 
         [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
         private struct RECT { public int Left, Top, Right, Bottom; }
@@ -222,6 +198,22 @@ namespace FLOMASTER
             public uint dwFlags;
             [System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.ByValTStr, SizeConst = 32)]
             public string szDevice;
+        }
+
+        private static double ScaleOf(System.Windows.Forms.Screen screen)
+        {
+            try
+            {
+                var pt = new System.Drawing.Point(
+                    screen.Bounds.Left + screen.Bounds.Width / 2,
+                    screen.Bounds.Top + screen.Bounds.Height / 2);
+                var hmon = MonitorFromPoint(pt, MONITOR_DEFAULTTONEAREST);
+                if (hmon == IntPtr.Zero) return 1.0;
+                if (GetDpiForMonitor(hmon, MDT_EFFECTIVE_DPI, out uint dx, out _) == 0 && dx > 0)
+                    return dx / 96.0;
+                return 1.0;
+            }
+            catch { return 1.0; }
         }
 
         // ---- Построение плиток ----
@@ -275,8 +267,7 @@ namespace FLOMASTER
         private void RebuildOcioChips()
         {
             OcioChips.Clear();
-            var roots = _vm.OcioConfigs;
-            foreach (var o in roots)
+            foreach (var o in _vm.OcioConfigs)
                 OcioChips.Add(new OverlayChip
                 {
                     Name = o.Name,
@@ -387,6 +378,73 @@ namespace FLOMASTER
             catch { return root; }
         }
 
+        // ---- Поиск: фильтрует плитки всех колонок ----
+
+        private void SearchBox_TextChanged(object sender, System.Windows.Controls.TextChangedEventArgs e)
+        {
+            var q = SearchBox.Text.Trim().ToLowerInvariant();
+            SearchHint.Visibility = q == "" ? Visibility.Visible : Visibility.Collapsed;
+
+            ApplyFilter(CollectionViewSource.GetDefaultView(AppTiles),
+                o => q == "" || Match((OverlayTile)o, q));
+            AppsSection.Visibility = VisibleCount(AppTiles) > 0 || q == "" ? Visibility.Visible : Visibility.Collapsed;
+
+            ApplyFilter(CollectionViewSource.GetDefaultView(ProjectFileTiles),
+                o => q == "" || Match((OverlayTile)o, q));
+            ProjectFilesList.Visibility = VisibleCount(ProjectFileTiles) > 0 || q == "" ? Visibility.Visible : Visibility.Collapsed;
+
+            ApplyFilter(CollectionViewSource.GetDefaultView(RecentTiles),
+                o => q == "" || Match((OverlayTile)o, q));
+            RecentList.Visibility = VisibleCount(RecentTiles) > 0 || q == "" ? Visibility.Visible : Visibility.Collapsed;
+        }
+
+        private static bool Match(OverlayTile tile, string q) =>
+            tile.Title.ToLowerInvariant().Contains(q) || tile.Subtitle.ToLowerInvariant().Contains(q);
+
+        private static void ApplyFilter(System.ComponentModel.ICollectionView view, Predicate<object> filter)
+        {
+            if (view == null) return;
+            view.Filter = filter;
+            view.Refresh();
+        }
+
+        private static int VisibleCount(ObservableCollection<OverlayTile> collection)
+        {
+            var view = CollectionViewSource.GetDefaultView(collection);
+            return view == null ? collection.Count : view.Cast<OverlayTile>().Count();
+        }
+
+        private void SearchBox_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key != Key.Enter) return;
+
+            // первый видимый кандидат: приложение -> файл проекта -> recent
+            foreach (var collection in new[] { AppTiles, ProjectFileTiles, RecentTiles })
+            {
+                var view = CollectionViewSource.GetDefaultView(collection);
+                var first = view.Cast<OverlayTile>().FirstOrDefault();
+                if (first == null) continue;
+
+                switch (first.Payload)
+                {
+                    case Preset preset:
+                        _vm.SelectedPreset = preset;
+                        _vm.LaunchCommand.Execute(null);
+                        break;
+                    case Profile profile:
+                        _vm.ApplyProfile(profile);
+                        _vm.LaunchCommand.Execute(null);
+                        break;
+                    case string file:
+                        _vm.OpenProjectFile(file);
+                        break;
+                }
+                Close();
+                return;
+            }
+            e.Handled = true;
+        }
+
         // ---- Клик по плитке/строке/роли ----
 
         private void Tile_Click(object sender, RoutedEventArgs e)
@@ -422,29 +480,13 @@ namespace FLOMASTER
             picker.ShowDialog();
         }
 
-        // ---- Кнопки окна ----
 
         private void CaptionMinimize_Click(object sender, RoutedEventArgs e) => WindowState = WindowState.Minimized;
 
-        private void CaptionMaximize_Click(object sender, RoutedEventArgs e)
-        {
-            // Maximized с WindowChrome уважает панель задач; Normal восстанавливается
-            // в WorkArea через ApplyScreenBounds (StateChanged)
+        private void CaptionMaximize_Click(object sender, RoutedEventArgs e) =>
             WindowState = WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized;
-        }
 
         private void CaptionClose_Click(object sender, RoutedEventArgs e) => Close();
-
-        /// <summary>Квик-команда из комбобокса: дописывается к аргументам.</summary>
-        private void QuickCombo_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
-        {
-            if (QuickCombo.SelectedItem is QuickCommand qc)
-            {
-                var current = ArgsText.Trim();
-                ArgsText = string.IsNullOrEmpty(current) ? qc.Cmd : $"{current} {qc.Cmd}";
-                QuickCombo.SelectedIndex = -1;
-            }
-        }
 
         private void Window_PreviewKeyDown(object sender, KeyEventArgs e)
         {
