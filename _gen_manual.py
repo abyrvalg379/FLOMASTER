@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-r'''FLOMASTER - Руководство пользователя (RU + EN). Генератор DOCX. Версия V2.5.
+r'''FLOMASTER - Руководство пользователя (RU + EN). Генератор DOCX. Версия V2.5.5.
 
 Хелперы стиля наследуют семейства STUKACH/LAMPOCHKA/TOCHKA,
 акцент - фирменный оранжевый FLOMASTER #E87D0D.
@@ -47,7 +47,7 @@ def _save(doc, out):
 
 def build_ru():
     ds.H1_REGISTRY.clear()
-    doc = ds.new_doc('FLOMASTER', 'Руководство пользователя', 'V2.5  -  WINDOWS 10/11')
+    doc = ds.new_doc('FLOMASTER', 'Руководство пользователя', 'V2.5.5  -  WINDOWS 10/11')
 
     p(doc, 'FLOMASTER - лаунчер для рабочих приложений трёхмерной графики: одна кнопка '
            'запускает Blender, Maya, Houdini, Nuke, DaVinci Resolve, Unreal Engine или '
@@ -160,23 +160,27 @@ def build_ru():
 
     h1(doc, '7. Полноэкранный дашборд')
     p(doc, 'Ctrl+Alt+F открывает лаунчер поверх всего окна: конфиг, приложения, проекты, '
-           'профили, роли и последние файлы — на одном экране. Повторное Ctrl+Alt+F или Esc '
-           'закрывает дашборд.')
+           'профили, роли, последние файлы и настройки — на одном экране. Повторное Ctrl+Alt+F '
+           'или Esc закрывает дашборд. Дашборд несёт весь функционал лаунчера: в нём же '
+           'управляются конфиги, приложения, профили, папки проектов и настройки.')
     for b in (
-        'ЦВЕТОВОЙ КОНФИГ: клик по чипу меняет конфиг для всех последующих запусков;',
-        'ПРИЛОЖЕНИЯ: плитки с иконками exe, клик = запуск;',
-        'ПРОЕКТЫ: чипы корней и файлы проектов, клик открывает файл в правильном приложении;',
-        'ПРОФИЛИ: клик применяет профиль и запускает приложение;',
-        'OCIO ROLES: клик по роли открывает пикер colorspaces, Reset возвращает значения конфига;',
-        'RECENT FILES: последние файлы, клик переоткрывает;',
-        'ARGUMENTS: аргументы, применяемые к запускам (в т.ч. из дашборда);',
-        'SETTINGS: тема, режим «поверх окон» и хоткей.',
+        'ЦВЕТОВОЙ КОНФИГ: клик по чипу меняет конфиг; плюс и минус в шапке секции добавляют и убирают конфиги;',
+        'ПРИЛОЖЕНИЯ: плитки с иконками exe, клик = запуск; ПКМ по плитке — запуск с командой (чистый старт, фоновый рендер и т.д.) и сохранение профиля; плюс и рескан в шапке секции;',
+        'ПРОЕКТЫ: чипы корней и файлы проектов, клик открывает файл в правильном приложении; плюс в шапке добавляет папку, ПКМ по чипу корня убирает её;',
+        'ЗАПУЩЕННЫЕ: чипы живых DCC-инстансов у строки поиска; клик выводит приложение вперёд, ПКМ — фокус и перезапуск;',
+        'ПРОФИЛИ: клик применяет профиль и запускает приложение; «Save current as profile» в шапке секции;',
+        'OCIO ROLES: клик по роли выдвигает справа шторку с деревом колорспейсов по семействам и поиском, Reset возвращает значения конфига;',
+        'RECENT FILES: последние файлы, клик переоткрывает; Clear очищает;',
+        'SETTINGS (футер): THEME (тема, конфиг по умолчанию), BEHAVIOUR (хоткей, режимы старта и «поверх окон»), MAINTENANCE (рескан, пути сканирования, SYNC, ярлыки, лог).',
     ):
         p(doc, b, bullet=True)
+    p(doc, 'Строка поиска фильтрует всё на лету: Enter запускает первое совпадение, стрелки '
+           'Up/Down идут по плиткам. Лог вызывается чипом Log и выдвигается шторкой внизу '
+           '(последние 200 записей, текст копируется).')
     p(doc, 'Дашборд открывается на мониторе, где был закрыт в прошлый раз (запоминается в '
            'настройках), и перетаскивается за шапку между мониторами — под каждый монитор '
-           'подстраиваются размеры. Если поверх окон не нужно — снимите галку Overlay on top '
-           'в настройках дашборда.')
+           'подстраиваются размеры. Если поверх окон не нужно — снимите галку Dashboard on top. '
+           'Галка Start with dashboard включает запуск лаунчера сразу с дашборда.')
 
     h1(doc, '8. Файлы проектов')
     p(doc, 'Перетащите файл проекта на окно лаунчера — файл откроется в правильном приложении с '
@@ -190,7 +194,7 @@ def build_ru():
            'конфига (scene_linear, data, default_byte и другие) — и позволяет переопределить их '
            'на уровень пресета.')
     for b in (
-        'клик по строке роли открывает пикер: colorspaces сгруппированы по family, как меню Color Space в Blender, есть поиск;',
+        'клик по строке роли выдвигает справа шторку: colorspaces деревом по family, как меню Color Space в Blender, есть поиск; поиск переключает список в плоский режим совпадений;',
         'переопределения хранятся в конфиге лаунчера, а при запуске собирается вариант конфига — оригинальный .ocio не изменяется никогда;',
         'Reset возвращает все роли пресета к значениям конфига;',
         'под селектором конфига — строка валидации: отсутствующие критичные роли и битые ссылки подсвечиваются заранее.',
@@ -232,15 +236,20 @@ def build_ru():
            'кнопки свернуть и закрыть. Перетаскивание окна — за полосу заголовка.')
 
     h1(doc, '12. Настройки')
+    p(doc, 'В маленьком окне настройки собраны в панель Settings; в дашборде — футер из трёх '
+           'групп: THEME (тема и конфиг по умолчанию), BEHAVIOUR (хоткей, режимы старта и '
+           '«поверх окон»), MAINTENANCE (рескан, пути сканирования, SYNC, ярлыки, лог).')
     add_table(doc, [
         ('Параметр', 'Что делает'),
         ('Check for updates on start', 'проверка автообновления при старте'),
         ('Theme', 'цветовая тема интерфейса'),
-        ('Start with Windows', 'автозапуск свёрнутым в трей вместе с Windows'),
-        ('Always on top', 'окно поверх всех'),
-        ('Overlay on top', 'полноэкранный дашборд поверх всех окон'),
+        ('Start with Windows', 'автозапуск вместе с Windows'),
+        ('Start with dashboard', 'запускаться сразу с полноэкранного дашборда'),
+        ('Always on top', 'маленькое окно поверх всех'),
+        ('Dashboard on top', 'полноэкранный дашборд поверх всех окон'),
         ('Global hotkey (Ctrl+Alt+F)', 'глобальный хоткей: показать/спрятать дашборд'),
-        ('Smooth animation', 'включить/выключить анимацию панелей'),
+        ('Hotkey opens dashboard', 'что открывает хоткей: дашборд или маленькое окно'),
+        ('Launcher animation', 'включить/выключить анимацию панелей'),
         ('Default OCIO', 'конфиг по умолчанию для запусков из трея'),
         ('Scan paths', 'дополнительные папки для автоскана'),
         ('SYNC', 'экспорт/импорт настроек для переноса на другую машину'),
@@ -250,11 +259,12 @@ def build_ru():
     h1(doc, '13. Трей и журнал')
     p(doc, 'Закрытие окна сворачивает лаунчер в системный трей - он продолжает работать. Меню '
            'трея: быстрый запуск пресетов, секция PROFILES (запуск профилей одной кнопкой) и '
-           'показ окна.')
-    p(doc, 'Кнопка Log открывает окно журнала сбоку от лаунчера (той же высоты, левее или '
-           'правее - где есть место). В журнале каждый запуск: время, пользователь, приложение, '
-           'конфиг OCIO, код возврата. Строка «Set OCIO=...» - маркер того, что конфиг реально '
-           'передан. Файл журнала - %APPDATA%\\FLOMASTER\\flomaster.log.')
+           'показ окна. Выход - Quit в меню трея.')
+    p(doc, 'В дашборде чип Log выдвигает шторку журнала (последние 200 записей, текст копируется). '
+           'В маленьком окне кнопка Log открывает окно журнала сбоку от лаунчера. В журнале каждый '
+           'запуск: время, пользователь, приложение, конфиг OCIO, код возврата. Строка '
+           '«Set OCIO=...» - маркер того, что конфиг реально передан. Файл журнала - '
+           '%APPDATA%\\FLOMASTER\\flomaster.log.')
 
     h1(doc, '14. Командная строка')
     p(doc, 'Лаунчер работает без окна - для батников, ферм и скриптов:')
@@ -345,7 +355,7 @@ def build_ru():
 
 def build_en():
     ds.H1_REGISTRY.clear()
-    doc = ds.new_doc('FLOMASTER', 'User Guide', 'V2.5  -  WINDOWS 10/11')
+    doc = ds.new_doc('FLOMASTER', 'User Guide', 'V2.5.5  -  WINDOWS 10/11')
 
     p(doc, 'FLOMASTER is a launcher for 3D graphics applications: one button starts Blender, '
            'Maya, Houdini, Nuke, DaVinci Resolve, Unreal Engine or Substance Painter with a '
@@ -458,23 +468,27 @@ def build_en():
 
     h1(doc, '7. The fullscreen dashboard')
     p(doc, 'Ctrl+Alt+F opens the launcher over every window: color config, applications, projects, '
-           'profiles, roles and recent files — on one screen. Ctrl+Alt+F again or Esc closes the '
-           'dashboard.')
+           'profiles, roles, recent files and settings — on one screen. Ctrl+Alt+F again or Esc '
+           'closes the dashboard. The dashboard carries the full launcher functionality: configs, '
+           'applications, profiles, project folders and settings are managed right here.')
     for b in (
-        'COLOR CONFIG: click a chip to switch the config for all subsequent launches;',
-        'APPLICATIONS: tiles with real exe icons, click = launch;',
-        'PROJECTS: root chips and project files, a click opens the file in the matching application;',
-        'PROFILES: a click applies the profile and launches the application;',
-        'OCIO ROLES: clicking a role opens the colorspace picker, Reset returns the config values;',
-        'RECENT FILES: recent files, a click reopens them;',
-        'ARGUMENTS: arguments applied to launches (including from the dashboard);',
-        'SETTINGS: theme, always-on-top mode and the hotkey.',
+        'COLOR CONFIG: click a chip to switch the config; + and − in the section header add and remove configs;',
+        'APPLICATIONS: tiles with real exe icons, click = launch; right-click a tile to launch with a command preset (clean start, background render, etc.) or to save a profile; + and rescan in the section header;',
+        'PROJECTS: root chips and project files, a click opens the file in the matching application; + adds a folder, right-click a root chip removes it;',
+        'RUNNING: chips of live DCC instances next to the search; click brings the app forward, right-click offers focus and restart;',
+        'PROFILES: a click applies the profile and launches the application; "Save current as profile" in the section header;',
+        'OCIO ROLES: clicking a role slides in a right-hand drawer with a family-grouped colorspace tree and search, Reset returns the config values;',
+        'RECENT FILES: recent files, a click reopens them; Clear empties the list;',
+        'SETTINGS (footer): THEME (theme, default config), BEHAVIOUR (hotkey, startup and always-on-top modes), MAINTENANCE (rescan, scan paths, SYNC, shortcuts, log).',
     ):
         p(doc, b, bullet=True)
+    p(doc, 'The search box filters everything on the fly: Enter launches the first match, the '
+           'Up/Down arrows walk the visible tiles. The Log chip pulls up a log drawer at the '
+           'bottom (last 200 entries, text is copyable).')
     p(doc, 'The dashboard opens on the monitor where it was last closed (remembered in the '
            'settings) and can be dragged between monitors by its header — sizes adapt to each '
-           'monitor. If you do not need it above other windows — untick Overlay on top in the '
-           'dashboard settings.')
+           'monitor. If you do not need it above other windows — untick Dashboard on top. The '
+           'Start with dashboard toggle makes the launcher open with the fullscreen dashboard.')
 
     h1(doc, '8. Project files')
     p(doc, 'Drag a project file onto the launcher window — the file opens in the matching '
@@ -488,7 +502,7 @@ def build_en():
     p(doc, 'The Roles panel shows what the key color roles of the selected config resolve to '
            '(scene_linear, data, default_byte and others) — and lets you override them per preset.')
     for b in (
-        'clicking a role row opens the picker: colorspaces grouped by family, like the Color Space menu in Blender, with search;',
+        'clicking a role row slides in a right-hand drawer: colorspaces as a family-grouped tree, like the Color Space menu in Blender, with search; a query switches the list to flat matches;',
         'overrides are stored in the launcher config, and a derived config is built at launch — the original .ocio file is never modified;',
         'Reset returns all roles of the preset to the config values;',
         'under the config selector — a validation line: missing critical roles and broken references are highlighted in advance.',
@@ -530,15 +544,20 @@ def build_en():
            'name on the left, minimize and close buttons on the right. Drag the window by the strip.')
 
     h1(doc, '12. Settings')
+    p(doc, 'The small window collects settings in the Settings panel; the dashboard footer groups '
+           'them into three blocks: THEME (theme and the default config), BEHAVIOUR (hotkey, '
+           'startup and always-on-top modes), MAINTENANCE (rescan, scan paths, SYNC, shortcuts, log).')
     add_table(doc, [
         ('Setting', 'What it does'),
         ('Check for updates on start', 'auto-update check at launch'),
         ('Theme', 'interface color theme'),
-        ('Start with Windows', 'auto-start minimized to tray with Windows'),
-        ('Always on top', 'window above all others'),
-        ('Overlay on top', 'fullscreen dashboard above all windows'),
+        ('Start with Windows', 'auto-start with Windows'),
+        ('Start with dashboard', 'open with the fullscreen dashboard at startup'),
+        ('Always on top', 'the small launcher window above all others'),
+        ('Dashboard on top', 'fullscreen dashboard above all windows'),
         ('Global hotkey (Ctrl+Alt+F)', 'global hotkey: show/hide the dashboard'),
-        ('Smooth animation', 'enable/disable panel animation'),
+        ('Hotkey opens dashboard', 'what the hotkey opens: the dashboard or the small window'),
+        ('Launcher animation', 'enable/disable panel animation'),
         ('Default OCIO', 'default config for tray launches'),
         ('Scan paths', 'extra folders for the auto-scan'),
         ('SYNC', 'export/import settings to move them to another machine'),
@@ -548,11 +567,12 @@ def build_en():
     h1(doc, '13. Tray and log')
     p(doc, 'Closing the window minimizes the launcher to the system tray - it keeps running. The '
            'tray menu offers quick launch of presets, a PROFILES section (one-click profile '
-           'launches) and the window itself.')
-    p(doc, 'The Log button opens the log window beside the launcher (same height, to the left '
-           'or right - wherever it fits). Every launch is logged: timestamp, user, application, '
-           'OCIO config, exit code. A "Set OCIO=..." line marks that the config was actually '
-           'passed. The log file lives at %APPDATA%\\FLOMASTER\\flomaster.log.')
+           'launches) and the window itself. Quit — in the tray menu.')
+    p(doc, 'In the dashboard the Log chip pulls up a log drawer (last 200 entries, copyable text). '
+           'In the small window the Log button opens the log window beside the launcher. Every '
+           'launch is logged: timestamp, user, application, OCIO config, exit code. A "Set '
+           'OCIO=..." line marks that the config was actually passed. The log file lives at '
+           '%APPDATA%\\FLOMASTER\\flomaster.log.')
 
     h1(doc, '14. Command line')
     p(doc, 'The launcher runs without a window - for batch files, farms and scripts:')

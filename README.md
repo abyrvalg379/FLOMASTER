@@ -38,46 +38,46 @@
 
 ---
 
-## What's New in v2.5
+## What's New in v2.5.5
 
-- **Fullscreen overlay dashboard** (`Ctrl+Alt+F`): color config chips, application tiles with real exe icons, projects (root chips + routed file rows), profiles, OCIO roles with the colorspace picker, recent files, arguments and quick settings — over everything, draggable between monitors with auto-fit, remembers the last screen
-- **Project routing** — .spp → Substance Painter, .blend → Blender, .hip → Houdini from the Projects panel, Recent and drag & drop
-- **PerMonitorV2** — crisp rendering on scaled monitors
+- **The dashboard is now the full launcher UI** — everything the small window does lives in the fullscreen view: manage OCIO configs and applications (add, remove, rescan, drag & drop), save and delete profiles, manage project folders, recent files, and the complete settings set (updates, autostart, scan paths, SYNC export/import, shortcuts)
+- **Startup switch** — "Start with dashboard" in Settings picks what FLOMASTER opens with; the tray and the global hotkey work in both modes
+- **Role picker drawer** — clicking a role slides in a right-hand drawer with a family-grouped colorspace tree and search; no more modal windows
+- **Log drawer** — the Log chip pulls up an in-dashboard log strip (last 200 entries, copyable)
+- **Per-tile quick launch** — right-click an application tile to launch it with one of its command-line presets (clean start, background render, headless, ...)
+- **Running apps** — launched DCC instances appear as chips next to the search: click to focus, right-click to restart
+- **Keyboard navigation** — Up/Down arrows walk the visible tiles, Enter launches
+- **Cleaner scanner** — installers and uninstallers from the registry no longer show up as applications
+- Also: application tiles in a compact grid, aligned columns, project files and recent files in unified frames, themed dropdowns and checkboxes, grouped settings footer
+
+### [v2.5](https://github.com/abyrvalg379/FLOMASTER/releases/tag/v2.5) — fullscreen dashboard
+Fullscreen overlay dashboard (`Ctrl+Alt+F`): color config chips, application tiles with real exe icons, projects, profiles, OCIO roles, recent files and quick settings — over everything, draggable between monitors. Project file routing (.spp to Painter, .blend to Blender, .hip to Houdini). PerMonitorV2.
 
 ### [v2.4.2](https://github.com/abyrvalg379/FLOMASTER/releases/tag/v2.4.2) — project file routing
 An .spp opens in Substance Painter, a .blend in Blender, a .hip in Houdini — regardless of the selected app. Works in the Projects panel, Recent and drag & drop.
 
-### [v2.4.1](https://github.com/abyrvalg379/FLOMASTER/releases/tag/v2.4.1) — polish patch
-- **Projects panel** — point it at your project folders and open any project file without digging through Explorer: flat recursive list with relative paths and a name filter; a click opens it with the current preset + OCIO and fills Recent
-- **Command line** — `--launch "Profile" [--project file]` and `--list-profiles`: headless, exit codes, same environment as a manual launch. For batch files and farms
-- **Multi-machine** — export/import settings as a file (profiles, roots, theme); presets match by name while exe paths stay machine-local. Preset discovery now scans the registry and Epic manifests
-- **Global hotkey** — `Ctrl+Alt+F` shows/hides the launcher over everything
-- **Themed title bar** — the system chrome is replaced by a caption strip in your theme (minimize/close in accent colors)
-- Also: themed input dialogs, full-accent toggle highlights, pinned ARGUMENTS row
-
-### [v2.4.2](https://github.com/abyrvalg379/FLOMASTER/releases/tag/v2.4.2) — project file routing
-.spp opens in Substance Painter, .blend in Blender, .hip in Houdini — regardless of the selected app. Works in the Projects panel, Recent and drag & drop.
-
-### [v2.4.1](https://github.com/abyrvalg379/FLOMASTER/releases/tag/v2.4.1) — polish patch
-Auto-update version check unit-tested; picker/log/input dialogs use the themed title bar.
+### [v2.4.1](https://github.com/abyrvalg379/FLOMASTER/releases/tag/v2.4.1) — command line + multi-machine
+- **Command line** — `--launch "Profile" [--project file]` and `--list-profiles`: headless, exit codes, same environment as a manual launch
+- **Multi-machine** — export/import settings as a file; preset discovery scans the registry and Epic manifests
+- **Global hotkey, themed title bar, Projects panel** — point it at project folders and open files without Explorer
 
 ### [v2.3.5](https://github.com/abyrvalg379/FLOMASTER/releases/tag/v2.3.5) — Projects panel prototype + recent files fix
 First take of the project browser; recent files click repaired.
 
-### [v2.3.4](https://github.com/abyrvalg379/FLOMASTER/releases/tag/v2.3.4) — launch profiles + recent files fix
-Named app + OCIO + arguments snapshots with tray quick-launch; recent files click repaired (handler had been silently lost); panels reordered Roles → Profiles → Recent → Settings → Quick → Arguments.
+### [v2.3.4](https://github.com/abyrvalg379/FLOMASTER/releases/tag/v2.3.4) — launch profiles
+Named app + OCIO + arguments snapshots with tray quick-launch; panels reordered.
 
 ### [v2.3.3](https://github.com/abyrvalg379/FLOMASTER/releases/tag/v2.3.3) — OCIO role picker + auto-update
-Per-preset role overrides with a Blender-style family-grouped picker; auto-update check on start with one-click install. Original config untouched.
+Per-preset role overrides with a family-grouped picker; auto-update check on start. Original config untouched.
 
 ### [v2.3.2](https://github.com/abyrvalg379/FLOMASTER/releases/tag/v2.3.2) — OCIO config validation
-Key roles are shown and validated per config: missing `default_byte` or `data`, roles pointing to unknown colorspaces — warnings right in the UI and the log.
+Key roles shown and validated per config — warnings right in the UI and the log.
 
 ### [v2.3.1](https://github.com/abyrvalg379/FLOMASTER/releases/tag/v2.3.1) — tray fixes
-Tray menu now updates with presets; items with missing exes warn instead of doing nothing.
+Tray menu updates with presets; missing exes warn instead of doing nothing.
 
 ### [v2.3](https://github.com/abyrvalg379/FLOMASTER/releases/tag/v2.3) — pipeline-correct defaults
-Explicit ACES roles in the bundled config: 8-bit images load as `raw`, float (EXR) as `acescg` — lowercase interchange-safe aliases, fixing the old sRGB-fix regression in Blender 5.1+.
+Explicit ACES roles in the bundled config: 8-bit images load as `raw`, float (EXR) as `acescg`.
 
 <details>
 <summary><b>What's New in v2.2</b></summary>
