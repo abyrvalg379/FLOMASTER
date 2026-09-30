@@ -330,6 +330,10 @@
 
         <!-- Шапка -->
         <Grid Grid.Row="0" Margin="36,22,12,14">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
             <StackPanel>
                 <TextBlock FontSize="38" FontWeight="Bold">
                     <Run Text="FLOMASTER" Foreground="{DynamicResource AccentBrush}"/><Run Text="." Foreground="{StaticResource BrandRed}"/>
@@ -348,6 +352,16 @@
                 <Button Style="{StaticResource CaptionButtonStyle}" Content="&#xE8BB;"
                         ToolTip="Close" Click="CaptionClose_Click"/>
             </StackPanel>
+            <!-- Явное напоминание об апдейте: STATUS и чип MAINTENANCE пропускали -->
+            <Border Grid.Row="1" Background="{DynamicResource AccentBrush}" CornerRadius="8" Padding="14,9" Margin="0,14,0,0"
+                    Visibility="{Binding UpdateReady, Converter={StaticResource BoolToVis}}">
+                <Grid>
+                    <TextBlock Text="{Binding UpdateInfoText}" Foreground="{DynamicResource AccentTextBrush}" FontWeight="SemiBold" FontSize="13"
+                               VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Margin="0,0,170,0"/>
+                    <Button Content="Restart and install" Style="{StaticResource BtnStyle}" Width="150" Height="26"
+                            FontSize="11.5" HorizontalAlignment="Right" Command="{Binding UpdateCommand}"/>
+                </Grid>
+            </Border>
         </Grid>
 
         <!-- Поиск слева + запущенные DCC справа (без подписи) -->
