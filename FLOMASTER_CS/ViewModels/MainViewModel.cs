@@ -31,7 +31,6 @@ namespace FLOMASTER.ViewModels
         private bool _autoStartEnabled;
         private bool _topMostEnabled;
         private bool _animationEnabled;
-        private OcioConfig _defaultOcio;
         private string _ocioWarningsText = "";
         private string _ocioOverrideWarnings = "";
 
@@ -317,6 +316,19 @@ namespace FLOMASTER.ViewModels
             }
         }
 
+        /// <summary>Приложение стартует с полноэкранного дашборда (false — маленькое окно).</summary>
+        public bool StartupDashboard
+        {
+            get => _config.StartupDashboard;
+            set
+            {
+                _config.StartupDashboard = value;
+                _store.Save(_config);
+                OnPropertyChanged();
+                Logger.Log("Startup", $"UI: {(value ? "dashboard" : "window")}", "info");
+            }
+        }
+
         /// <summary>Монитор оверлея (DeviceName): пишется при закрытии оверлея, читается при открытии.</summary>
         public string OverlayScreenDeviceName
         {
@@ -328,7 +340,7 @@ namespace FLOMASTER.ViewModels
             }
         }
 
-        /// <summary>Глобальный хоткей Ctrl+Alt+F (регистрация — в MainWindow, там hwnd).</summary>
+        /// <summary>Глобальный хоткей Ctrl+Alt+F (регистрация — в HotkeyService).</summary>
         public bool HotkeyEnabled
         {
             get => _config.HotkeyEnabled;
@@ -354,7 +366,19 @@ namespace FLOMASTER.ViewModels
                 }
             }
         }
-        public OcioConfig DefaultOcio { get => _defaultOcio; set => SetProperty(ref _defaultOcio, value); }
+        /// <summary>OCIO по умолчанию (трей/CLI). Хранится в конфиге именем; вычисляется из списка.</summary>
+        public OcioConfig DefaultOcio
+        {
+            get => OcioConfigs.FirstOrDefault(o => o.Name == _config.DefaultOcio) ?? OcioConfigs.FirstOrDefault();
+            set
+            {
+                if (value == null) return;
+                _config.DefaultOcio = value.Name;
+                _store.Save(_config);
+                OnPropertyChanged();
+                Logger.Log("OCIO", $"Default OCIO: {value.Name}", "info");
+            }
+        }
 
         // Theme names for selector
         public ObservableCollection<string> Themes { get; } = new();
@@ -394,6 +418,16 @@ namespace FLOMASTER.ViewModels
             var dialog = new Microsoft.Win32.OpenFileDialog { Title = "Select executable", Filter = "Executables (*.exe)|*.exe|All files (*.*)|*.*" };
             if (dialog.ShowDialog() != true) return;
             AddPresetFromExe(dialog.FileName);
+        }
+
+        /// <summary>Запуск пресета сразу с квик-командой: одноразовые аргументы, ArgsText не загрязняется.</summary>
+        public void LaunchPresetWithCommand(Preset preset, string cmd)
+        {
+            SelectedPreset = preset;
+            var saved = ArgsText;
+            ArgsText = cmd;
+            try { LaunchCommand.Execute(null); }
+            finally { ArgsText = saved; }
         }
 
         public void AddPresetFromExe(string exePath)
@@ -1071,7 +1105,7 @@ namespace FLOMASTER.ViewModels
                 QuickCommands.Add(new QuickCommand { Cmd = cmd, Desc = desc });
         }
 
-        private List<(string cmd, string desc)> GetCommandsForApp(string appName)
+        public List<(string cmd, string desc)> GetCommandsForApp(string appName)
         {
             if (appName.Contains("blender") || appName.Contains("k-cycles"))
                 return new() { ("--factory-startup", "Clean start (no addons)"), ("--debug-gpu", "GPU diagnostics"), ("--debug-cycles", "Cycles debug"), ("-b \"{file}\" -o \"{out}\" -f 1", "Background render"), ("--python-expr \"import bpy; bpy.context.scene.render.resolution_percentage = 25\"", "Quick preview (25%)") };

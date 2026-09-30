@@ -1,45 +1,29 @@
 using System;
 using System.IO;
-using System.Runtime.InteropServices;
-using System.Linq;
 using System.Windows;
 using System.Windows.Media.Animation;
 using System.Windows.Media.Imaging;
 using FLOMASTER.ViewModels;
 using FLOMASTER.Services;
-using WinForms = System.Windows.Forms;
 
 namespace FLOMASTER
 {
+    /// <summary>
+    /// Маленькое окно лаунчера. Трей, глобальный хоткей и создание оверлея живут на уровне
+    /// приложения (TrayService / HotkeyService / UiController) — окно может вообще не
+    /// создаваться (старт с дашборда). Закрытие = скрыть в трей; настоящий выход — Quit.
+    /// </summary>
     public partial class MainWindow : Window
     {
-        private WinForms.NotifyIcon _trayIcon;
-        private OverlayWindow? _overlay;
-        private System.Windows.Forms.Screen? _lastOverlayScreen;
         private const int BaseHeight = 560; // свёрнутое окно вмещает весь стек вкладок + ARGUMENTS (32 из них — шапка)
 
-        // ---- Глобальный хоткей Ctrl+Alt+F: показать/спрятать лаунчер поверх всего ----
-        [DllImport("user32.dll")] private static extern bool RegisterHotKey(IntPtr hWnd, int id, uint fsModifiers, uint vk);
-        [DllImport("user32.dll")] private static extern bool UnregisterHotKey(IntPtr hWnd, int id);
-        [DllImport("user32.dll")] private static extern bool SetWindowPos(IntPtr hWnd, IntPtr after, int x, int y, int cx, int cy, uint flags);
-        private const int HOTKEY_ID = 0xF10;
-        private const int WM_HOTKEY = 0x0312;
-        private const uint MOD_ALT = 0x1, MOD_CONTROL = 0x2, MOD_NOREPEAT = 0x4000, VK_F = 0x46;
-        private static readonly IntPtr HwndTopmost = new IntPtr(-1);
-        private static readonly IntPtr HwndNotTopmost = new IntPtr(-2);
-        private const uint SwpNomove = 0x2, SwpNosize = 0x1, SwpShowwindow = 0x40;
-        private bool _hotkeyRegistered;
+        private readonly MainViewModel _viewModel;
 
-        public MainWindow()
+        public MainWindow(MainViewModel viewModel)
         {
             InitializeComponent();
-
-            // Set ViewModel as DataContext (composition root: ручной DI без контейнеров)
-            var ocio = new OcioService();
-            _ocioService = ocio;
-            var viewModel = new MainViewModel(new ConfigManager(), ocio, new LaunchService(ocio));
-            DataContext = viewModel;
             _viewModel = viewModel;
+            DataContext = viewModel;
 
             // Open in top-right corner of the screen
             WindowStartupLocation = WindowStartupLocation.Manual;
@@ -53,45 +37,30 @@ namespace FLOMASTER
                 foreach (var file in files)
                 {
                     if (file.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
-                        viewModel.AddPresetFromExe(file);
-                    else if (viewModel.IsProjectFile(file))
-                        viewModel.OpenProjectFile(file);
+                        _viewModel.AddPresetFromExe(file);
+                    else if (_viewModel.IsProjectFile(file))
+                        _viewModel.OpenProjectFile(file);
                 }
             };
 
-            // Apply initial theme
-            ApplyTheme(viewModel.SelectedTheme);
-
-            // Update when properties change
-            viewModel.PropertyChanged += (s, e) =>
+            // Раскрытие панелей анимирует высоту окна (тема применяется на уровне App)
+            _viewModel.PropertyChanged += (s, e) =>
             {
-                if (e.PropertyName == nameof(viewModel.SelectedTheme))
-                {
-                    ApplyTheme(viewModel.SelectedTheme);
-                }
-                else if (e.PropertyName == nameof(viewModel.HotkeyEnabled))
-                {
-                    ApplyHotkey(viewModel.HotkeyEnabled);
-                }
-                else if (e.PropertyName == nameof(viewModel.OverlayTopmost))
-                {
-                    if (_overlay != null) _overlay.Topmost = viewModel.OverlayTopmost;
-                }
-                else if (e.PropertyName == nameof(viewModel.RecentPanelVisible) ||
-                    e.PropertyName == nameof(viewModel.ArgsPanelVisible) ||
-                    e.PropertyName == nameof(viewModel.SettingsPanelVisible) ||
-                    e.PropertyName == nameof(viewModel.RolesPanelVisible) ||
-                    e.PropertyName == nameof(viewModel.ProfilesPanelVisible) ||
-                    e.PropertyName == nameof(viewModel.ProjectsPanelVisible))
+                if (e.PropertyName == nameof(_viewModel.RecentPanelVisible) ||
+                    e.PropertyName == nameof(_viewModel.ArgsPanelVisible) ||
+                    e.PropertyName == nameof(_viewModel.SettingsPanelVisible) ||
+                    e.PropertyName == nameof(_viewModel.RolesPanelVisible) ||
+                    e.PropertyName == nameof(_viewModel.ProfilesPanelVisible) ||
+                    e.PropertyName == nameof(_viewModel.ProjectsPanelVisible))
                 {
                     double h = BaseHeight;
-                    if (viewModel.RecentPanelVisible) h += 200;
-                    if (viewModel.ArgsPanelVisible) h += 200;
-                    if (viewModel.SettingsPanelVisible) h += 200;
-                    if (viewModel.RolesPanelVisible) h += 220;
-                    if (viewModel.ProfilesPanelVisible) h += 180;
-                    if (viewModel.ProjectsPanelVisible) h += 220;
-                    AnimateToHeight(h, viewModel.AnimationEnabled);
+                    if (_viewModel.RecentPanelVisible) h += 200;
+                    if (_viewModel.ArgsPanelVisible) h += 200;
+                    if (_viewModel.SettingsPanelVisible) h += 200;
+                    if (_viewModel.RolesPanelVisible) h += 220;
+                    if (_viewModel.ProfilesPanelVisible) h += 180;
+                    if (_viewModel.ProjectsPanelVisible) h += 220;
+                    AnimateToHeight(h, _viewModel.AnimationEnabled);
                 }
             };
 
@@ -125,7 +94,7 @@ namespace FLOMASTER
                     var entries = Logger.GetLastEntries(50);
                     if (entries.Count == 0)
                     {
-                        viewModel.StatusText = "No log entries yet";
+                        _viewModel.StatusText = "No log entries yet";
                         return;
                     }
                     var logContent = string.Join(Environment.NewLine, entries);
@@ -142,8 +111,8 @@ namespace FLOMASTER
                 {
                     if (quickList.SelectedItem is QuickCommand cmd)
                     {
-                        var current = viewModel.ArgsText?.Trim() ?? "";
-                        viewModel.ArgsText = string.IsNullOrEmpty(current) ? cmd.Cmd : $"{current} {cmd.Cmd}";
+                        var current = _viewModel.ArgsText?.Trim() ?? "";
+                        _viewModel.ArgsText = string.IsNullOrEmpty(current) ? cmd.Cmd : $"{current} {cmd.Cmd}";
                         quickList.SelectedIndex = -1; // deselect
                     }
                 };
@@ -157,139 +126,30 @@ namespace FLOMASTER
                 {
                     if (recentList.SelectedItem is string file)
                     {
-                        viewModel.OpenRecentFile(file);
+                        _viewModel.OpenRecentFile(file);
                         recentList.SelectedIndex = -1; // deselect
                     }
                 };
             }
 
-            // Global hotkey: регистрация требует hwnd
-            SourceInitialized += (s, e) => ApplyHotkey(viewModel.HotkeyEnabled);
-
             // WindowStyle=None отключает системное скругление Windows 11 — DWM-атрибут + клип бордера
             SourceInitialized += (s, e) => UiHelper.RoundCorners(this);
             Loaded += (s, e) => ClipRootBorder();
             SizeChanged += (s, e) => ClipRootBorder();
-
-            // Setup tray
-            SetupTray(viewModel);
         }
-
-        private void ApplyHotkey(bool enabled)
-        {
-            var handle = new System.Windows.Interop.WindowInteropHelper(this).Handle;
-            if (handle == IntPtr.Zero) return;
-            if (_hotkeyRegistered)
-            {
-                UnregisterHotKey(handle, HOTKEY_ID);
-                _hotkeyRegistered = false;
-            }
-            if (enabled)
-            {
-                // MOD_NOREPEAT: автоповтор клавиатуры не дёргает тоггл
-                _hotkeyRegistered = RegisterHotKey(handle, HOTKEY_ID, MOD_CONTROL | MOD_ALT | MOD_NOREPEAT, VK_F);
-                if (_hotkeyRegistered)
-                {
-                    var source = System.Windows.Interop.HwndSource.FromHwnd(handle);
-                    source?.AddHook(WndProc);
-                    Logger.Log("Hotkey", "Registered Ctrl+Alt+F", "info");
-                }
-                else Logger.Log("Hotkey", "RegisterHotKey failed (combination busy?)", "warn");
-            }
-        }
-
-        private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
-        {
-            if (msg == WM_HOTKEY && wParam.ToInt32() == HOTKEY_ID)
-            {
-                if (_viewModel.HotkeyOpensDashboard) ToggleOverlay();
-                else ToggleMainWindow();
-                handled = true;
-            }
-            return IntPtr.Zero;
-        }
-
-        /// <summary>Полноэкранный оверлей: открыт — закрыть; закрыт — открыть поверх всего.</summary>
-        private void ToggleOverlay()
-        {
-            if (_overlay != null)
-            {
-                if (_overlay.WindowState == WindowState.Minimized)
-                {
-                    _overlay.WindowState = WindowState.Normal;
-                    _overlay.Activate();
-                    return;
-                }
-                if (_overlay.IsActive)
-                {
-                    _overlay.Close();
-                    return;
-                }
-                _overlay.Activate();
-                return;
-            }
-            if (_viewModel == null) return;
-
-            // приоритет монитора: конфиг (переживает рестарт) -> сессия -> монитор лаунчера
-            System.Windows.Forms.Screen? preferred = null;
-            var saved = _viewModel.OverlayScreenDeviceName;
-            if (!string.IsNullOrEmpty(saved))
-                preferred = System.Windows.Forms.Screen.AllScreens
-                    .FirstOrDefault(s => s.DeviceName == saved)
-                    ?? _lastOverlayScreen;
-            preferred ??= _lastOverlayScreen;
-
-            _overlay = new OverlayWindow(_viewModel, this, preferred);
-            _overlay.Topmost = _viewModel.OverlayTopmost;
-            _overlay.Closing += (_, _) =>
-            {
-                try
-                {
-                    _viewModel.OverlayScreenDeviceName = System.Windows.Forms.Screen.FromHandle(
-                        new System.Windows.Interop.WindowInteropHelper(_overlay).Handle).DeviceName;
-                }
-                catch { }
-            };
-            _overlay.Closed += (_, _) => _overlay = null;
-            _overlay.Show();
-            _overlay.Activate();
-            Logger.Log("Hotkey", "Overlay opened", "info");
-        }
-
-        private MainViewModel? _viewModel;
-
-        /// <summary>Маленькое окно: видно и активно — спрятать; иначе — показать и поднять.</summary>
-        private void ToggleMainWindow()
-        {
-            if (IsVisible && IsActive)
-            {
-                Hide();
-                return;
-            }
-            Show();
-            WindowState = WindowState.Normal;
-            Activate();
-            // всплытие поверх DCC: Win32-topmost на миг, WPF-биндинг Topmost не трогаем
-            var handle = new System.Windows.Interop.WindowInteropHelper(this).Handle;
-            SetWindowPos(handle, HwndTopmost, 0, 0, 0, 0, SwpNomove | SwpNosize | SwpShowwindow);
-            SetWindowPos(handle, HwndNotTopmost, 0, 0, 0, 0, SwpNomove | SwpNosize);
-        }
-        private OcioService? _ocioService;
 
         private void RolePick_Click(object sender, RoutedEventArgs e)
         {
             if ((sender as FrameworkElement)?.Tag is not ViewModels.OcioRoleRow row) return;
-            var ocio = _viewModel?.SelectedOcio;
+            var ocio = _viewModel.SelectedOcio;
             if (ocio == null || string.IsNullOrEmpty(ocio.Path) || !File.Exists(ocio.Path)) return;
-            if (_viewModel == null) return;
 
-            var (_, colorspaces) = _ocioService.Parse(ocio.Path);
             string? current = null;
             if (_viewModel.SelectedPreset?.RoleOverrides != null &&
                 _viewModel.SelectedPreset.RoleOverrides.TryGetValue(row.RoleName, out var v))
                 current = v;
 
-            var picker = UiHelper.CreateColorspacePicker(this, row.RoleName, current, colorspaces,
+            var picker = UiHelper.CreateColorspacePicker(this, row.RoleName, current, _viewModel.GetColorspaces(),
                 name => _viewModel.ApplyRolePick(row, name));
             picker.ShowDialog();
         }
@@ -312,120 +172,6 @@ namespace FLOMASTER
             BeginAnimation(Window.HeightProperty, anim);
         }
 
-        private void ApplyTheme(string themeName)
-        {
-            var t = ThemeManager.GetTheme(
-                ThemeManager.ThemeOrder.FirstOrDefault(k => ThemeManager.Themes[k].Name == themeName) ?? "blender"
-            );
-            Application.Current.Resources["BgBrush"] = ThemeManager.Brush(t.Bg);
-            Application.Current.Resources["PanelBrush"] = ThemeManager.Brush(t.Panel);
-            Application.Current.Resources["AccentBrush"] = ThemeManager.Brush(t.Accent);
-            Application.Current.Resources["AccentTextBrush"] = ThemeManager.Brush(string.IsNullOrEmpty(t.AccentText) ? "#FFFFFF" : t.AccentText);
-            Application.Current.Resources["TextBrush"] = ThemeManager.Brush(t.Text);
-            Application.Current.Resources["DimBrush"] = ThemeManager.Brush(t.Dim);
-            Application.Current.Resources["BorderBrush"] = ThemeManager.Brush(t.Border);
-
-            var accentColor = (System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(t.Accent);
-            Application.Current.Resources["AccentHoverBrush"] = new System.Windows.Media.SolidColorBrush(
-                System.Windows.Media.Color.FromArgb(0x55, accentColor.R, accentColor.G, accentColor.B));
-            Application.Current.Resources["AccentPressBrush"] = new System.Windows.Media.SolidColorBrush(
-                System.Windows.Media.Color.FromArgb(0x77, accentColor.R, accentColor.G, accentColor.B));
-            Application.Current.Resources["AccentLightBrush"] = new System.Windows.Media.SolidColorBrush(ShiftColor(accentColor, 1.18));
-            Application.Current.Resources["AccentDarkBrush"] = new System.Windows.Media.SolidColorBrush(ShiftColor(accentColor, 0.82));
-
-            // System color overrides for ComboBox dropdowns
-            Application.Current.Resources[System.Windows.SystemColors.WindowBrushKey] = ThemeManager.Brush(t.Panel);
-            Application.Current.Resources[System.Windows.SystemColors.WindowTextBrushKey] = ThemeManager.Brush(t.Text);
-            Application.Current.Resources[System.Windows.SystemColors.ControlBrushKey] = ThemeManager.Brush(t.Panel);
-            Application.Current.Resources[System.Windows.SystemColors.ControlTextBrushKey] = ThemeManager.Brush(t.Text);
-            Application.Current.Resources[System.Windows.SystemColors.HighlightBrushKey] = ThemeManager.Brush(t.Accent);
-            Application.Current.Resources[System.Windows.SystemColors.HighlightTextBrushKey] = ThemeManager.Brush(string.IsNullOrEmpty(t.AccentText) ? "#FFFFFF" : t.AccentText);
-        }
-
-        private static System.Windows.Media.Color ShiftColor(System.Windows.Media.Color c, double k)
-        {
-            return System.Windows.Media.Color.FromRgb(
-                (byte)Math.Min(255, c.R * k),
-                (byte)Math.Min(255, c.G * k),
-                (byte)Math.Min(255, c.B * k));
-        }
-
-        private void SetupTray(MainViewModel viewModel)
-        {
-            _trayIcon = new WinForms.NotifyIcon();
-            try
-            {
-                var icoPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "flomaster.ico");
-                _trayIcon.Icon = File.Exists(icoPath)
-                    ? new System.Drawing.Icon(icoPath)
-                    : System.Drawing.SystemIcons.Application;
-            }
-            catch { _trayIcon.Icon = System.Drawing.SystemIcons.Application; }
-
-            _trayIcon.Text = "FLOMASTER";
-            _trayIcon.Visible = true;
-
-            _trayIcon.ContextMenuStrip = new WinForms.ContextMenuStrip();
-            RebuildTrayMenu(viewModel);
-            viewModel.Presets.CollectionChanged += (s, e) => RebuildTrayMenu(viewModel);
-            viewModel.Profiles.CollectionChanged += (s, e) => RebuildTrayMenu(viewModel);
-
-            _trayIcon.DoubleClick += (s, e) => { Show(); WindowState = WindowState.Normal; Activate(); };
-        }
-
-        private void RebuildTrayMenu(MainViewModel viewModel)
-        {
-            var menu = _trayIcon.ContextMenuStrip;
-            if (menu == null) return;
-            menu.Items.Clear();
-
-            foreach (var preset in viewModel.Presets)
-            {
-                var item = menu.Items.Add(preset.Name);
-                item.Click += (s, e) =>
-                {
-                    if (!File.Exists(preset.Exe))
-                    {
-                        Logger.Log("Tray", $"Preset exe not found: {preset.Exe}", "warn");
-                        viewModel.StatusText = $"{preset.Name}: exe not found";
-                        return;
-                    }
-                    viewModel.SelectedPreset = preset;
-                    viewModel.LaunchCommand.Execute(null);
-                };
-            }
-
-            // Профили: применение состояния + запуск тем же путём, что и Launch
-            if (viewModel.Profiles.Count > 0)
-            {
-                menu.Items.Add(new WinForms.ToolStripSeparator());
-                var header = menu.Items.Add("PROFILES");
-                header.Enabled = false;
-
-                foreach (var profile in viewModel.Profiles)
-                {
-                    var item = menu.Items.Add(profile.Name);
-                    item.Click += (s, e) =>
-                    {
-                        viewModel.ApplyProfile(profile);
-                        var exe = viewModel.SelectedPreset?.Exe;
-                        if (string.IsNullOrEmpty(exe) || !File.Exists(exe))
-                        {
-                            Logger.Log("Tray", $"Profile '{profile.Name}': exe not found: {exe}", "warn");
-                            return;
-                        }
-                        viewModel.LaunchCommand.Execute(null);
-                    };
-                }
-            }
-
-            menu.Items.Add(new WinForms.ToolStripSeparator());
-            var showItem = menu.Items.Add("Show FLOMASTER");
-            showItem.Click += (s, e) => { Show(); WindowState = WindowState.Normal; Activate(); };
-            var quitItem = menu.Items.Add("Quit");
-            quitItem.Click += (s, e) => { _trayIcon.Visible = false; _trayIcon.Dispose(); Close(); };
-        }
-
         /// <summary>Клип контента по скруглению корневого бордера (после AllowsTransparency).</summary>
         private void ClipRootBorder()
         {
@@ -439,11 +185,11 @@ namespace FLOMASTER
 
         private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {
-            ApplyHotkey(false);
-            if (_trayIcon != null)
+            // лаунчер живёт в трее: крестик прячет окно, настоящий выход — Quit (App.IsExiting)
+            if (!App.IsExiting)
             {
-                _trayIcon.Visible = false;
-                _trayIcon.Dispose();
+                e.Cancel = true;
+                Hide();
             }
         }
     }

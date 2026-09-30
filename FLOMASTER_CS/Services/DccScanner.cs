@@ -24,6 +24,20 @@ namespace FLOMASTER.Services
             return Regex.IsMatch(fileName ?? "", @"^Nuke(\d+(\.\d+)?)?(v\d+)?\.exe$", RegexOptions.IgnoreCase);
         }
 
+        private static readonly Regex JunkExeRegex = new(
+            @"(?i)(uninst|installer|setup|crashreport|crash_handler|error_report|vcredist|redist|directx|prereq)",
+            RegexOptions.Compiled);
+
+        /// <summary>
+        /// Инсталляторы/деинсталляторы/репортеры — не DCC. Урок 2.5.3: реестр отдаёт
+        /// DisplayIcon деинсталлятора (Uninstall Houdini.exe, Autodesk Installer.exe).
+        /// </summary>
+        public static bool IsJunkExe(string exePath)
+        {
+            var name = Path.GetFileName(exePath ?? "");
+            return !string.IsNullOrEmpty(name) && JunkExeRegex.IsMatch(name);
+        }
+
         /// <summary>Матчит DisplayName из реестра/манифеста на известное DCC-приложение.</summary>
         public static bool MatchesKnownApp(string displayName)
         {
@@ -93,6 +107,13 @@ namespace FLOMASTER.Services
                 }
             }
 
+            // страховочный фильтр: никакой мусор из любого источника не доходит до пресетов
+            foreach (var junk in found.Where(f => IsJunkExe(f.Exe)).ToList())
+            {
+                Logger.Log("Scanner", $"Skip junk exe: {junk.Exe}", "warn");
+                found.Remove(junk);
+            }
+
             // дедуп по exe: реестр может пересечься с эвристиками
             found = found
                 .GroupBy(f => f.Exe, StringComparer.OrdinalIgnoreCase)
@@ -132,17 +153,19 @@ namespace FLOMASTER.Services
                             if (!string.IsNullOrEmpty(icon) && File.Exists(icon) && icon.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
                                 exe = icon;
 
-                            if (exe == null)
+                            // DisplayIcon часто показывает деинсталлятор/инсталлятор — канонический exe из InstallLocation
+                            if (exe == null || IsJunkExe(exe))
                             {
+                                exe = null;
                                 var install = key.GetValue("InstallLocation") as string;
                                 if (!string.IsNullOrEmpty(install))
                                 {
-                                    var candidates = new[] { "blender.exe", "maya.exe", "houdini.exe", "Resolve.exe", "Adobe Substance 3D Painter.exe" };
+                                    var candidates = new[] { "blender.exe", "maya.exe", "houdini.exe", "Resolve.exe", "Adobe Substance 3D Painter.exe", "UnrealEditor.exe" };
                                     exe = candidates.Select(c => Path.Combine(install, c)).FirstOrDefault(File.Exists) ?? "";
                                 }
                             }
 
-                            if (string.IsNullOrEmpty(exe)) continue;
+                            if (string.IsNullOrEmpty(exe) || IsJunkExe(exe)) continue;
                             if (found.Any(f => string.Equals(f.Exe, exe, StringComparison.OrdinalIgnoreCase))) continue;
 
                             var presetName = Regex.Replace(displayName.Trim(), @"\s*\(x64\)$", "", RegexOptions.IgnoreCase);
