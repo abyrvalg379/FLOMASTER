@@ -35,6 +35,12 @@ namespace FLOMASTER.Models
     {
         public string Name { get; set; } = "";
         public string Path { get; set; } = "";
+
+        // Запись = канон, поставляемый с установкой (ocio\config.ocio рядом с exe).
+        // Путь канона перепривязывается при старте к файлу текущей установки:
+        // сохранённый в launcher_config путь переживает установки/обновления
+        // и законсервирует устаревшую копию (кейс второго ПК, 01.10).
+        public bool IsCanon { get; set; }
     }
 
     public class Preset

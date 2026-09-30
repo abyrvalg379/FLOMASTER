@@ -252,13 +252,14 @@ namespace FLOMASTER.ViewModels
             try
             {
                 await Task.Delay(3000); // даём окну спокойно стартовать
-                var (tag, url) = await UpdateService.CheckAsync();
+                var (tag, url, isZip) = await UpdateService.CheckAsync();
                 if (tag == null || url == null) { Logger.Log("Update", "Up to date", "info"); return; }
 
                 _updateTag = tag;
                 _updateUrl = url;
-                _updatePath = Path.Combine(Path.GetTempPath(), "FLOMASTER_update.exe");
+                _updatePath = Path.Combine(Path.GetTempPath(), isZip ? "FLOMASTER_update.zip" : "FLOMASTER_update.exe");
                 UpdateInfoText = $"Update {tag}: downloading...";
+                Logger.Log("Update", $"Downloading {tag}...", "info"); // прогресс и в лог: раньше скачивание молчало
 
                 await UpdateService.DownloadAsync(url, _updatePath,
                     (done, total) => UpdateInfoText = total > 0
@@ -402,7 +403,9 @@ namespace FLOMASTER.ViewModels
             }
 
             Logger.Log(SelectedPreset.Name, SelectedPreset.Exe, SelectedOcio?.Name ?? "", args);
+            var hint = OcioMissingHint();
             StatusText = string.IsNullOrEmpty(args) ? $"Launched: {SelectedPreset.Name}" : $"Launched: {SelectedPreset.Name} + {args}";
+            if (hint != "") StatusText += " — " + hint;
 
             // Add to recent if file opened
             if (!string.IsNullOrEmpty(args) && args.Contains("\""))
@@ -412,6 +415,12 @@ namespace FLOMASTER.ViewModels
                     AddRecentFile(match.Groups[1].Value);
             }
         }
+
+        /// <summary>Подсказка, когда у выбранного конфига нет файла: DCC уйдёт без OCIO молча (реальный кейс).</summary>
+        private string OcioMissingHint() =>
+            SelectedOcio != null && string.IsNullOrEmpty(SelectedOcio.Path)
+                ? $"OCIO '{SelectedOcio.Name}' has no config file (ocio\\ folder missing next to FLOMASTER.exe) — app runs WITHOUT color management, reinstall from the full zip"
+                : "";
 
         private void AddPreset()
         {
@@ -713,6 +722,8 @@ namespace FLOMASTER.ViewModels
             foreach (var o in _config.OcioConfigs) OcioConfigs.Add(o);
             if (OcioConfigs.Count > 0)
                 SelectedOcio = OcioConfigs.FirstOrDefault(o => o.Name == _config.DefaultOcio) ?? OcioConfigs[0];
+            var hint = OcioMissingHint();
+            if (hint != "") StatusText = hint; // видно сразу при старте, не только после запуска
         }
 
         private void UpdateOcioRoles()

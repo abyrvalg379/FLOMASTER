@@ -47,7 +47,8 @@ namespace FLOMASTER.Services
             {
                 // seeded/imported запись без файла: NormalizePaths чинит это при старте,
                 // но если добрались сюда — конфиг в списке есть, а .ocio не указан
-                Logger.Log("OCIO", $"Config '{ocio.Name}' has no .ocio file path, launching without OCIO", "warn");
+                Logger.Log("OCIO", $"Config '{ocio.Name}' has no .ocio file path — launching WITHOUT color management. " +
+                    "Reinstall from the full release zip: ocio\\ folder must sit next to FLOMASTER.exe", "warn");
                 return;
             }
 
@@ -70,6 +71,9 @@ namespace FLOMASTER.Services
             {
                 psi.EnvironmentVariables["OCIO"] = ocioPath;
                 Logger.Log("OCIO", $"Set OCIO={ocioPath}", "info");
+                if (ocioPath.Any(c => c > 127))
+                    Logger.Log("OCIO", "OCIO path contains non-ASCII characters — some DCC (Substance Painter) " +
+                        "may silently ignore the config; keep FLOMASTER in an ASCII path, e.g. C:\\Program Files\\FLOMASTER", "warn");
             }
         }
 

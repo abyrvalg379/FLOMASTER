@@ -146,5 +146,78 @@ namespace FLOMASTER.Tests
                 if (created) try { Directory.Delete(ocioDir, true); } catch { }
             }
         }
+
+        // ---- Канон следует за установкой (кейс второго ПК: сохранённый путь ----
+        // ---- законсервировал старую копию конфига навсегда) ----
+
+        private string PlantShippedOcio()
+        {
+            // ocio\config.ocio рядом с exe тест-раннера = «установка» для FindOcioConfig
+            var ocioDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "ocio");
+            var ocioFile = Path.Combine(ocioDir, "config.ocio");
+            Directory.CreateDirectory(ocioDir);
+            File.WriteAllText(ocioFile, "ocio_profile_version: 1\nroles:\n  scene_linear: raw\n  default_byte: raw\n");
+            return ocioFile;
+        }
+
+        [Fact]
+        public void Load_CanonEntryFollowsShippedConfig_EvenWhenStoredPathExists()
+        {
+            // главный регресс: старый путь СУЩЕСТВУЕТ (старая копия) — прежний код его не трогал
+            var shipped = PlantShippedOcio();
+            var staleDir = Path.Combine(_dir, "old_install", "ocio");
+            Directory.CreateDirectory(staleDir);
+            var staleFile = Path.Combine(staleDir, "config.ocio");
+            File.WriteAllText(staleFile, "ocio_profile_version: 1\nroles:\n  scene_linear: raw\n"); // старье без default_byte
+
+            File.WriteAllText(ConfigPath,
+                "{\n  \"theme\": \"maya\",\n  \"ocioConfigs\": [ { \"name\": \"ACES 1.2\", \"path\": \"" +
+                staleFile.Replace("\\", "\\\\").ToLowerInvariant() + "\", \"isCanon\": true } ],\n" +
+                "\"defaultOcio\": \"ACES 1.2\",\n  \"presets\": [],\n  \"recentFiles\": [],\n  \"scanPaths\": []\n}");
+
+            var loaded = new ConfigManager(_dir).Load();
+
+            Assert.True(loaded.OcioConfigs[0].IsCanon);
+            Assert.Equal(shipped, loaded.OcioConfigs[0].Path); // перепривязан к установке
+            var json = File.ReadAllText(ConfigPath);
+            Assert.Contains("ocio\\\\config.ocio", json); // персистится
+        }
+
+        [Fact]
+        public void Load_LegacyAcesEntryWithoutFlag_MigratesToCanonAndRepoints()
+        {
+            // конфиг от старой версии FLOMASTER: «ACES 1.2» без isCanon — миграция + перепривязка
+            var shipped = PlantShippedOcio();
+            var staleFile = Path.Combine(_dir, "somewhere", "config.ocio");
+            Directory.CreateDirectory(Path.GetDirectoryName(staleFile)!);
+            File.WriteAllText(staleFile, "legacy junk");
+
+            File.WriteAllText(ConfigPath,
+                "{\n  \"theme\": \"maya\",\n  \"ocioConfigs\": [ { \"name\": \"ACES 1.2\", \"path\": \"" +
+                staleFile.Replace("\\", "\\\\") + "\" } ],\n" +
+                "\"defaultOcio\": \"ACES 1.2\",\n  \"presets\": [],\n  \"recentFiles\": [],\n  \"scanPaths\": []\n}");
+
+            var loaded = new ConfigManager(_dir).Load();
+
+            Assert.True(loaded.OcioConfigs[0].IsCanon);
+            Assert.Equal(shipped, loaded.OcioConfigs[0].Path);
+        }
+
+        [Fact]
+        public void Load_CustomNamedEntry_GetsStalePathFixed_ButStaysCustom()
+        {
+            var shipped = PlantShippedOcio();
+            var staleFile = Path.Combine(_dir, "gone", "my.ocio"); // не существует
+
+            File.WriteAllText(ConfigPath,
+                "{\n  \"theme\": \"maya\",\n  \"ocioConfigs\": [ { \"name\": \"My Film Config\", \"path\": \"" +
+                staleFile.Replace("\\", "\\\\") + "\" } ],\n" +
+                "\"defaultOcio\": \"My Film Config\",\n  \"presets\": [],\n  \"recentFiles\": [],\n  \"scanPaths\": []\n}");
+
+            var loaded = new ConfigManager(_dir).Load();
+
+            Assert.False(loaded.OcioConfigs[0].IsCanon); // не канон и не стал им
+            Assert.Equal(shipped, loaded.OcioConfigs[0].Path); // протухший путь починен
+        }
     }
 }

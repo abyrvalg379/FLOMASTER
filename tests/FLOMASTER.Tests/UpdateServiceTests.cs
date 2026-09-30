@@ -25,5 +25,53 @@ namespace FLOMASTER.Tests
         {
             Assert.Equal(expected, UpdateService.IsUpdateAvailable(tag, Local241));
         }
+
+        // ---- SelectUpdateAsset: ZIP (exe + ocio) важнее голого exe; мусорные вложения не берём ----
+
+        private const string Base = "\"browser_download_url\":\"https://example.com/abyrvalg379/FLOMASTER/releases/download/v2.5.7/";
+
+        [Fact]
+        public void SelectUpdateAsset_PrefersVersionedZip()
+        {
+            var json = "{" + Base + "FLOMASTER.exe\"}," + Base + "FLOMASTER_v2.5.7.zip\"}";
+            var (url, isZip) = UpdateService.SelectUpdateAsset(json);
+            Assert.True(isZip);
+            Assert.Contains("FLOMASTER_v2.5.7.zip", url);
+        }
+
+        [Fact]
+        public void SelectUpdateAsset_FallsBackToExe_WhenNoZip()
+        {
+            var json = "{" + Base + "FLOMASTER.exe\"}";
+            var (url, isZip) = UpdateService.SelectUpdateAsset(json);
+            Assert.False(isZip);
+            Assert.Contains("FLOMASTER.exe", url);
+        }
+
+        [Fact]
+        public void SelectUpdateAsset_IgnoresWindowsAutobundle()
+        {
+            var json = "{" + Base + "FLOMASTER_Windows.zip\"}";
+            var (url, isZip) = UpdateService.SelectUpdateAsset(json);
+            Assert.False(isZip);
+            Assert.Null(url);
+        }
+
+        [Fact]
+        public void SelectUpdateAsset_IgnoresSourceArchive()
+        {
+            var json = "{\"browser_download_url\":\"https://example.com/abyrvalg379/FLOMASTER/archive/refs/tags/v2.5.7.zip\"}";
+            var (url, isZip) = UpdateService.SelectUpdateAsset(json);
+            Assert.False(isZip);
+            Assert.Null(url);
+        }
+
+        [Fact]
+        public void SelectUpdateAsset_ReturnsNull_OnEmptyAssets()
+        {
+            var (url, isZip) = UpdateService.SelectUpdateAsset("{\"assets\":[]}");
+            Assert.Null(url);
+            Assert.False(isZip);
+        }
     }
 }

@@ -14,6 +14,10 @@ namespace FLOMASTER.Services
 
     public class ConfigManager : IConfigStore
     {
+        // Зарезервированное имя канон-записи (сидинг с v2.0). Записи с этим именем
+        // без явного флага — legacy-сидинг, мигрируют в IsCanon при загрузке.
+        public const string CanonName = "ACES 1.2";
+
         private readonly string _dir;
         private string ConfigPath => Path.Combine(_dir, "launcher_config.json");
 
@@ -117,9 +121,9 @@ namespace FLOMASTER.Services
                 Theme = "blender",
                 OcioConfigs = new()
                 {
-                    new() { Name = "ACES 1.2", Path = ocioPath }
+                    new() { Name = CanonName, Path = ocioPath, IsCanon = true }
                 },
-                DefaultOcio = "ACES 1.2",
+                DefaultOcio = CanonName,
                 Presets = new(),
                 RecentFiles = new(),
                 ScanPaths = new(),
@@ -151,42 +155,79 @@ namespace FLOMASTER.Services
             return null;
         }
 
-        /// <summary>Ремонт OCIO-путей (пустые и протухшие). true — что-то изменено, нужно Save.</summary>
+        /// <summary>
+        /// Ремонт OCIO-путей (пустые и протухшие) + перепривязка канона. true — что-то изменено, нужно Save.
+        /// Канон (IsCanon) следует за установкой: путь перепривязывается к ocio рядом с exe,
+        /// потому что инсталлер/апдейтер синхронизируют именно эту папку. Сохранённый в
+        /// launcher_config путь иначе законсервирует старую копию конфига навсегда.
+        /// </summary>
         private bool NormalizePaths(Config config)
         {
             bool changed = false;
+            var canonPath = FindOcioConfig();
+
             foreach (var ocio in config.OcioConfigs)
             {
-                // File.Exists(null/"") = false: чиним и пустые пути (сидинг без ocio рядом с exe,
-                // когда FindOcioConfig вернул null), и протухшие непустые
+                // миграция: «ACES 1.2» без флага — сидинг старых версий, это канон
+                if (!ocio.IsCanon && ocio.Name == CanonName)
+                {
+                    ocio.IsCanon = true;
+                    changed = true;
+                }
+
+                if (ocio.IsCanon)
+                {
+                    if (canonPath != null && !SameFile(ocio.Path, canonPath))
+                    {
+                        Logger.Log("Config", $"Canon '{ocio.Name}' follows shipped config: {canonPath} (was: {(string.IsNullOrEmpty(ocio.Path) ? "null" : ocio.Path)})", "info");
+                        ocio.Path = canonPath;
+                        changed = true;
+                    }
+                    else if (canonPath == null && !string.IsNullOrEmpty(ocio.Path) && File.Exists(ocio.Path))
+                    {
+                        // установка без папки ocio (exe-only апдейтер): сохранённый путь — единственный
+                        // известный конфиг, оставляем; ApplyOcio предупредит, если и он протухнет
+                        Logger.Log("Config", $"Canon '{ocio.Name}': shipped config not found next to exe, keeping {ocio.Path}", "warn");
+                    }
+                    continue;
+                }
+
+                // пользовательская запись: File.Exists(null/"") = false — чиним пустые
+                // и протухшие пути (перепривязкой на канон установки)
                 if (!File.Exists(ocio.Path))
                 {
                     Logger.Log("Config", string.IsNullOrEmpty(ocio.Path)
                         ? $"OCIO '{ocio.Name}' has no file path, searching..."
                         : $"OCIO path not found: {ocio.Path}, searching...", "warn");
-                    var found = FindOcioConfig();
-                    if (found != null)
+                    if (canonPath != null)
                     {
-                        ocio.Path = found;
+                        ocio.Path = canonPath;
                         changed = true;
-                        Logger.Log("Config", $"OCIO path fixed to: {found}", "info");
+                        Logger.Log("Config", $"OCIO path fixed to: {canonPath}", "info");
                     }
                 }
             }
 
             if (config.OcioConfigs.Count == 0)
             {
-                var ocioPath = FindOcioConfig();
-                if (ocioPath != null)
+                if (canonPath != null)
                 {
-                    config.OcioConfigs.Add(new() { Name = "ACES 1.2", Path = ocioPath });
-                    config.DefaultOcio = "ACES 1.2";
+                    config.OcioConfigs.Add(new() { Name = CanonName, Path = canonPath, IsCanon = true });
+                    config.DefaultOcio = CanonName;
                     changed = true;
                     Logger.Log("Config", "Added default OCIO config", "info");
                 }
             }
 
             return changed;
+        }
+
+        /// <summary>Тот же файл? Полные пути, без учёта регистра (Windows).</summary>
+        private static bool SameFile(string? a, string b)
+        {
+            if (string.IsNullOrEmpty(a)) return false;
+            try { return string.Equals(Path.GetFullPath(a), Path.GetFullPath(b), StringComparison.OrdinalIgnoreCase); }
+            catch { return string.Equals(a, b, StringComparison.Ordinal); }
         }
     }
 }

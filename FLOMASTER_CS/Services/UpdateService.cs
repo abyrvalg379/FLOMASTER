@@ -41,18 +41,35 @@ namespace FLOMASTER.Services
             return remote > local;
         }
 
-        /// <summary>Тег и URL на FLOMASTER.exe из вложений последнего релиза, если он новее текущего.</summary>
-        public static async Task<(string? tag, string? exeUrl)> CheckAsync()
+        /// <summary>
+        /// Тег и URL на обновление из вложений последнего релиза, если он новее текущего.
+        /// Качаем версионированный ZIP (exe + ocio): точечная замена одного exe оставляла
+        /// машины без папки ocio — SP запускался без env var молча (реальный кейс, 01.10).
+        /// Fallback на exe-вложение, если ZIP в релизе нет.
+        /// </summary>
+        public static async Task<(string? tag, string? url, bool isZip)> CheckAsync()
         {
             Http.DefaultRequestHeaders.UserAgent.ParseAdd("FLOMASTER");
             var json = await Http.GetStringAsync(ReleasesApi).ConfigureAwait(false);
 
             var tag = Regex.Match(json, "\"tag_name\"\\s*:\\s*\"v?([^\"]+)\"").Groups[1].Value;
-            if (!IsUpdateAvailable(tag, CurrentVersion)) return (null, null);
+            if (!IsUpdateAvailable(tag, CurrentVersion)) return (null, null, false);
 
-            // обновляем точечной заменой exe, поэтому качаем именно exe-вложение
-            var url = Regex.Match(json, "\"browser_download_url\"\\s*:\\s*\"([^\"]*/FLOMASTER\\.exe)\"").Groups[1].Value;
-            return url == "" ? ((string?)null, (string?)null) : ("v" + tag, url);
+            var (url, isZip) = SelectUpdateAsset(json);
+            return url == null ? (null, null, false) : ("v" + tag, url, isZip);
+        }
+
+        /// <summary>
+        /// Выбор вложения обновления: версионированный ZIP (FLOMASTER_v*.zip) важнее exe.
+        /// Автобандл FLOMASTER_Windows.zip и source-архивы (…/archive/refs/tags/*.zip) не берём.
+        /// </summary>
+        public static (string? url, bool isZip) SelectUpdateAsset(string releaseJson)
+        {
+            var zip = Regex.Match(releaseJson, "\"browser_download_url\"\\s*:\\s*\"([^\"]*/FLOMASTER_v[^\"]*\\.zip)\"");
+            if (zip.Success) return (zip.Groups[1].Value, true);
+
+            var exe = Regex.Match(releaseJson, "\"browser_download_url\"\\s*:\\s*\"([^\"]*/FLOMASTER\\.exe)\"").Groups[1].Value;
+            return exe == "" ? ((string?)null, false) : (exe, false);
         }
 
         public static async Task DownloadAsync(string url, string destPath, Action<long, long>? progress = null)
@@ -85,22 +102,45 @@ namespace FLOMASTER.Services
         }
 
         /// <summary>
-        /// Запускает повышенный (UAC) установщик: ждёт завершения приложения,
-        /// заменяет exe, подчищает бэкап и стартует новую версию. Текущий процесс завершается.
-        /// НОВАЯ версия стартуется через explorer.exe, а не напрямую: PowerShell под UAC
-        /// elevated, и прямой Start-Process оставил бы FLOMASTER с правами админа —
-        /// все запущенные из него DCC наследуют admin-токен (вылеты Painter, блок drag&drop).
+        /// Запускает повышенный (UAC) установщик: ждёт завершения приложения, заменяет exe,
+        /// синхронизирует папку ocio (из ZIP-вложения), подчищает бэкап и стартует новую версию.
+        /// Текущий процесс завершается. НОВАЯ версия стартуется через explorer.exe, а не напрямую:
+        /// PowerShell под UAC elevated, и прямой Start-Process оставил бы FLOMASTER с правами
+        /// админа — все запущенные из него DCC наследуют admin-токен (вылеты Painter, блок drag&drop).
         /// explorer.exe форвардит запрос уже запущенному шеллу (medium IL) — ребёнок без повышения.
         /// </summary>
         public static void ApplyDownloadedUpdate(string downloadedPath, string exePath)
         {
+            var isZip = downloadedPath.EndsWith(".zip", StringComparison.OrdinalIgnoreCase);
+            var extractDir = Path.Combine(Path.GetTempPath(), "FLOMASTER_update");
+
+            // robocopy /MIR делает target идентичным source: подхватывают и обновления канон-конфига
+            string body;
+            if (isZip)
+            {
+                body =
+                    "$tmp=" + Ps(extractDir) + ";" +
+                    "if (Test-Path $tmp) { Remove-Item $tmp -Recurse -Force };" +
+                    "Expand-Archive " + Ps(downloadedPath) + " $tmp -Force;" +
+                    "Copy-Item (Join-Path $tmp 'FLOMASTER.exe') $exe -Force;" +
+                    "robocopy (Join-Path $tmp 'ocio') (Join-Path (Split-Path $exe) 'ocio') /MIR /NFL /NDL /NJH /NJS /NP;" +
+                    "Remove-Item $tmp -Recurse -Force -ErrorAction SilentlyContinue;" +
+                    "Remove-Item $zip -ErrorAction SilentlyContinue;";
+            }
+            else
+            {
+                // запасной путь: в релизе нет ZIP — точечная замена exe как раньше
+                body = "Copy-Item $new $exe -Force;" +
+                       "Remove-Item $new -ErrorAction SilentlyContinue;";
+            }
+
             var script =
-                "$exe='" + exePath + "';" +
-                "$new='" + downloadedPath + "';" +
+                "$exe=" + Ps(exePath) + ";" +
+                "$zip=" + Ps(downloadedPath) + ";" +
+                "$new=" + Ps(downloadedPath) + ";" +
                 "Get-Process FLOMASTER -ErrorAction SilentlyContinue | Stop-Process -Force;" +
                 "Start-Sleep 2;" +
-                "Copy-Item $new $exe -Force;" +
-                "Remove-Item $new -ErrorAction SilentlyContinue;" +
+                body +
                 "explorer.exe $exe";
             var encoded = Convert.ToBase64String(Encoding.Unicode.GetBytes(script));
 
@@ -113,5 +153,8 @@ namespace FLOMASTER.Services
             };
             Process.Start(psi);
         }
+
+        /// <summary>PS-одинарные кавычки: пути с пробелами/кириллицей/апострофами не рвут скрипт.</summary>
+        private static string Ps(string s) => "'" + (s ?? "").Replace("'", "''") + "'";
     }
 }
