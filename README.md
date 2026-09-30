@@ -38,17 +38,17 @@
 
 ---
 
-## What's New in v2.5.5
+## What's New in v2.5.6
 
-- **The dashboard is now the full launcher UI** — everything the small window does lives in the fullscreen view: manage OCIO configs and applications (add, remove, rescan, drag & drop), save and delete profiles, manage project folders, recent files, and the complete settings set (updates, autostart, scan paths, SYNC export/import, shortcuts)
-- **Startup switch** — "Start with dashboard" in Settings picks what FLOMASTER opens with; the tray and the global hotkey work in both modes
-- **Role picker drawer** — clicking a role slides in a right-hand drawer with a family-grouped colorspace tree and search; no more modal windows
-- **Log drawer** — the Log chip pulls up an in-dashboard log strip (last 200 entries, copyable)
-- **Per-tile quick launch** — right-click an application tile to launch it with one of its command-line presets (clean start, background render, headless, ...)
-- **Running apps** — launched DCC instances appear as chips next to the search: click to focus, right-click to restart
-- **Keyboard navigation** — Up/Down arrows walk the visible tiles, Enter launches
-- **Cleaner scanner** — installers and uninstallers from the registry no longer show up as applications
-- Also: application tiles in a compact grid, aligned columns, project files and recent files in unified frames, themed dropdowns and checkboxes, grouped settings footer
+Bugfix release — launched apps no longer inherit administrator rights, and lost OCIO configs repair themselves.
+
+- **No more hidden admin launches** — after an auto-update FLOMASTER used to keep running with administrator rights, and every DCC started from it inherited the elevated token (crashes in Substance Painter with overlay tools, blocked drag & drop). Updates now relaunch the app without elevation, and on startup FLOMASTER self-heals: detecting admin rights, it quietly relaunches itself de-elevated
+- **OCIO configs repair themselves** — a config entry whose .ocio file path was lost (for example, after copying just the exe to another machine) is re-linked to the bundled config on startup instead of silently launching apps without color management
+- **Clearer diagnostics** — the log names the config missing its file and warns when FLOMASTER itself is running elevated
+- Launched apps start in their own folder instead of inheriting FLOMASTER's working directory
+
+### [v2.5.5](https://github.com/abyrvalg379/FLOMASTER/releases/tag/v2.5.5) — dashboard era
+The dashboard became the full launcher UI: role picker and log drawers, per-tile quick launch commands, running-app chips, keyboard navigation, cleaner scanner, compact 2×N tile grid.
 
 ### [v2.5](https://github.com/abyrvalg379/FLOMASTER/releases/tag/v2.5) — fullscreen dashboard
 Fullscreen overlay dashboard (`Ctrl+Alt+F`): color config chips, application tiles with real exe icons, projects, profiles, OCIO roles, recent files and quick settings — over everything, draggable between monitors. Project file routing (.spp to Painter, .blend to Blender, .hip to Houdini). PerMonitorV2.
