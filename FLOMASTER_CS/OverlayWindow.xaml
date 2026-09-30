@@ -1,6 +1,7 @@
 <Window x:Class="FLOMASTER.OverlayWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:FLOMASTER"
         Title="FLOMASTER"
         WindowStyle="None"
         ResizeMode="CanResize"
@@ -8,6 +9,8 @@
         ShowInTaskbar="False"
         Topmost="{Binding OverlayTopmost}"
         Background="{DynamicResource BgBrush}"
+        AllowDrop="True"
+        Drop="Window_Drop"
         PreviewKeyDown="Window_PreviewKeyDown">
 
     <WindowChrome.WindowChrome>
@@ -17,6 +20,78 @@
 
     <Window.Resources>
         <SolidColorBrush x:Key="BrandRed" Color="#C82823"/>
+
+        <!-- Видимый фокус плиток при навигации стрелками (до стилей, которые на него ссылаются) -->
+        <Style x:Key="NavFocusStyle">
+            <Setter Property="Control.Template">
+                <Setter.Value>
+                    <ControlTemplate>
+                        <Rectangle RadiusX="8" RadiusY="8" StrokeThickness="2"
+                                   Stroke="{DynamicResource AccentBrush}" SnapsToDevicePixels="True"/>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+
+        <!-- Кнопки в заголовках секций: + / − / scan / clear -->
+        <Style x:Key="MiniButtonStyle" TargetType="Button">
+            <Setter Property="Width" Value="30"/>
+            <Setter Property="Height" Value="26"/>
+            <Setter Property="Margin" Value="8,0,0,0"/>
+            <Setter Property="Background" Value="{DynamicResource PanelBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="FocusVisualStyle" Value="{StaticResource NavFocusStyle}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Name="Bd" Background="{TemplateBinding Background}" CornerRadius="6">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource AccentHoverBrush}"/>
+                                <Setter Property="Foreground" Value="{DynamicResource AccentTextBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource AccentPressBrush}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Чипы действий в футере настроек -->
+        <Style x:Key="FooterChipStyle" TargetType="Button">
+            <Setter Property="Height" Value="28"/>
+            <Setter Property="Margin" Value="0,0,8,6"/>
+            <Setter Property="Padding" Value="12,0"/>
+            <Setter Property="Background" Value="{DynamicResource PanelBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FontSize" Value="11.5"/>
+            <Setter Property="FocusVisualStyle" Value="{StaticResource NavFocusStyle}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Name="Bd" Background="{TemplateBinding Background}" CornerRadius="14"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource AccentHoverBrush}"/>
+                                <Setter Property="Foreground" Value="{DynamicResource AccentTextBrush}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
 
         <Style x:Key="CaptionButtonStyle" TargetType="Button">
             <Setter Property="Width" Value="44"/>
@@ -44,17 +119,19 @@
         </Style>
 
         <Style x:Key="TileButtonStyle" TargetType="Button">
-            <Setter Property="Height" Value="118"/>
-            <Setter Property="Margin" Value="0,0,0,16"/>
+            <Setter Property="Height" Value="84"/>
+            <Setter Property="Width" Value="300"/>
+            <Setter Property="Margin" Value="0,0,12,12"/>
             <Setter Property="Background" Value="{DynamicResource PanelBrush}"/>
             <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="HorizontalContentAlignment" Value="Left"/>
+            <Setter Property="FocusVisualStyle" Value="{StaticResource NavFocusStyle}"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
                         <Border Name="Bd" Background="{TemplateBinding Background}" CornerRadius="12">
-                            <ContentPresenter Margin="18,0,14,0" VerticalAlignment="Center"/>
+                            <ContentPresenter Margin="14,0,10,0" VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
@@ -77,6 +154,7 @@
             <Setter Property="Background" Value="{DynamicResource PanelBrush}"/>
             <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
             <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FocusVisualStyle" Value="{StaticResource NavFocusStyle}"/>
             <Setter Property="FontSize" Value="13"/>
             <Setter Property="Template">
                 <Setter.Value>
@@ -107,6 +185,7 @@
             <Setter Property="Background" Value="{DynamicResource PanelBrush}"/>
             <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
             <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FocusVisualStyle" Value="{StaticResource NavFocusStyle}"/>
             <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
             <Setter Property="Template">
                 <Setter.Value>
@@ -129,6 +208,116 @@
             <Setter Property="Orientation" Value="Horizontal"/>
             <Setter Property="Margin" Value="0,0,0,14"/>
         </Style>
+
+        <!-- Тёмные чекбоксы/комбо оверлея (стили потеряны в 9e156ff, восстановлены) -->
+        <Style TargetType="CheckBox">
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FocusVisualStyle" Value="{StaticResource NavFocusStyle}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="CheckBox">
+                        <StackPanel Orientation="Horizontal" Background="Transparent">
+                            <Border Name="Box" Width="16" Height="16" CornerRadius="3"
+                                    Background="{DynamicResource BgBrush}"
+                                    BorderBrush="{DynamicResource BorderBrush}"
+                                    BorderThickness="1" VerticalAlignment="Center">
+                                <Path Name="Check" Data="M 2,6 L 5,9 L 10,2" Stroke="{DynamicResource AccentTextBrush}" StrokeThickness="2"
+                                      Stretch="Uniform" Margin="2" Visibility="Collapsed"/>
+                            </Border>
+                            <ContentPresenter VerticalAlignment="Center" Margin="8,0,0,0"/>
+                        </StackPanel>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="Box" Property="Background" Value="{DynamicResource AccentBrush}"/>
+                                <Setter TargetName="Box" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                                <Setter TargetName="Check" Property="Visibility" Value="Visible"/>
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Box" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style TargetType="ComboBox">
+            <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+            <Setter Property="Background" Value="{DynamicResource BgBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+            <Setter Property="Padding" Value="8,0"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ComboBox">
+                        <Grid>
+                            <ToggleButton x:Name="Toggle" Focusable="False"
+                                          IsChecked="{Binding IsDropDownOpen, RelativeSource={RelativeSource TemplatedParent}}"
+                                          Background="Transparent"
+                                          BorderThickness="0"
+                                          Cursor="Hand">
+                                <ToggleButton.Template>
+                                    <ControlTemplate TargetType="ToggleButton">
+                                        <Border Name="Bd" Background="{TemplateBinding Background}"
+                                                BorderBrush="{DynamicResource BorderBrush}"
+                                                BorderThickness="1" CornerRadius="4">
+                                            <ContentPresenter/>
+                                        </Border>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource AccentHoverBrush}"/>
+                                                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </ToggleButton.Template>
+                            </ToggleButton>
+                            <ContentPresenter Content="{Binding SelectedItem, RelativeSource={RelativeSource TemplatedParent}}"
+                                              ContentTemplate="{Binding ItemTemplate, RelativeSource={RelativeSource TemplatedParent}}"
+                                              Margin="8,0,26,0" VerticalAlignment="Center" IsHitTestVisible="False"
+                                              TextElement.Foreground="{DynamicResource TextBrush}"/>
+                            <Path Data="M 0 0 L 4 4 L 8 0" Stroke="{DynamicResource DimBrush}" StrokeThickness="1.5"
+                                  HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,10,0"
+                                  IsHitTestVisible="False"/>
+                            <Popup IsOpen="{TemplateBinding IsDropDownOpen}" Placement="Bottom"
+                                   AllowsTransparency="True" Focusable="False" PopupAnimation="Fade">
+                                <Border Background="{DynamicResource PanelBrush}" BorderBrush="{DynamicResource BorderBrush}"
+                                        BorderThickness="1" CornerRadius="6" MaxHeight="320" Margin="0,4,0,0"
+                                        MinWidth="{TemplateBinding ActualWidth}">
+                                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                        <ItemsPresenter/>
+                                    </ScrollViewer>
+                                </Border>
+                            </Popup>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Setter Property="ItemContainerStyle">
+                <Setter.Value>
+                    <Style TargetType="ComboBoxItem">
+                        <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+                        <Setter Property="Padding" Value="10,6"/>
+                        <Setter Property="Template">
+                            <Setter.Value>
+                                <ControlTemplate TargetType="ComboBoxItem">
+                                    <Border Name="Bd" Background="Transparent" Padding="{TemplateBinding Padding}">
+                                        <ContentPresenter TextElement.Foreground="{DynamicResource TextBrush}"/>
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsHighlighted" Value="True">
+                                            <Setter TargetName="Bd" Property="Background" Value="{DynamicResource AccentHoverBrush}"/>
+                                            <Setter Property="Foreground" Value="{DynamicResource AccentTextBrush}"/>
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </Setter.Value>
+                        </Setter>
+                    </Style>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </Window.Resources>
 
     <Grid>
@@ -147,6 +336,8 @@
                 </TextBlock>
                 <TextBlock Text="LAUNCH APPLICATIONS IN THE ASSIGNED COLOR SPACE"
                            Foreground="{DynamicResource DimBrush}" FontSize="11.5" Margin="0,4,0,0"/>
+                <TextBlock Text="{Binding VersionLabel}"
+                           Foreground="{DynamicResource DimBrush}" FontSize="10.5" Margin="0,2,0,0"/>
             </StackPanel>
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Top"
                         WindowChrome.IsHitTestVisibleInChrome="True">
@@ -159,41 +350,75 @@
             </StackPanel>
         </Grid>
 
-        <!-- Поиск: фиксированная позиция, не двигается при фильтрации -->
-        <Grid Grid.Row="1" Margin="36,0,36,22">
-            <TextBox x:Name="SearchBox" Height="44" FontSize="15" Padding="14,0"
-                     VerticalContentAlignment="Center"
-                     Background="{DynamicResource PanelBrush}"
-                     Foreground="{DynamicResource TextBrush}"
-                     BorderBrush="{DynamicResource BorderBrush}"
-                     TextChanged="SearchBox_TextChanged"
-                     KeyDown="SearchBox_KeyDown"/>
-            <TextBlock x:Name="SearchHint" Text="Search applications, projects, files..."
-                       Foreground="{DynamicResource DimBrush}" FontSize="14"
-                       Margin="16,0,0,0" VerticalAlignment="Center"
-                       IsHitTestVisible="False"/>
+        <!-- Поиск слева + запущенные DCC справа (без подписи) -->
+        <Grid Grid.Row="1" Margin="36,0,36,20">
+            <Grid HorizontalAlignment="Left" MaxWidth="720" MinWidth="420">
+                <TextBox x:Name="SearchBox" Height="34" FontSize="13.5" Padding="12,0"
+                         VerticalContentAlignment="Center"
+                         Background="{DynamicResource PanelBrush}"
+                         Foreground="{DynamicResource TextBrush}"
+                         BorderBrush="{DynamicResource BorderBrush}"
+                         TextChanged="SearchBox_TextChanged"
+                         KeyDown="SearchBox_KeyDown"/>
+                <TextBlock x:Name="SearchHint" Text="Search applications, projects, files..."
+                           Foreground="{DynamicResource DimBrush}" FontSize="12.5"
+                           Margin="14,0,0,0" VerticalAlignment="Center"
+                           IsHitTestVisible="False"/>
+            </Grid>
+            <ItemsControl x:Name="RunningList" ItemsSource="{Binding RunningTiles}"
+                          HorizontalAlignment="Right" VerticalAlignment="Center">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <WrapPanel/>
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Button Style="{StaticResource ChipButtonStyle}" Click="RunningChip_Click"
+                                ToolTip="{Binding Subtitle}" Margin="0,0,8,0">
+                            <StackPanel Orientation="Horizontal">
+                                <Image Source="{Binding Icon}" Width="16" Height="16"
+                                       RenderOptions.BitmapScalingMode="HighQuality" VerticalAlignment="Center"/>
+                                <TextBlock Text="{Binding Title}" Margin="8,0,2,0" VerticalAlignment="Center"/>
+                            </StackPanel>
+                            <Button.ContextMenu>
+                                <ContextMenu>
+                                    <MenuItem Header="Focus" Click="RunningFocus_Menu" Tag="{Binding}"/>
+                                    <MenuItem Header="Restart with current selection" Click="RunningRestart_Menu" Tag="{Binding}"/>
+                                </ContextMenu>
+                            </Button.ContextMenu>
+                        </Button>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
         </Grid>
 
-        <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
-            <Grid MaxWidth="1780" HorizontalAlignment="Center" Margin="36,0,36,20">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="1.25*"/>
-                    <ColumnDefinition Width="1*"/>
-                    <ColumnDefinition Width="1*"/>
-                </Grid.ColumnDefinitions>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
-                </Grid.RowDefinitions>
+        <!-- Колонки без внешнего скролла: скроллы у колонок, рамки растягиваются до футера -->
+        <Grid Grid.Row="2" MaxWidth="1780" HorizontalAlignment="Center" Margin="36,0,36,12">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="1.25*"/>
+                <ColumnDefinition Width="1*"/>
+                <ColumnDefinition Width="1*"/>
+            </Grid.ColumnDefinitions>
 
-                <!-- ============ КОЛОНКА 1: конфиг + приложения ============ -->
-                <StackPanel Grid.Column="0" Grid.Row="0" Margin="0,0,36,0">
-                    <StackPanel Style="{StaticResource SectionLabelStyle}">
-                        <Rectangle Width="26" Height="3" Fill="{DynamicResource AccentBrush}"
-                                   VerticalAlignment="Center" Margin="0,0,12,0"/>
-                        <TextBlock Text="COLOR CONFIG" Foreground="{DynamicResource TextBrush}"
-                                   FontSize="14" FontWeight="SemiBold"/>
-                    </StackPanel>
+            <!-- ============ КОЛОНКА 1: конфиг + приложения ============ -->
+            <ScrollViewer Grid.Column="0" VerticalScrollBarVisibility="Auto">
+            <StackPanel Margin="0,0,36,0">
+                    <Grid Margin="0,0,0,14">
+                        <StackPanel Orientation="Horizontal">
+                            <Rectangle Width="26" Height="3" Fill="{DynamicResource AccentBrush}"
+                                       VerticalAlignment="Center" Margin="0,0,12,0"/>
+                            <TextBlock Text="COLOR CONFIG" Foreground="{DynamicResource TextBrush}"
+                                       FontSize="14" FontWeight="SemiBold"/>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                            <Button Content="+" Style="{StaticResource MiniButtonStyle}"
+                                    Command="{Binding AddOcioCommand}" ToolTip="Add OCIO config"/>
+                            <Button Content="&#xE74D;" FontFamily="Segoe MDL2 Assets" FontSize="10"
+                                    Style="{StaticResource MiniButtonStyle}"
+                                    Command="{Binding RemoveOcioCommand}" ToolTip="Remove selected config"/>
+                        </StackPanel>
+                    </Grid>
                     <ItemsControl ItemsSource="{Binding OcioChips}">
                         <ItemsControl.ItemsPanel>
                             <ItemsPanelTemplate>
@@ -208,25 +433,46 @@
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
+                    <!-- предупреждения валидатора конфига (пустое = не занимает места) -->
+                    <TextBlock FontSize="10" FontFamily="Consolas" TextWrapping="Wrap" Margin="0,2,0,0" TextAlignment="Left">
+                        <Run Text="{Binding OcioWarningsText, Mode=OneWay}" Foreground="{DynamicResource AccentBrush}"/>
+                    </TextBlock>
 
-                    <StackPanel Style="{StaticResource SectionLabelStyle}" Margin="0,20,0,14">
-                        <Rectangle Width="26" Height="3" Fill="{DynamicResource AccentBrush}"
-                                   VerticalAlignment="Center" Margin="0,0,12,0"/>
-                        <TextBlock x:Name="AppsSection" Text="APPLICATIONS" Foreground="{DynamicResource TextBrush}"
-                                   FontSize="14" FontWeight="SemiBold"/>
-                    </StackPanel>
-                    <ItemsControl ItemsSource="{Binding AppTiles}">
+                    <Grid Margin="0,20,0,14">
+                        <StackPanel Orientation="Horizontal">
+                            <Rectangle Width="26" Height="3" Fill="{DynamicResource AccentBrush}"
+                                       VerticalAlignment="Center" Margin="0,0,12,0"/>
+                            <TextBlock x:Name="AppsSection" Text="APPLICATIONS" Foreground="{DynamicResource TextBrush}"
+                                       FontSize="14" FontWeight="SemiBold"/>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                            <Button Content="+" Style="{StaticResource MiniButtonStyle}"
+                                    Command="{Binding AddPresetCommand}" ToolTip="Add application (or drop exe here)"/>
+                            <Button Content="&#xE72C;" FontFamily="Segoe MDL2 Assets" FontSize="10"
+                                    Style="{StaticResource MiniButtonStyle}"
+                                    Command="{Binding RescanCommand}" ToolTip="Rescan applications"/>
+                        </StackPanel>
+                    </Grid>
+                    <ItemsControl x:Name="AppsList" ItemsSource="{Binding AppTiles}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <WrapPanel/>
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
                                 <Button Style="{StaticResource TileButtonStyle}" Click="Tile_Click" Tag="{Binding}"
                                         Visibility="{Binding TileVisibility}">
+                                    <Button.ContextMenu>
+                                        <ContextMenu Opened="AppTileMenu_Opened"/>
+                                    </Button.ContextMenu>
                                     <StackPanel Orientation="Horizontal">
-                                        <Image Source="{Binding Icon}" Width="44" Height="44"
+                                        <Image Source="{Binding Icon}" Width="36" Height="36"
                                                RenderOptions.BitmapScalingMode="HighQuality" VerticalAlignment="Center"/>
-                                        <StackPanel Margin="16,0,0,0" VerticalAlignment="Center">
-                                            <TextBlock Text="{Binding Title}" FontSize="16" FontWeight="SemiBold"
+                                        <StackPanel Margin="12,0,0,0" VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding Title}" FontSize="14.5" FontWeight="SemiBold"
                                                        TextTrimming="CharacterEllipsis"/>
-                                            <TextBlock Text="{Binding Subtitle}" FontSize="10.5"
+                                            <TextBlock Text="{Binding Subtitle}" FontSize="10"
                                                        Foreground="{DynamicResource DimBrush}"
                                                        TextTrimming="CharacterEllipsis" Margin="0,3,0,0"/>
                                         </StackPanel>
@@ -238,73 +484,109 @@
                     <TextBlock x:Name="AppsEmpty" Text="Nothing matches."
                                Foreground="{DynamicResource DimBrush}" FontSize="12" FontStyle="Italic"
                                Visibility="Collapsed"/>
-                </StackPanel>
+                    </StackPanel>
+            </ScrollViewer>
 
-                <!-- ============ КОЛОНКА 2: проекты ============ -->
-                <StackPanel Grid.Column="1" Grid.Row="0" Margin="0,0,36,0">
-                    <StackPanel Style="{StaticResource SectionLabelStyle}">
+            <!-- ============ КОЛОНКА 2: проекты, рамка — до нижней границы ============ -->
+            <Grid Grid.Column="1" Margin="0,0,36,0">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                <Grid Grid.Row="0" Margin="0,0,0,14">
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Top">
                         <Rectangle Width="26" Height="3" Fill="{DynamicResource AccentBrush}"
                                    VerticalAlignment="Center" Margin="0,0,12,0"/>
                         <TextBlock x:Name="ProjectsSection" Text="PROJECTS" Foreground="{DynamicResource TextBrush}"
                                    FontSize="14" FontWeight="SemiBold"/>
                     </StackPanel>
-                    <ItemsControl x:Name="RootsList" ItemsSource="{Binding RootChips}">
-                        <ItemsControl.ItemsPanel>
-                            <ItemsPanelTemplate>
-                                <WrapPanel/>
-                            </ItemsPanelTemplate>
-                        </ItemsControl.ItemsPanel>
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                                <Button Content="{Binding Name}" ToolTip="{Binding Path}"
-                                        Style="{StaticResource ChipButtonStyle}"
-                                        Click="RootChip_Click" Tag="{Binding}"/>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                    <ItemsControl x:Name="ProjectFilesList" ItemsSource="{Binding ProjectFileTiles}" Margin="0,4,0,0">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                                <Button Style="{StaticResource RowButtonStyle}" Click="Tile_Click" Tag="{Binding}"
-                                        ToolTip="{Binding FullPath}"
-                                        Visibility="{Binding TileVisibility}">
-                                    <Grid>
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="Auto"/>
-                                            <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="Auto"/>
-                                        </Grid.ColumnDefinitions>
-                                        <TextBlock Grid.Column="0" Text="{Binding Badge}" FontSize="10.5"
-                                                   FontFamily="Consolas" FontWeight="Bold"
-                                                   Foreground="{DynamicResource AccentBrush}"
-                                                   VerticalAlignment="Center" Margin="0,0,14,0"/>
-                                        <TextBlock Grid.Column="1" Text="{Binding Title}" FontSize="12"
-                                                   FontFamily="Consolas" TextTrimming="CharacterEllipsis"/>
-                                        <TextBlock Grid.Column="2" Text="{Binding Dir}" FontSize="10.5"
-                                                   Foreground="{DynamicResource DimBrush}"
-                                                   VerticalAlignment="Center" Margin="24,0,0,0"/>
-                                    </Grid>
-                                </Button>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                    <TextBlock x:Name="ProjectsEmpty" Text="Add project roots in the launcher's Projects panel."
-                               Foreground="{DynamicResource DimBrush}" FontSize="12" FontStyle="Italic"/>
-                </StackPanel>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                        <Button Content="+" Style="{StaticResource MiniButtonStyle}"
+                                Command="{Binding AddProjectRootCommand}" ToolTip="Add project folder"/>
+                    </StackPanel>
+                </Grid>
+                <ItemsControl Grid.Row="1" x:Name="RootsList" ItemsSource="{Binding RootChips}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <WrapPanel/>
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Button Content="{Binding Name}" ToolTip="{Binding Path}"
+                                    Style="{StaticResource ChipButtonStyle}"
+                                    Click="RootChip_Click" Tag="{Binding}">
+                                <Button.ContextMenu>
+                                    <ContextMenu>
+                                        <MenuItem Header="Remove project folder" Click="RootRemove_Menu" Tag="{Binding Path}"/>
+                                    </ContextMenu>
+                                </Button.ContextMenu>
+                            </Button>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <!-- рамка растягивается до футера; ползунок внутри -->
+                <Border Grid.Row="2" x:Name="ProjectFilesFrame" Background="{DynamicResource PanelBrush}" CornerRadius="12"
+                        Padding="10" Margin="0,4,0,0">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto">
+                            <ItemsControl x:Name="ProjectFilesList" ItemsSource="{Binding ProjectFileTiles}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Button Style="{StaticResource RowButtonStyle}" Click="Tile_Click" Tag="{Binding}"
+                                                ToolTip="{Binding FullPath}"
+                                                Visibility="{Binding TileVisibility}">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock Grid.Column="0" Text="{Binding Badge}" FontSize="10.5"
+                                                           FontFamily="Consolas" FontWeight="Bold"
+                                                           Foreground="{DynamicResource AccentBrush}"
+                                                           VerticalAlignment="Center" Margin="0,0,14,0"/>
+                                                <TextBlock Grid.Column="1" Text="{Binding Title}" FontSize="12"
+                                                           FontFamily="Consolas" TextTrimming="CharacterEllipsis"/>
+                                                <TextBlock Grid.Column="2" Text="{Binding Dir}" FontSize="10.5"
+                                                           Foreground="{DynamicResource DimBrush}"
+                                                           VerticalAlignment="Center" Margin="24,0,0,0"/>
+                                            </Grid>
+                                        </Button>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+                    </Border>
+                <TextBlock Grid.Row="3" x:Name="ProjectsEmpty" Text="Add project roots in the launcher's Projects panel."
+                           Foreground="{DynamicResource DimBrush}" FontSize="12" FontStyle="Italic" Margin="0,4,0,0"/>
+            </Grid>
 
-                <!-- ============ КОЛОНКА 3: профили + recent + роли ============ -->
-                <StackPanel Grid.Column="2" Grid.Row="0">
-                    <StackPanel Style="{StaticResource SectionLabelStyle}">
+            <!-- ============ КОЛОНКА 3: профили + recent + роли ============ -->
+            <ScrollViewer Grid.Column="2" VerticalScrollBarVisibility="Auto">
+            <StackPanel>
+                <Grid Margin="0,0,0,14">
+                    <StackPanel x:Name="ProfilesSection" Orientation="Horizontal" VerticalAlignment="Top">
                         <Rectangle Width="26" Height="3" Fill="{DynamicResource AccentBrush}"
                                    VerticalAlignment="Center" Margin="0,0,12,0"/>
                         <TextBlock Text="PROFILES" Foreground="{DynamicResource TextBrush}"
                                    FontSize="14" FontWeight="SemiBold"/>
                     </StackPanel>
+                    <Button Content="Save current as profile" Style="{StaticResource RowButtonStyle}" Height="30" Width="200"
+                            HorizontalAlignment="Right" VerticalAlignment="Top"
+                            Command="{Binding SaveProfileCommand}"/>
+                </Grid>
                     <ItemsControl x:Name="ProfilesList" ItemsSource="{Binding ProfileTiles}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
                                 <Button Style="{StaticResource RowButtonStyle}" Click="Tile_Click" Tag="{Binding}"
                                         Visibility="{Binding TileVisibility}">
+                                    <Button.ContextMenu>
+                                        <ContextMenu>
+                                            <MenuItem Header="Delete profile" Click="ProfileDelete_Menu" Tag="{Binding Payload}"/>
+                                        </ContextMenu>
+                                    </Button.ContextMenu>
                                     <StackPanel Orientation="Horizontal">
                                         <Border Width="30" Height="30" CornerRadius="15"
                                                 Background="{DynamicResource AccentBrush}" VerticalAlignment="Center">
@@ -327,38 +609,49 @@
                     <TextBlock x:Name="ProfilesEmpty" Text="No profiles yet — build one in the launcher's Profiles panel."
                                Foreground="{DynamicResource DimBrush}" FontSize="12" FontStyle="Italic"/>
 
-                    <StackPanel Style="{StaticResource SectionLabelStyle}" Margin="0,22,0,14">
-                        <Rectangle Width="26" Height="3" Fill="{DynamicResource AccentBrush}"
-                                   VerticalAlignment="Center" Margin="0,0,12,0"/>
-                        <TextBlock x:Name="RecentSection" Text="RECENT FILES" Foreground="{DynamicResource TextBrush}"
-                                   FontSize="14" FontWeight="SemiBold"/>
-                    </StackPanel>
-                    <ItemsControl x:Name="RecentList" ItemsSource="{Binding RecentTiles}">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                                <Button Style="{StaticResource RowButtonStyle}" Click="Tile_Click" Tag="{Binding}"
-                                        ToolTip="{Binding FullPath}"
-                                        Visibility="{Binding TileVisibility}">
-                                    <Grid>
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="Auto"/>
-                                            <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="Auto"/>
-                                        </Grid.ColumnDefinitions>
-                                        <TextBlock Grid.Column="0" Text="{Binding Badge}" FontSize="10.5"
-                                                   FontFamily="Consolas" FontWeight="Bold"
-                                                   Foreground="{DynamicResource AccentBrush}"
-                                                   VerticalAlignment="Center" Margin="0,0,14,0"/>
-                                        <TextBlock Grid.Column="1" Text="{Binding Title}" FontSize="12"
-                                                   FontFamily="Consolas" TextTrimming="CharacterEllipsis"/>
-                                        <TextBlock Grid.Column="2" Text="{Binding Dir}" FontSize="10.5"
-                                                   Foreground="{DynamicResource DimBrush}"
-                                                   VerticalAlignment="Center" Margin="24,0,0,0"/>
-                                    </Grid>
-                                </Button>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
+                    <Grid Margin="0,22,0,14">
+                        <StackPanel Orientation="Horizontal">
+                            <Rectangle Width="26" Height="3" Fill="{DynamicResource AccentBrush}"
+                                       VerticalAlignment="Center" Margin="0,0,12,0"/>
+                            <TextBlock x:Name="RecentSection" Text="RECENT FILES" Foreground="{DynamicResource TextBrush}"
+                                       FontSize="14" FontWeight="SemiBold"/>
+                        </StackPanel>
+                        <Button Content="Clear" Style="{StaticResource MiniButtonStyle}" Width="64"
+                                HorizontalAlignment="Right"
+                                Command="{Binding ClearRecentCommand}" ToolTip="Clear recent files"/>
+                    </Grid>
+                    <!-- рамка с ползунком: как в PROJECTS -->
+                    <Border x:Name="RecentFrame" Background="{DynamicResource PanelBrush}" CornerRadius="12"
+                            Padding="10" Margin="0,4,0,0" Height="460">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto">
+                            <ItemsControl x:Name="RecentList" ItemsSource="{Binding RecentTiles}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Button Style="{StaticResource RowButtonStyle}" Click="Tile_Click" Tag="{Binding}"
+                                                ToolTip="{Binding FullPath}"
+                                                Visibility="{Binding TileVisibility}">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock Grid.Column="0" Text="{Binding Badge}" FontSize="10.5"
+                                                           FontFamily="Consolas" FontWeight="Bold"
+                                                           Foreground="{DynamicResource AccentBrush}"
+                                                           VerticalAlignment="Center" Margin="0,0,14,0"/>
+                                                <TextBlock Grid.Column="1" Text="{Binding Title}" FontSize="12"
+                                                           FontFamily="Consolas" TextTrimming="CharacterEllipsis"/>
+                                                <TextBlock Grid.Column="2" Text="{Binding Dir}" FontSize="10.5"
+                                                           Foreground="{DynamicResource DimBrush}"
+                                                           VerticalAlignment="Center" Margin="24,0,0,0"/>
+                                            </Grid>
+                                        </Button>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+                    </Border>
                     <TextBlock x:Name="RecentEmpty" Text="Opened files will appear here."
                                Foreground="{DynamicResource DimBrush}" FontSize="12" FontStyle="Italic"/>
 
@@ -382,58 +675,213 @@
                     <Button Content="Reset roles to config" Style="{StaticResource RowButtonStyle}" Height="34"
                             Command="{Binding ResetRolesCommand}"/>
                 </StackPanel>
-            </Grid>
-        </ScrollViewer>
+            </ScrollViewer>
+        </Grid>
 
-        <!-- Низ: аргументы + настройки -->
+        <!-- Лог-шторка: лежит поверх низа колонок, лейаут не дёргает -->
+        <Border x:Name="LogDrawer" Grid.Row="2" VerticalAlignment="Bottom" Height="240" Margin="36,0,36,8"
+                Background="{DynamicResource BgBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                CornerRadius="12" Padding="14" Visibility="Collapsed">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                <Grid Grid.Row="0" Margin="0,0,0,8">
+                    <TextBlock Text="LOG · LAST 200" Foreground="{DynamicResource DimBrush}" FontSize="10.5"
+                               FontWeight="SemiBold" VerticalAlignment="Center"/>
+                    <Button Content="Close" Style="{StaticResource FooterChipStyle}" Height="26"
+                            HorizontalAlignment="Right" Click="LogDrawerClose_Click"/>
+                </Grid>
+                <TextBox Grid.Row="1" x:Name="LogText" IsReadOnly="True" FontFamily="Consolas" FontSize="11"
+                         Foreground="{DynamicResource TextBrush}" Background="Transparent" BorderThickness="0"
+                         VerticalScrollBarVisibility="Auto" TextWrapping="NoWrap"/>
+            </Grid>
+        </Border>
+
+        <!-- Шторка ролей: справа, во всю высоту контентной зоны до футера -->
+        <Border x:Name="RoleDrawer" Grid.Row="2" HorizontalAlignment="Right" Width="480" Margin="0,0,36,8"
+                Background="{DynamicResource BgBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1"
+                CornerRadius="12" Padding="14" Visibility="Collapsed">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                <Grid Grid.Row="0" Margin="0,0,0,8">
+                    <TextBlock x:Name="RoleDrawerTitle" Foreground="{DynamicResource AccentBrush}"
+                               FontSize="13" FontWeight="SemiBold" FontFamily="Consolas"
+                               VerticalAlignment="Center"/>
+                    <Button Content="Close" Style="{StaticResource FooterChipStyle}" Height="26"
+                            HorizontalAlignment="Right" Click="RoleDrawerClose_Click"/>
+                </Grid>
+                <TextBox Grid.Row="1" x:Name="RoleDrawerSearch" Height="30" FontSize="12" Padding="8,0"
+                         VerticalContentAlignment="Center"
+                         Background="{DynamicResource PanelBrush}"
+                         Foreground="{DynamicResource TextBrush}"
+                         BorderBrush="{DynamicResource BorderBrush}"
+                         TextChanged="RoleDrawerSearch_TextChanged"/>
+                <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" Margin="0,10,0,0">
+                    <ItemsControl x:Name="RoleDrawerList">
+                        <ItemsControl.Resources>
+                            <!-- узел дерева: семейство с кнопкой сворачивания и вложенными колорспейсами -->
+                            <DataTemplate DataType="{x:Type local:RoleFamilyGroup}">
+                                <StackPanel>
+                                    <Button Style="{StaticResource RowButtonStyle}" Height="30" Margin="0,0,0,4"
+                                            Click="RoleFamilyHeader_Click" Tag="{Binding}">
+                                        <TextBlock Text="{Binding Header}" FontFamily="Consolas" FontSize="11.5"
+                                                   FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                    </Button>
+                                    <ItemsControl ItemsSource="{Binding Items}" Margin="14,0,0,6"
+                                                  Visibility="{Binding ItemsVisibility}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Button Style="{StaticResource RowButtonStyle}" Height="28" Margin="0,0,0,4"
+                                                        Click="RolePickItem_Click" Tag="{Binding}">
+                                                    <TextBlock Text="{Binding Name}" FontFamily="Consolas" FontSize="11.5"
+                                                               VerticalAlignment="Center"/>
+                                                </Button>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
+                            </DataTemplate>
+                            <!-- плоский режим поиска: имя + family -->
+                            <DataTemplate DataType="{x:Type local:RolePickerItem}">
+                                <Button Style="{StaticResource RowButtonStyle}" Height="30" Margin="0,0,0,4"
+                                        Click="RolePickItem_Click" Tag="{Binding}">
+                                    <Grid>
+                                        <TextBlock Text="{Binding Name}" FontFamily="Consolas" FontSize="11.5"
+                                                   VerticalAlignment="Center"/>
+                                        <TextBlock Text="{Binding Family}" FontFamily="Consolas" FontSize="10"
+                                                   Foreground="{DynamicResource DimBrush}"
+                                                   HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                                    </Grid>
+                                </Button>
+                            </DataTemplate>
+                        </ItemsControl.Resources>
+                    </ItemsControl>
+                </ScrollViewer>
+            </Grid>
+        </Border>
+
+        <!-- Низ: статус + настройки (THEME / BEHAVIOUR / MAINTENANCE) -->
         <Border Grid.Row="3" Background="{DynamicResource PanelBrush}" Padding="36,14,36,14">
             <Grid>
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="1.6*"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="0.85*"/>
+                    <ColumnDefinition Width="1.15*"/>
                     <ColumnDefinition Width="1*"/>
                 </Grid.ColumnDefinitions>
 
-                <StackPanel Grid.Column="0" Margin="0,0,36,0">
-                    <TextBlock Text="ARGUMENTS" Foreground="{DynamicResource DimBrush}" FontSize="10.5"
-                               FontWeight="SemiBold" Margin="0,0,0,6"/>
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
-                        <TextBox Grid.Column="0" Text="{Binding ArgsText, UpdateSourceTrigger=PropertyChanged}"
-                                 Background="{DynamicResource BgBrush}" Foreground="{DynamicResource TextBrush}"
-                                 BorderBrush="{DynamicResource BorderBrush}" FontSize="12" Height="30" Padding="8,2"
-                                 VerticalContentAlignment="Center"/>
-                        <Button Grid.Column="1" Content="Clear" Style="{StaticResource RowButtonStyle}"
-                                Width="70" Height="30" Margin="8,0,0,0"
-                                Command="{Binding ClearArgsCommand}"/>
-                    </Grid>
-                    <TextBlock Text="Arguments apply to launches from this overlay and the launcher."
-                               Foreground="{DynamicResource DimBrush}" FontSize="10" Margin="0,6,0,0"/>
+                <!-- STATUS -->
+                <StackPanel Grid.Column="0" Margin="0,0,48,0">
+                    <TextBlock Text="STATUS" Foreground="{DynamicResource DimBrush}" FontSize="10.5"
+                               FontWeight="SemiBold" Margin="0,0,0,8"/>
+                    <TextBlock Text="{Binding StatusText}" MaxWidth="260"
+                               Foreground="{DynamicResource TextBrush}" FontSize="11.5"
+                               TextTrimming="CharacterEllipsis"/>
                 </StackPanel>
 
-                <StackPanel Grid.Column="1">
-                    <TextBlock Text="SETTINGS" Foreground="{DynamicResource DimBrush}" FontSize="10.5"
-                               FontWeight="SemiBold" Margin="0,0,0,6"/>
-                    <Grid>
+                <!-- THEME -->
+                <StackPanel Grid.Column="1" Margin="0,0,48,0">
+                    <TextBlock Text="THEME" Foreground="{DynamicResource DimBrush}" FontSize="10.5"
+                               FontWeight="SemiBold" Margin="0,0,0,8"/>
+                    <Grid Margin="0,0,0,8">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
                         <TextBlock Grid.Column="0" Text="Theme" Foreground="{DynamicResource DimBrush}"
                                    FontSize="12" VerticalAlignment="Center" Margin="0,0,14,0"/>
-                        <ComboBox Grid.Column="1" ItemsSource="{Binding Themes}" SelectedItem="{Binding SelectedTheme}"
-                                  Height="28" Background="{DynamicResource PanelBrush}"
-                                  Foreground="{DynamicResource TextBrush}"/>
+                        <ComboBox x:Name="ThemeCombo" Grid.Column="1" ItemsSource="{Binding Themes}" SelectedItem="{Binding SelectedTheme}"
+                                  Height="28"/>
                     </Grid>
-                    <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
-                        <CheckBox Content="Always on top" IsChecked="{Binding TopMostEnabled}"
-                                  Foreground="{DynamicResource TextBrush}" FontSize="12" Margin="0,0,22,0"/>
-                        <CheckBox Content="Overlay on top" IsChecked="{Binding OverlayTopmost}"
-                                  Foreground="{DynamicResource TextBrush}" FontSize="12" Margin="0,0,22,0"/>
-                        <CheckBox Content="Ctrl+Alt+F opens dashboard" IsChecked="{Binding HotkeyOpensDashboard}"
-                                  Foreground="{DynamicResource TextBrush}" FontSize="12"/>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="Default OCIO" Foreground="{DynamicResource DimBrush}"
+                                   FontSize="12" VerticalAlignment="Center" Margin="0,0,14,0"
+                                   ToolTip="Used when launching from tray"/>
+                        <ComboBox x:Name="DefaultOcioCombo" Grid.Column="1" Height="28" FontSize="11"
+                                  ItemsSource="{Binding OcioConfigs}" SelectedItem="{Binding DefaultOcio}"
+                                  SelectionChanged="DefaultOcioCombo_SelectionChanged">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding Name}"/>
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+                    </Grid>
+                </StackPanel>
+
+                <!-- BEHAVIOUR: сетка 2×4, короткие подписи -->
+                <StackPanel Grid.Column="2" Margin="0,0,48,0">
+                    <TextBlock Text="BEHAVIOUR" Foreground="{DynamicResource DimBrush}" FontSize="10.5"
+                               FontWeight="SemiBold" Margin="0,0,0,8"/>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0" Margin="0,0,28,0">
+                            <CheckBox Content="Global hotkey" IsChecked="{Binding HotkeyEnabled}"
+                                      Foreground="{DynamicResource TextBrush}" FontSize="12" Margin="0,0,0,8"
+                                      ToolTip="Ctrl+Alt+F shows FLOMASTER over everything"/>
+                            <CheckBox Content="Hotkey → dashboard" IsChecked="{Binding HotkeyOpensDashboard}"
+                                      Foreground="{DynamicResource TextBrush}" FontSize="12" Margin="0,0,0,8"
+                                      ToolTip="Ctrl+Alt+F opens the fullscreen dashboard (off — the small window)"/>
+                            <CheckBox Content="Start with dashboard" IsChecked="{Binding StartupDashboard}"
+                                      Foreground="{DynamicResource TextBrush}" FontSize="12" Margin="0,0,0,8"
+                                      ToolTip="FLOMASTER starts with the fullscreen dashboard instead of the small window"/>
+                            <CheckBox Content="Always on top" IsChecked="{Binding TopMostEnabled}"
+                                      Foreground="{DynamicResource TextBrush}" FontSize="12"
+                                      ToolTip="The small launcher window stays on top"/>
+                        </StackPanel>
+                        <StackPanel Grid.Column="1">
+                            <CheckBox Content="Dashboard on top" IsChecked="{Binding OverlayTopmost}"
+                                      Foreground="{DynamicResource TextBrush}" FontSize="12" Margin="0,0,0,8"
+                                      ToolTip="The dashboard stays above other windows"/>
+                            <CheckBox Content="Launcher animation" IsChecked="{Binding AnimationEnabled}"
+                                      Foreground="{DynamicResource TextBrush}" FontSize="12" Margin="0,0,0,8"
+                                      ToolTip="Height animation of the small launcher window"/>
+                            <CheckBox Content="Check for updates" IsChecked="{Binding CheckUpdatesEnabled}"
+                                      Foreground="{DynamicResource TextBrush}" FontSize="12" Margin="0,0,0,8"/>
+                            <CheckBox Content="Start with Windows" IsChecked="{Binding AutoStartEnabled}"
+                                      Foreground="{DynamicResource TextBrush}" FontSize="12"/>
+                        </StackPanel>
+                    </Grid>
+                </StackPanel>
+
+                <!-- MAINTENANCE -->
+                <StackPanel Grid.Column="3">
+                    <TextBlock Text="MAINTENANCE" Foreground="{DynamicResource DimBrush}" FontSize="10.5"
+                               FontWeight="SemiBold" Margin="0,0,0,8"/>
+                    <WrapPanel>
+                        <Button Content="Rescan" Style="{StaticResource FooterChipStyle}"
+                                Command="{Binding RescanCommand}" ToolTip="Rescan applications"/>
+                        <Button Content="Add scan path" Style="{StaticResource FooterChipStyle}"
+                                Command="{Binding AddScanPathCommand}" ToolTip="Folder to scan for applications"/>
+                        <Button Content="Export" Style="{StaticResource FooterChipStyle}"
+                                Command="{Binding ExportSettingsCommand}" ToolTip="Export .flomaster for another machine"/>
+                        <Button Content="Import" Style="{StaticResource FooterChipStyle}"
+                                Command="{Binding ImportSettingsCommand}" ToolTip="Import .flomaster"/>
+                        <Button Content="App shortcut" Style="{StaticResource FooterChipStyle}"
+                                Command="{Binding CreateShortcutCommand}" ToolTip="Desktop shortcut with OCIO env for the selected app"/>
+                        <Button Content="Launcher shortcut" Style="{StaticResource FooterChipStyle}"
+                                Command="{Binding CreateDesktopShortcutCommand}" ToolTip="Desktop shortcut for FLOMASTER"/>
+                        <Button Content="Log" Style="{StaticResource FooterChipStyle}" Click="LogBtn_Click"/>
+                    </WrapPanel>
+                    <StackPanel Orientation="Horizontal" Margin="0,2,0,0"
+                                Visibility="{Binding UpdateReady, Converter={StaticResource BoolToVis}}">
+                        <TextBlock Text="{Binding UpdateInfoText}" Foreground="{DynamicResource TextBrush}"
+                                   FontSize="11" VerticalAlignment="Center" Margin="0,0,12,0" TextTrimming="CharacterEllipsis"/>
+                        <Button Content="Restart and install" Style="{StaticResource FooterChipStyle}"
+                                Command="{Binding UpdateCommand}"/>
                     </StackPanel>
                 </StackPanel>
             </Grid>

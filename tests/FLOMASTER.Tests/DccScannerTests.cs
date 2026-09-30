@@ -38,6 +38,26 @@ namespace FLOMASTER.Tests
             Assert.Equal(expected, DccScanner.MatchesKnownApp(displayName));
         }
 
+        [Theory]
+        [InlineData("C:\\Program Files\\Side Effects Software\\Houdini 20.5.278\\bin\\Uninstall Houdini.exe", true)]
+        [InlineData("C:\\Autodesk\\Installer.exe", true)]
+        [InlineData("C:\\Autodesk\\Setup.exe", true)]
+        [InlineData("C:\\app\\CrashReport.exe", true)]
+        [InlineData("C:\\app\\crash_handler.exe", true)]
+        [InlineData("C:\\app\\vcredist_x64.exe", true)]
+        [InlineData("C:\\Program Files\\Blender Foundation\\Blender 5.2\\blender.exe", false)]
+        [InlineData("C:\\Program Files\\Autodesk\\Maya2025\\bin\\maya.exe", false)]
+        [InlineData("C:\\Program Files\\Side Effects Software\\Houdini 20.5.278\\bin\\houdini.exe", false)]
+        [InlineData("C:\\Program Files\\Adobe\\Adobe Substance 3D Painter\\Adobe Substance 3D Painter.exe", false)]
+        [InlineData("C:\\Program Files\\Blackmagic Design\\DaVinci Resolve\\Resolve.exe", false)]
+        [InlineData("E:\\UE_5.4\\Engine\\Binaries\\Win64\\UnrealEditor.exe", false)]
+        [InlineData("", false)]
+        [InlineData(null, false)]
+        public void IsJunkExe_FiltersInstallersAndUninstallers(string exePath, bool expected)
+        {
+            Assert.Equal(expected, DccScanner.IsJunkExe(exePath));
+        }
+
         [Fact]
         public void FromEpicManifest_ParsesUnrealManifest()
         {

@@ -26,6 +26,9 @@ namespace FLOMASTER.Models
 
         /// <summary>Ctrl+Alt+F открывает полноэкранный дашборд (false — маленькое окно).</summary>
         public bool HotkeyOpensDashboard { get; set; } = true;
+
+        /// <summary>При старте показывать полноэкранный дашборд (false — маленькое окно).</summary>
+        public bool StartupDashboard { get; set; } = false;
     }
 
     public class OcioConfig

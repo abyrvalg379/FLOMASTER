@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Windows;
@@ -22,7 +23,7 @@ namespace FLOMASTER
     /// лаунчера; перетаскивается за шапку и подстраивается под мониторы.
     /// Esc или повторный хоткей — закрыть.
     /// </summary>
-    public partial class OverlayWindow : Window
+    public partial class OverlayWindow : Window, INotifyPropertyChanged
     {
         /// <summary>Плитка: полезная нагрузка (Preset/Profile/строка-файл) + данные отображения.</summary>
         public class OverlayTile : INotifyPropertyChanged
@@ -61,12 +62,14 @@ namespace FLOMASTER
         private System.Windows.Forms.Screen _screen = System.Windows.Forms.Screen.PrimaryScreen
             ?? System.Windows.Forms.Screen.AllScreens[0];
 
-        /// <summary>Монитор, на котором оверлей был закрыт последний раз (сессионная память).</summary>
-        public static System.Windows.Forms.Screen? LastScreen;
-
         private readonly System.Windows.Threading.DispatcherTimer _searchDebounce;
 
-        public OverlayWindow(MainViewModel viewModel, Window owner,
+        // INPC окна: живые тексты (статус/апдейт/варнинги) приходят из VM через прокси
+        public event PropertyChangedEventHandler? PropertyChanged;
+        private void Raise(string name) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+
+        /// <param name="owner">Маленькое окно, если создано (старт с дашборда — null).</param>
+        public OverlayWindow(MainViewModel viewModel, Window? owner,
             System.Windows.Forms.Screen? preferredScreen = null)
         {
             InitializeComponent();
@@ -81,6 +84,24 @@ namespace FLOMASTER
             RebuildProjectFiles();
             RebuildRecentTiles();
             UpdateSectionVisibility();
+            RefreshRunningTiles();
+            Closed += (_, _) => DisposeTrackedProcesses();
+
+            // Дашборд — полноценный UI: мутации из дашборда же перерисовывают плитки
+            _vm.Presets.CollectionChanged += (_, _) => RebuildAppTiles();
+            _vm.OcioConfigs.CollectionChanged += (_, _) => RebuildOcioChips();
+            _vm.ProjectRoots.CollectionChanged += (_, _) => { RebuildRootChips(); RebuildProjectFiles(); };
+            _vm.Profiles.CollectionChanged += (_, _) => RebuildProfileTiles();
+            _vm.RecentFiles.CollectionChanged += (_, _) => RebuildRecentTiles();
+
+            // Живые тексты (статус, апдейт, варнинги) — прокси-свойства с INPC
+            _vm.PropertyChanged += (_, e) =>
+            {
+                if (e.PropertyName == nameof(MainViewModel.StatusText)) Raise(nameof(StatusText));
+                else if (e.PropertyName == nameof(MainViewModel.UpdateInfoText)) Raise(nameof(UpdateInfoText));
+                else if (e.PropertyName == nameof(MainViewModel.UpdateReady)) Raise(nameof(UpdateReady));
+                else if (e.PropertyName == nameof(MainViewModel.OcioWarningsText)) Raise(nameof(OcioWarningsText));
+            };
 
             PositionOnOwnerScreen();
             LocationChanged += (_, _) => SnapToMonitorIfChanged();
@@ -105,22 +126,18 @@ namespace FLOMASTER
         public ObservableCollection<OverlayTile> ProfileTiles { get; } = new();
         public ObservableCollection<OverlayTile> RecentTiles { get; } = new();
         public ObservableCollection<OverlayTile> ProjectFileTiles { get; } = new();
+        public ObservableCollection<OverlayTile> RunningTiles { get; } = new();
         public ObservableCollection<OverlayChip> OcioChips { get; } = new();
         public ObservableCollection<OverlayChip> RootChips { get; } = new();
+
+        /// <summary>Найденные процессы DCC: живут до следующего скана, закрываем хэндлы.</summary>
+        private readonly List<Process> _trackedProcesses = new();
 
         // ---- Прокси к ViewModel (DataContext оверлея — сам оверлей) ----
 
         public ObservableCollection<OcioRoleRow> RoleRows => _vm.OcioRoleRows;
         public ICommand ResetRolesCommand => _vm.ResetRolesCommand;
-        public ICommand ClearArgsCommand => _vm.ClearArgsCommand;
         public ObservableCollection<string> Themes => _vm.Themes;
-        public ObservableCollection<QuickCommand> QuickCommands => _vm.QuickCommands;
-
-        public string ArgsText
-        {
-            get => _vm.ArgsText ?? "";
-            set => _vm.ArgsText = value;
-        }
 
         public string SelectedTheme
         {
@@ -146,6 +163,63 @@ namespace FLOMASTER
             get => _vm.OverlayTopmost;
             set => _vm.OverlayTopmost = value;
         }
+
+        // ---- Прокси: полный функционал лаунчера в дашборде (команды живут в VM) ----
+
+        public string VersionLabel => _vm.VersionLabel;
+        public string OcioWarningsText => _vm.OcioWarningsText;
+        public string StatusText => _vm.StatusText;
+        public string UpdateInfoText => _vm.UpdateInfoText;
+        public bool UpdateReady => _vm.UpdateReady;
+
+        public ObservableCollection<OcioConfig> OcioConfigs => _vm.OcioConfigs;
+
+        public OcioConfig DefaultOcio
+        {
+            get => _vm.DefaultOcio;
+            set => _vm.DefaultOcio = value;
+        }
+
+        public bool CheckUpdatesEnabled
+        {
+            get => _vm.CheckUpdatesEnabled;
+            set => _vm.CheckUpdatesEnabled = value;
+        }
+
+        public bool AutoStartEnabled
+        {
+            get => _vm.AutoStartEnabled;
+            set => _vm.AutoStartEnabled = value;
+        }
+
+        public bool AnimationEnabled
+        {
+            get => _vm.AnimationEnabled;
+            set => _vm.AnimationEnabled = value;
+        }
+
+        /// <summary>Рулька: приложение стартует с дашборда (false — маленькое окно).</summary>
+        public bool StartupDashboard
+        {
+            get => _vm.StartupDashboard;
+            set => _vm.StartupDashboard = value;
+        }
+
+        public ICommand AddPresetCommand => _vm.AddPresetCommand;
+        public ICommand AddOcioCommand => _vm.AddOcioCommand;
+        public ICommand RemoveOcioCommand => _vm.RemoveOcioCommand;
+        public ICommand RescanCommand => _vm.RescanCommand;
+        public ICommand SaveProfileCommand => _vm.SaveProfileCommand;
+        public ICommand DeleteProfileCommand => _vm.DeleteProfileCommand;
+        public ICommand AddProjectRootCommand => _vm.AddProjectRootCommand;
+        public ICommand RemoveProjectRootCommand => _vm.RemoveProjectRootCommand;
+        public ICommand ClearRecentCommand => _vm.ClearRecentCommand;
+        public ICommand AddScanPathCommand => _vm.AddScanPathCommand;
+        public ICommand ExportSettingsCommand => _vm.ExportSettingsCommand;
+        public ICommand ImportSettingsCommand => _vm.ImportSettingsCommand;
+        public ICommand CreateShortcutCommand => _vm.CreateShortcutCommand;
+        public ICommand CreateDesktopShortcutCommand => _vm.CreateDesktopShortcutCommand;
+        public ICommand UpdateCommand => _vm.UpdateCommand;
 
         // ---- Мониторы: открытие на мониторе лаунчера, слежение за перетаскиванием ----
 
@@ -218,8 +292,21 @@ namespace FLOMASTER
         private static extern bool GetMonitorInfo(IntPtr hmon, ref MONITORINFOEX info);
         [System.Runtime.InteropServices.DllImport("user32.dll")]
         private static extern IntPtr MonitorFromPoint(System.Drawing.Point pt, uint flags);
+        [System.Runtime.InteropServices.DllImport("user32.dll")]
+        private static extern bool SetForegroundWindow(IntPtr hWnd);
+        [System.Runtime.InteropServices.DllImport("user32.dll")]
+        private static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
+        [System.Runtime.InteropServices.DllImport("user32.dll")]
+        private static extern bool IsIconic(IntPtr hWnd);
+        [System.Runtime.InteropServices.DllImport("user32.dll")]
+        private static extern bool EnumWindows(EnumWindowsProc lpEnumFunc, IntPtr lParam);
+        [System.Runtime.InteropServices.DllImport("user32.dll")]
+        private static extern bool IsWindowVisible(IntPtr hWnd);
+        [System.Runtime.InteropServices.DllImport("user32.dll")]
+        private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
         private const uint MONITOR_DEFAULTTONEAREST = 2;
         private const int MDT_EFFECTIVE_DPI = 0;
+        private const int SW_RESTORE = 9;
 
         [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
         private struct RECT { public int Left, Top, Right, Bottom; }
@@ -255,6 +342,13 @@ namespace FLOMASTER
 
         private void BuildAppAndProfileTiles()
         {
+            RebuildAppTiles();
+            RebuildProfileTiles();
+        }
+
+        private void RebuildAppTiles()
+        {
+            AppTiles.Clear();
             foreach (var preset in _vm.Presets)
             {
                 AppTiles.Add(new OverlayTile
@@ -265,7 +359,11 @@ namespace FLOMASTER
                     Payload = preset
                 });
             }
+        }
 
+        private void RebuildProfileTiles()
+        {
+            ProfileTiles.Clear();
             foreach (var profile in _vm.Profiles)
             {
                 var letter = string.IsNullOrWhiteSpace(profile.Name)
@@ -279,6 +377,9 @@ namespace FLOMASTER
                     Payload = profile
                 });
             }
+            ProfilesList.Visibility = _vm.Profiles.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+            ProfilesEmpty.Visibility = _vm.Profiles.Count > 0 ? Visibility.Collapsed : Visibility.Visible;
+            ProfilesSection.Visibility = _vm.Profiles.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
         }
 
         /// <summary>Иконка exe (System.Drawing 32x32 -> ImageSource). Не удалось — null, плитка без иконки.</summary>
@@ -343,6 +444,7 @@ namespace FLOMASTER
                     Payload = f
                 });
             }
+            ProjectFilesFrame.Visibility = ProjectFileTiles.Count == 0 ? Visibility.Collapsed : Visibility.Visible;
             ProjectsEmpty.Visibility = ProjectFileTiles.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
         }
 
@@ -362,6 +464,7 @@ namespace FLOMASTER
                     Payload = file
                 });
             }
+            RecentFrame.Visibility = RecentTiles.Count == 0 ? Visibility.Collapsed : Visibility.Visible;
             RecentSection.Visibility = RecentTiles.Count == 0 ? Visibility.Collapsed : Visibility.Visible;
         }
 
@@ -372,6 +475,143 @@ namespace FLOMASTER
             RebuildRecentTiles();
             ProfilesList.Visibility = _vm.Profiles.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
             ProfilesEmpty.Visibility = _vm.Profiles.Count > 0 ? Visibility.Collapsed : Visibility.Visible;
+            ProfilesSection.Visibility = _vm.Profiles.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+        }
+
+        // ---- RUNNING: запущенные инстансы DCC ----
+
+        private void RefreshRunningTiles()
+        {
+            DisposeTrackedProcesses();
+            RunningTiles.Clear();
+
+            foreach (var proc in Process.GetProcesses())
+            {
+                var preset = MatchPreset(proc);
+                if (preset == null) { proc.Dispose(); continue; }
+
+                _trackedProcesses.Add(proc);
+                string title = "";
+                try { title = proc.MainWindowTitle ?? ""; } catch { }
+                RunningTiles.Add(new OverlayTile
+                {
+                    Title = preset.Name,
+                    Subtitle = string.IsNullOrEmpty(title)
+                        ? $"{preset.Name} — pid {proc.Id}"
+                        : $"{title} — pid {proc.Id}",
+                    Icon = ExtractIcon(preset.Exe),
+                    Payload = proc
+                });
+            }
+            RunningList.Visibility = RunningTiles.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+        }
+
+        private void DisposeTrackedProcesses()
+        {
+            foreach (var p in _trackedProcesses) { try { p.Dispose(); } catch { } }
+            _trackedProcesses.Clear();
+        }
+
+        /// <summary>Процесс соответствует пресету, если путь exe совпадает с путём из пресета.</summary>
+        private Preset? MatchPreset(Process proc)
+        {
+            string? path = null;
+            try { path = proc.MainModule?.FileName; } catch { return null; }
+            if (string.IsNullOrEmpty(path)) return null;
+
+            foreach (var p in _vm.Presets)
+            {
+                if (string.IsNullOrWhiteSpace(p.Exe)) continue;
+                string normalized;
+                try { normalized = Path.GetFullPath(p.Exe); } catch { normalized = p.Exe; }
+                if (string.Equals(normalized, path, StringComparison.OrdinalIgnoreCase)) return p;
+            }
+            return null;
+        }
+
+        private void FocusRunning(OverlayTile tile)
+        {
+            if (tile.Payload is not Process proc) return;
+            if (proc.HasExited) { RefreshRunningTiles(); return; }
+            try
+            {
+                // MainWindowHandle кэшируется в Process: если DCC ещё стартовала (сплэш без окна),
+                // в кэше ноль — Refresh перечитывает, дальше fallback по EnumWindows
+                proc.Refresh();
+                var hwnd = proc.MainWindowHandle;
+                if (hwnd == IntPtr.Zero) hwnd = FindProcessWindow(proc.Id);
+                if (hwnd == IntPtr.Zero)
+                {
+                    _vm.StatusText = $"{proc.ProcessName} has no main window";
+                    Logger.Log("Running", $"Focus failed: {proc.ProcessName} (pid {proc.Id}) has no main window", "warn");
+                    return;
+                }
+                if (IsIconic(hwnd)) ShowWindow(hwnd, SW_RESTORE);
+                SetForegroundWindow(hwnd);
+            }
+            catch (Exception ex)
+            {
+                Logger.Log("Running", $"Focus failed: {ex.Message}", "warn");
+                RefreshRunningTiles();
+            }
+        }
+
+        /// <summary>Первое видимое top-level окно процесса (fallback, когда MainWindowHandle = 0).</summary>
+        private static IntPtr FindProcessWindow(int pid)
+        {
+            IntPtr found = IntPtr.Zero;
+            EnumWindows((hwnd, _) =>
+            {
+                GetWindowThreadProcessId(hwnd, out var windowPid);
+                if (windowPid == pid && IsWindowVisible(hwnd))
+                {
+                    found = hwnd;
+                    return false;
+                }
+                return true;
+            }, IntPtr.Zero);
+            return found;
+        }
+
+        private delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
+
+        private void RunningChip_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is FrameworkElement { DataContext: OverlayTile tile }) FocusRunning(tile);
+        }
+
+        private void RunningFocus_Menu(object sender, RoutedEventArgs e)
+        {
+            if (sender is FrameworkElement { Tag: OverlayTile tile }) FocusRunning(tile);
+        }
+
+        private void RunningRestart_Menu(object sender, RoutedEventArgs e)
+        {
+            if (sender is not FrameworkElement { Tag: OverlayTile tile } ||
+                tile.Payload is not Process proc) return;
+            if (proc.HasExited) { RefreshRunningTiles(); return; }
+            var preset = MatchPreset(proc);
+            if (preset == null) return;
+
+            // мягкое закрытие: приложение само спросит про несохранённую сцену; Kill не применяем
+            bool closing;
+            try
+            {
+                var hwnd = proc.MainWindowHandle;
+                if (hwnd != IntPtr.Zero && IsIconic(hwnd)) ShowWindow(hwnd, SW_RESTORE);
+                closing = proc.CloseMainWindow();
+            }
+            catch { closing = false; }
+
+            if (!closing || !proc.WaitForExit(10000))
+            {
+                _vm.StatusText = $"{preset.Name} is still open — restart aborted";
+                Close();
+                return;
+            }
+            _vm.SelectedPreset = preset;
+            _vm.LaunchCommand.Execute(null);
+            Close();
         }
 
         // ---- Утилиты ----
@@ -403,17 +643,29 @@ namespace FLOMASTER
             var q = query.ToLowerInvariant();
 
             ApplyTileFilter(AppTiles, q);
+            ApplyTileFilter(ProfileTiles, q);
             ApplyTileFilter(ProjectFileTiles, q);
             ApplyTileFilter(RecentTiles, q);
 
-            var appsVisible = VisibleCount(AppTiles) > 0;
-            var projectsVisible = VisibleCount(ProjectFileTiles) > 0;
-            var recentVisible = VisibleCount(RecentTiles) > 0;
+            if (q == "")
+            {
+                // без запроса — эталонная видимость секций (по наличию данных)
+                UpdateSectionVisibility();
+                AppsSection.Visibility = Visibility.Visible;
+                RolesSection.Visibility = Visibility.Visible;
+                SearchHint.Visibility = Visibility.Visible;
+                return;
+            }
 
-            AppsSection.Visibility = appsVisible || q == "" ? Visibility.Visible : Visibility.Collapsed;
-            ProjectsSection.Visibility = projectsVisible || q == "" ? Visibility.Visible : Visibility.Collapsed;
-            RecentSection.Visibility = recentVisible || q == "" ? Visibility.Visible : Visibility.Collapsed;
-            RolesSection.Visibility = q == "" ? Visibility.Visible : Visibility.Collapsed;
+            // с запросом — секции без совпадений схлопываются, подсказки о настройке неуместны
+            SearchHint.Visibility = Visibility.Collapsed;
+            AppsSection.Visibility = VisibleCount(AppTiles) > 0 ? Visibility.Visible : Visibility.Collapsed;
+            ProfilesSection.Visibility = VisibleCount(ProfileTiles) > 0 ? Visibility.Visible : Visibility.Collapsed;
+            ProjectsSection.Visibility = VisibleCount(ProjectFileTiles) > 0 ? Visibility.Visible : Visibility.Collapsed;
+            RecentSection.Visibility = VisibleCount(RecentTiles) > 0 ? Visibility.Visible : Visibility.Collapsed;
+            RolesSection.Visibility = Visibility.Collapsed;
+            ProjectsEmpty.Visibility = Visibility.Collapsed;
+            RecentEmpty.Visibility = Visibility.Collapsed;
         }
 
         private static void ApplyTileFilter(ObservableCollection<OverlayTile> tiles, string q)
@@ -434,7 +686,8 @@ namespace FLOMASTER
 
         private void SearchBox_TextChanged(object sender, System.Windows.Controls.TextChangedEventArgs e)
         {
-            // debounce: таймер перезапускается на каждое нажатие
+            // placeholder гаснет сразу, фильтр — с дебаунсом (таймер перезапускается на каждое нажатие)
+            SearchHint.Visibility = string.IsNullOrEmpty(SearchBox.Text) ? Visibility.Visible : Visibility.Collapsed;
             _searchDebounce.Stop();
             _searchDebounce.Start();
         }
@@ -500,11 +753,87 @@ namespace FLOMASTER
             if (sender is not FrameworkElement { DataContext: OcioRoleRow row }) return;
             if (_vm.SelectedOcio == null) return;
 
-            var picker = UiHelper.CreateColorspacePicker(
-                this, row.RoleName, _vm.GetRoleOverride(row.RoleName),
-                _vm.GetColorspaces(),
-                name => _vm.ApplyRolePick(row, name));
-            picker.ShowDialog();
+            // повторный клик по той же роли схлопывает шторку
+            if (_expandedRole == row && RoleDrawer.Visibility == Visibility.Visible)
+            {
+                CollapseRoleDrawer();
+                return;
+            }
+
+            LogDrawer.Visibility = Visibility.Collapsed; // шторки взаимно исключают друг друга
+            _expandedRole = row;
+            RoleDrawerTitle.Text = $"ROLE: {row.RoleName}";
+            RoleDrawerSearch.Text = "";
+            _roleColorspaces = _vm.GetColorspaces()
+                .OrderBy(kv => kv.Key, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+            RebuildRoleDrawerList("");
+            RoleDrawer.Visibility = Visibility.Visible;
+            RoleDrawerSearch.Focus();
+        }
+
+        private OcioRoleRow? _expandedRole;
+        private List<KeyValuePair<string, string>> _roleColorspaces = new();
+
+        /// <summary>Раскрытые семейства живут между перестройками списка.</summary>
+        private readonly HashSet<string> _expandedFamilies = new();
+
+        private void RebuildRoleDrawerList(string filter)
+        {
+            var f = filter.Trim().ToLowerInvariant();
+            RoleDrawerList.Items.Clear();
+            RoleDrawerList.Items.Add(new RolePickerItem { Name = "(config default)", IsDefault = true });
+
+            if (f != "")
+            {
+                // поиск: плоский список совпадений
+                foreach (var kv in _roleColorspaces)
+                {
+                    if (!kv.Key.ToLowerInvariant().Contains(f)) continue;
+                    RoleDrawerList.Items.Add(new RolePickerItem { Name = kv.Key, Family = kv.Value });
+                }
+                return;
+            }
+
+            // без поиска: дерево по family
+            foreach (var g in _roleColorspaces
+                .GroupBy(kv => string.IsNullOrEmpty(kv.Value) ? "(other)" : kv.Value)
+                .OrderBy(g => g.Key, StringComparer.OrdinalIgnoreCase))
+            {
+                var node = new RoleFamilyGroup { Family = g.Key, IsExpanded = _expandedFamilies.Contains(g.Key) };
+                foreach (var kv in g.OrderBy(kv => kv.Key, StringComparer.OrdinalIgnoreCase))
+                    node.Items.Add(new RolePickerItem { Name = kv.Key });
+                RoleDrawerList.Items.Add(node);
+            }
+        }
+
+        private void RoleFamilyHeader_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is not FrameworkElement { DataContext: RoleFamilyGroup group }) return;
+            group.IsExpanded = !group.IsExpanded;
+            if (group.IsExpanded) _expandedFamilies.Add(group.Family);
+            else _expandedFamilies.Remove(group.Family);
+        }
+
+        private void RoleDrawerSearch_TextChanged(object sender, System.Windows.Controls.TextChangedEventArgs e)
+        {
+            RebuildRoleDrawerList(RoleDrawerSearch.Text);
+        }
+
+        private void RolePickItem_Click(object sender, RoutedEventArgs e)
+        {
+            if (_expandedRole == null) return;
+            if (sender is FrameworkElement { Tag: RolePickerItem item })
+                _vm.ApplyRolePick(_expandedRole, item.IsDefault ? null : item.Name);
+            CollapseRoleDrawer();
+        }
+
+        private void RoleDrawerClose_Click(object sender, RoutedEventArgs e) => CollapseRoleDrawer();
+
+        private void CollapseRoleDrawer()
+        {
+            _expandedRole = null;
+            RoleDrawer.Visibility = Visibility.Collapsed;
         }
 
         private void OcioChip_Click(object sender, RoutedEventArgs e)
@@ -524,8 +853,158 @@ namespace FLOMASTER
             RebuildProjectFiles();
         }
 
+        // ---- Полный функционал: drop, контекст-меню, лог ----
+
+        /// <summary>Drag&drop как в маленьком окне: exe → новый пресет, проект-файл → открыть.</summary>
+        private void Window_Drop(object sender, DragEventArgs e)
+        {
+            if (e.Data.GetData(DataFormats.FileDrop) is not string[] files) return;
+            foreach (var file in files)
+            {
+                if (file.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
+                    _vm.AddPresetFromExe(file);
+                else if (_vm.IsProjectFile(file))
+                    _vm.OpenProjectFile(file);
+            }
+        }
+
+        private void ProfileDelete_Menu(object sender, RoutedEventArgs e)
+        {
+            if (sender is FrameworkElement { Tag: Profile profile })
+                _vm.DeleteProfileCommand.Execute(profile);
+        }
+
+        private void RootRemove_Menu(object sender, RoutedEventArgs e)
+        {
+            if (sender is FrameworkElement { Tag: string root })
+                _vm.RemoveProjectRootCommand.Execute(root);
+        }
+
+        /// <summary>Чип Log: тогглит шторку лога поверх низа колонок.</summary>
+        private void LogBtn_Click(object sender, RoutedEventArgs e)
+        {
+            if (LogDrawer.Visibility == Visibility.Visible)
+            {
+                LogDrawer.Visibility = Visibility.Collapsed;
+                return;
+            }
+            RoleDrawer.Visibility = Visibility.Collapsed; // шторки взаимно исключают друг друга
+            var entries = Logger.GetLastEntries(200);
+            LogText.Text = entries.Count == 0 ? "No log entries yet." : string.Join(Environment.NewLine, entries);
+            LogDrawer.Visibility = Visibility.Visible;
+            LogText.ScrollToEnd();
+        }
+
+        private void LogDrawerClose_Click(object sender, RoutedEventArgs e) =>
+            LogDrawer.Visibility = Visibility.Collapsed;
+
+        private void DefaultOcioCombo_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
+        {
+            if (sender is System.Windows.Controls.ComboBox combo) combo.IsDropDownOpen = false;
+        }
+
+        // ---- Клавиатурная навигация: стрелки по видимым плиткам ----
+
+        private static T? FindVisualChild<T>(DependencyObject? parent) where T : DependencyObject
+        {
+            if (parent == null) return null;
+            for (int i = 0; i < System.Windows.Media.VisualTreeHelper.GetChildrenCount(parent); i++)
+            {
+                var child = System.Windows.Media.VisualTreeHelper.GetChild(parent, i);
+                if (child is T match) return match;
+                var deeper = FindVisualChild<T>(child);
+                if (deeper != null) return deeper;
+            }
+            return null;
+        }
+
+        private Button? TileButtonFor(ItemsControl control, OverlayTile tile)
+        {
+            if (control?.ItemContainerGenerator.ContainerFromItem(tile) is System.Windows.Controls.ContentPresenter cp)
+                return FindVisualChild<Button>(cp);
+            return null;
+        }
+
+        /// <summary>Видимые плитки-кнопки в порядке чтения: running → apps → profiles → files → recent.</summary>
+        private List<Button> NavButtons()
+        {
+            var result = new List<Button>();
+            var pairs = new (ObservableCollection<OverlayTile> Items, ItemsControl? Host)[]
+            {
+                (RunningTiles, RunningList),
+                (AppTiles, AppsList),
+                (ProfileTiles, ProfilesList),
+                (ProjectFileTiles, ProjectFilesList),
+                (RecentTiles, RecentList)
+            };
+            foreach (var (items, host) in pairs)
+            {
+                if (host == null || host.Visibility != Visibility.Visible) continue;
+                foreach (var tile in items)
+                {
+                    if (tile.TileVisibility != Visibility.Visible) continue;
+                    if (TileButtonFor(host, tile) is { } b && b.Visibility == Visibility.Visible)
+                        result.Add(b);
+                }
+            }
+            return result;
+        }
+
+        private void MoveNavFocus(bool down)
+        {
+            if (ThemeCombo.IsDropDownOpen || DefaultOcioCombo.IsDropDownOpen) return;
+
+            var buttons = NavButtons();
+            if (buttons.Count == 0) return;
+
+            var current = Keyboard.FocusedElement as Button;
+            int idx = current != null ? buttons.IndexOf(current) : -1;
+            if (idx < 0)
+            {
+                if (down) { buttons[0].Focus(); buttons[0].BringIntoView(); }
+                else SearchBox.Focus();
+                return;
+            }
+
+            int next = idx + (down ? 1 : -1);
+            if (next < 0) { SearchBox.Focus(); return; }
+            if (next >= buttons.Count) return;
+            buttons[next].Focus();
+            buttons[next].BringIntoView();
+        }
+
         // ---- Кнопки окна ----
 
+        /// <summary>ПКМ на плитке: меню квик-команд запуска + сохранение профиля. Собирается на открытие.</summary>
+        private void AppTileMenu_Opened(object sender, RoutedEventArgs e)
+        {
+            if (sender is not ContextMenu menu) return;
+            if (menu.PlacementTarget is not FrameworkElement { DataContext: OverlayTile tile } ||
+                tile.Payload is not Preset preset) return;
+
+            menu.Items.Clear();
+
+            foreach (var (cmd, desc) in _vm.GetCommandsForApp(preset.Name.ToLower()))
+            {
+                var item = new System.Windows.Controls.MenuItem { Header = $"Launch: {desc}" };
+                item.Click += (_, _) =>
+                {
+                    _vm.LaunchPresetWithCommand(preset, cmd);
+                    Close();
+                };
+                menu.Items.Add(item);
+            }
+            if (menu.Items.Count > 0)
+                menu.Items.Add(new System.Windows.Controls.Separator());
+
+            var save = new System.Windows.Controls.MenuItem { Header = "Save as profile" };
+            save.Click += (_, _) =>
+            {
+                _vm.SelectedPreset = preset;
+                _vm.SaveProfileCommand.Execute(null);
+            };
+            menu.Items.Add(save);
+        }
 
         private void CaptionMinimize_Click(object sender, RoutedEventArgs e) => WindowState = WindowState.Minimized;
 
@@ -536,7 +1015,64 @@ namespace FLOMASTER
 
         private void Window_PreviewKeyDown(object sender, KeyEventArgs e)
         {
-            if (e.Key == Key.Escape) Close();
+            if (e.Key == Key.Escape)
+            {
+                // открытый дропдаун комбо гасит Esc сам — окно не закрываем
+                if (ThemeCombo.IsDropDownOpen || DefaultOcioCombo.IsDropDownOpen) return;
+                // слои: шторка лога → пикер ролей → окно
+                if (LogDrawer.Visibility == Visibility.Visible)
+                {
+                    LogDrawer.Visibility = Visibility.Collapsed;
+                    e.Handled = true;
+                    return;
+                }
+                if (RoleDrawer.Visibility == Visibility.Visible)
+                {
+                    CollapseRoleDrawer();
+                    e.Handled = true;
+                    return;
+                }
+                Close();
+                return;
+            }
+            if (e.Key == Key.Down) { MoveNavFocus(down: true); e.Handled = true; }
+            else if (e.Key == Key.Up) { MoveNavFocus(down: false); e.Handled = true; }
         }
+    }
+
+    /// <summary>Элемент списка пикера: колорспейс (или запись сброса в конфиг).</summary>
+    public class RolePickerItem
+    {
+        public string Name { get; init; } = "";
+        public string Family { get; init; } = "";
+        public bool IsDefault { get; init; }
+    }
+
+    /// <summary>Семейство колорспейсов в дереве шторки ролей (кастомный сворачиваемый узел).</summary>
+    public class RoleFamilyGroup : System.ComponentModel.INotifyPropertyChanged
+    {
+        private bool _isExpanded;
+
+        public string Family { get; init; } = "";
+        public List<RolePickerItem> Items { get; } = new();
+
+        public bool IsExpanded
+        {
+            get => _isExpanded;
+            set
+            {
+                _isExpanded = value;
+                PropertyChanged?.Invoke(this, new(nameof(IsExpanded)));
+                PropertyChanged?.Invoke(this, new(nameof(ItemsVisibility)));
+                PropertyChanged?.Invoke(this, new(nameof(Header)));
+            }
+        }
+
+        public System.Windows.Visibility ItemsVisibility =>
+            _isExpanded ? System.Windows.Visibility.Visible : System.Windows.Visibility.Collapsed;
+
+        public string Header => $"{(_isExpanded ? "▾" : "▸")} {Family} ({Items.Count})";
+
+        public event System.ComponentModel.PropertyChangedEventHandler? PropertyChanged;
     }
 }
