@@ -1,5 +1,6 @@
 using System;
 using System.Runtime.InteropServices;
+using System.Security.Principal;
 using System.Windows;
 using FLOMASTER.Services;
 using FLOMASTER.ViewModels;
@@ -43,6 +44,11 @@ namespace FLOMASTER
             // Ручной DI без контейнеров; composition root теперь App — окна может не быть
             // (старт с дашборда по рульке StartupDashboard).
             ShutdownMode = ShutdownMode.OnExplicitShutdown;
+
+            // запуск с правами админа (обычно после автообновления) наследуется всеми DCC —
+            // вылеты Painter, блок drag&drop; маркер в логе для мгновенного диагноза
+            if (new WindowsPrincipal(WindowsIdentity.GetCurrent()).IsInRole(WindowsBuiltInRole.Administrator))
+                Logger.Log("APP", "Running ELEVATED (admin): launched DCC apps inherit admin rights", "warn");
 
             var ocio = new OcioService();
             var viewModel = new MainViewModel(new ConfigManager(), ocio, new LaunchService(ocio));

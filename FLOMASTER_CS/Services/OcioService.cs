@@ -38,9 +38,16 @@ namespace FLOMASTER.Services
     {
         public void ApplyOcio(ProcessStartInfo psi, OcioConfig ocio, string exePath, string? variantPath = null)
         {
-            if (ocio == null || string.IsNullOrEmpty(ocio.Path))
+            if (ocio == null)
             {
                 Logger.Log("OCIO", "No OCIO config selected, launching without OCIO", "warn");
+                return;
+            }
+            if (string.IsNullOrEmpty(ocio.Path))
+            {
+                // seeded/imported запись без файла: NormalizePaths чинит это при старте,
+                // но если добрались сюда — конфиг в списке есть, а .ocio не указан
+                Logger.Log("OCIO", $"Config '{ocio.Name}' has no .ocio file path, launching without OCIO", "warn");
                 return;
             }
 

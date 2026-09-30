@@ -48,11 +48,10 @@ namespace FLOMASTER.Services
                     return GetDefault();
                 }
 
-                NormalizePaths(config);
+                if (NormalizePaths(config)) Save(config); // починенный путь персистится, иначе чинится каждый старт
                 Logger.Log("Config", $"Loaded: {config.Presets.Count} presets, theme={config.Theme}", "info");
                 return config;
-            }
-            catch (JsonException ex)
+            }catch (JsonException ex)
             {
                 Logger.Log("Config", $"JSON parse error: {ex.Message}", "error");
                 BackupCorruptedConfig();
@@ -152,17 +151,24 @@ namespace FLOMASTER.Services
             return null;
         }
 
-        private void NormalizePaths(Config config)
+        /// <summary>Ремонт OCIO-путей (пустые и протухшие). true — что-то изменено, нужно Save.</summary>
+        private bool NormalizePaths(Config config)
         {
+            bool changed = false;
             foreach (var ocio in config.OcioConfigs)
             {
-                if (!string.IsNullOrEmpty(ocio.Path) && !File.Exists(ocio.Path))
+                // File.Exists(null/"") = false: чиним и пустые пути (сидинг без ocio рядом с exe,
+                // когда FindOcioConfig вернул null), и протухшие непустые
+                if (!File.Exists(ocio.Path))
                 {
-                    Logger.Log("Config", $"OCIO path not found: {ocio.Path}, searching...", "warn");
+                    Logger.Log("Config", string.IsNullOrEmpty(ocio.Path)
+                        ? $"OCIO '{ocio.Name}' has no file path, searching..."
+                        : $"OCIO path not found: {ocio.Path}, searching...", "warn");
                     var found = FindOcioConfig();
                     if (found != null)
                     {
                         ocio.Path = found;
+                        changed = true;
                         Logger.Log("Config", $"OCIO path fixed to: {found}", "info");
                     }
                 }
@@ -175,9 +181,12 @@ namespace FLOMASTER.Services
                 {
                     config.OcioConfigs.Add(new() { Name = "ACES 1.2", Path = ocioPath });
                     config.DefaultOcio = "ACES 1.2";
+                    changed = true;
                     Logger.Log("Config", "Added default OCIO config", "info");
                 }
             }
+
+            return changed;
         }
     }
 }
