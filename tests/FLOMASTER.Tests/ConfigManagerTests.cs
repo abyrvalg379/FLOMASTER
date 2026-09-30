@@ -116,5 +116,35 @@ namespace FLOMASTER.Tests
             Assert.Empty(loaded.ProjectRoots);
             Assert.True(loaded.CheckUpdates); // initializer-дефолт
         }
+
+        [Fact]
+        public void Load_EmptyOcioPath_FixedFromBaseDirectoryAndPersisted()
+        {
+            // регресс: сидинг без ocio рядом с exe дал Path = null, NormalizePaths его
+            // не чинил — «ACES 1.2» вечно запускалась без OCIO (кейс стороннего пользователя)
+            var ocioDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "ocio");
+            var ocioFile = Path.Combine(ocioDir, "config.ocio");
+            bool created = !File.Exists(ocioFile);
+            Directory.CreateDirectory(ocioDir);
+            if (created) File.WriteAllText(ocioFile, "ocio_profile_version: 1\nroles:\n  scene_linear: raw\n");
+
+            try
+            {
+                File.WriteAllText(ConfigPath,
+                    "{\n  \"theme\": \"maya\",\n  \"ocioConfigs\": [ { \"name\": \"ACES 1.2\", \"path\": null } ],\n  \"defaultOcio\": \"ACES 1.2\",\n  \"presets\": [],\n  \"recentFiles\": [],\n  \"scanPaths\": []\n}");
+
+                var loaded = new ConfigManager(_dir).Load();
+
+                Assert.False(string.IsNullOrEmpty(loaded.OcioConfigs[0].Path));
+
+                // починка персистится: в json на диске путь уже не null
+                var json = File.ReadAllText(ConfigPath);
+                Assert.DoesNotContain("null", json);
+            }
+            finally
+            {
+                if (created) try { Directory.Delete(ocioDir, true); } catch { }
+            }
+        }
     }
 }

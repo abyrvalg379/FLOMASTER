@@ -31,6 +31,9 @@ namespace FLOMASTER.Services
             {
                 var psi = new ProcessStartInfo { FileName = exePath, UseShellExecute = false };
                 if (!string.IsNullOrWhiteSpace(args)) psi.Arguments = args;
+                // не наследуем CWD FLOMASTER (после автообновления из elevated-PS это System32)
+                var dir = Path.GetDirectoryName(exePath);
+                if (!string.IsNullOrEmpty(dir)) psi.WorkingDirectory = dir;
 
                 // переопределения ролей -> вариант конфига в %APPDATA% (канон не трогается)
                 string? variantPath = null;

@@ -87,6 +87,10 @@ namespace FLOMASTER.Services
         /// <summary>
         /// Запускает повышенный (UAC) установщик: ждёт завершения приложения,
         /// заменяет exe, подчищает бэкап и стартует новую версию. Текущий процесс завершается.
+        /// НОВАЯ версия стартуется через explorer.exe, а не напрямую: PowerShell под UAC
+        /// elevated, и прямой Start-Process оставил бы FLOMASTER с правами админа —
+        /// все запущенные из него DCC наследуют admin-токен (вылеты Painter, блок drag&drop).
+        /// explorer.exe форвардит запрос уже запущенному шеллу (medium IL) — ребёнок без повышения.
         /// </summary>
         public static void ApplyDownloadedUpdate(string downloadedPath, string exePath)
         {
@@ -97,7 +101,7 @@ namespace FLOMASTER.Services
                 "Start-Sleep 2;" +
                 "Copy-Item $new $exe -Force;" +
                 "Remove-Item $new -ErrorAction SilentlyContinue;" +
-                "Start-Process $exe";
+                "explorer.exe $exe";
             var encoded = Convert.ToBase64String(Encoding.Unicode.GetBytes(script));
 
             var psi = new ProcessStartInfo("powershell",
