@@ -323,17 +323,29 @@
 
         <!-- Header -->
         <Border Grid.Row="1" Background="{DynamicResource PanelBrush}" Padding="20,14">
-            <Grid>
-                <StackPanel>
-                    <TextBlock Text="FLOMASTER" Foreground="{DynamicResource AccentBrush}" FontSize="22" FontWeight="Bold"
-                               HorizontalAlignment="Left" FontFamily="Segoe UI"/>
-                    <TextBlock Foreground="{DynamicResource DimBrush}" FontSize="11" Margin="0,2,0,0" FontFamily="Segoe UI">
-                        <Run Text="OCIO Launcher"/>
-                        <Run Text=" " />
-                        <Run Text="{Binding VersionLabel, Mode=OneWay}" Foreground="{DynamicResource AccentBrush}"/>
-                    </TextBlock>
-                </StackPanel>
-            </Grid>
+            <StackPanel>
+                <Grid>
+                    <StackPanel>
+                        <TextBlock Text="FLOMASTER" Foreground="{DynamicResource AccentBrush}" FontSize="22" FontWeight="Bold"
+                                   HorizontalAlignment="Left" FontFamily="Segoe UI"/>
+                        <TextBlock Foreground="{DynamicResource DimBrush}" FontSize="11" Margin="0,2,0,0" FontFamily="Segoe UI">
+                            <Run Text="OCIO Launcher"/>
+                            <Run Text=" " />
+                            <Run Text="{Binding VersionLabel, Mode=OneWay}" Foreground="{DynamicResource AccentBrush}"/>
+                        </TextBlock>
+                    </StackPanel>
+                </Grid>
+                <!-- Явное напоминание об апдейте: STATUS и чип MAINTENANCE пропускали -->
+                <Border Background="{DynamicResource AccentBrush}" CornerRadius="6" Padding="12,8" Margin="0,12,0,0"
+                        Visibility="{Binding UpdateReady, Converter={StaticResource BoolToVis}}">
+                    <Grid>
+                        <TextBlock Text="{Binding UpdateInfoText}" Foreground="{DynamicResource AccentTextBrush}" FontWeight="SemiBold" FontSize="12.5"
+                                   VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Margin="0,0,150,0"/>
+                        <Button Content="Restart and install" Style="{StaticResource BtnStyle}" Width="140" Height="24"
+                                FontSize="11" HorizontalAlignment="Right" Command="{Binding UpdateCommand}"/>
+                    </Grid>
+                </Border>
+            </StackPanel>
         </Border>
 
         <!-- Accent line -->
