@@ -18,6 +18,14 @@ roles:
   scene_linear: acescg
   texture_paint: Utility - sRGB - Texture
   default_byte: raw
+  substance_3d_painter_bitmap_import_8bit: Utility - sRGB - Texture
+  substance_3d_painter_bitmap_import_16bit: Utility - sRGB - Texture
+  substance_3d_painter_bitmap_import_floating: Utility - Linear - sRGB
+  substance_3d_painter_bitmap_export_8bit: Utility - sRGB - Texture
+  substance_3d_painter_bitmap_export_16bit: ACES - ACEScg
+  substance_3d_painter_bitmap_export_floating: ACES - ACEScg
+  substance_3d_painter_substance_material: Utility - sRGB - Texture
+  substance_3d_painter_standard_srgb: Utility - sRGB - Texture
 
 displays:
   ACES:

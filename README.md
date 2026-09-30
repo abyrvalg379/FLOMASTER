@@ -38,14 +38,17 @@
 
 ---
 
-## What's New in v2.5.6
+## What's New in v2.5.7
 
-Bugfix release — launched apps no longer inherit administrator rights, and lost OCIO configs repair themselves.
+Bugfix release — updates now deliver the OCIO config, Substance Painter gets correct project color defaults, and stale config paths heal themselves.
 
-- **No more hidden admin launches** — after an auto-update FLOMASTER used to keep running with administrator rights, and every DCC started from it inherited the elevated token (crashes in Substance Painter with overlay tools, blocked drag & drop). Updates now relaunch the app without elevation, and on startup FLOMASTER self-heals: detecting admin rights, it quietly relaunches itself de-elevated
-- **OCIO configs repair themselves** — a config entry whose .ocio file path was lost (for example, after copying just the exe to another machine) is re-linked to the bundled config on startup instead of silently launching apps without color management
-- **Clearer diagnostics** — the log names the config missing its file and warns when FLOMASTER itself is running elevated
-- Launched apps start in their own folder instead of inheriting FLOMASTER's working directory
+- **Updates ship the full package** — the auto-updater used to replace only the exe, so machines without an `ocio` folder next to it launched apps without color management, silently and forever. Updates now download the complete package (exe + OCIO config) and sync the folder on install; paths with spaces, Cyrillic characters and apostrophes are quoted safely
+- **Substance Painter: correct project defaults** — the bundled OCIO config now defines Painter's bitmap import/export default color spaces, so new projects follow the studio regulation (16-bit export in ACEScg, sRGB textures stay sRGB) instead of falling back to the working color space for everything. Existing projects keep their own settings
+- **Config paths can no longer go stale** — the canonical config entry follows the installation: on every start it re-links to the config shipped with the running build, and legacy entries migrate automatically. Custom configs are left untouched
+- **Clearer warnings** — STATUS warns when the selected config has no file, the log flags non-ASCII config paths (some apps silently ignore them) and shows download progress
+
+### [v2.5.6](https://github.com/abyrvalg379/FLOMASTER/releases/tag/v2.5.6) — self-healing
+No hidden admin launches after updates; lost OCIO config paths repair themselves on startup.
 
 ### [v2.5.5](https://github.com/abyrvalg379/FLOMASTER/releases/tag/v2.5.5) — dashboard era
 The dashboard became the full launcher UI: role picker and log drawers, per-tile quick launch commands, running-app chips, keyboard navigation, cleaner scanner, compact 2×N tile grid.
