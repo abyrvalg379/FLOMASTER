@@ -517,6 +517,37 @@
                                    FontSize="14" FontWeight="SemiBold"/>
                     </StackPanel>
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                        <!-- Сортировка проектов: A–Z / Date / Apps -->
+                        <ItemsControl ItemsSource="{Binding ProjectSortChips}" VerticalAlignment="Center" Margin="0,0,10,0"
+                                      Focusable="False" IsTabStop="False" IsHitTestVisible="True">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <StackPanel Orientation="Horizontal"/>
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Button Content="{Binding Name}" Click="ProjectSortChip_Click" Tag="{Binding Path}"
+                                            ToolTip="Sort projects" Cursor="Hand">
+                                        <Button.Style>
+                                            <Style TargetType="Button" BasedOn="{StaticResource ChipButtonStyle}">
+                                                <Setter Property="Height" Value="26"/>
+                                                <Setter Property="Padding" Value="12,0"/>
+                                                <Setter Property="Margin" Value="0,0,6,0"/>
+                                                <Setter Property="FontSize" Value="11.5"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                                        <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
+                                                        <Setter Property="Foreground" Value="{DynamicResource AccentTextBrush}"/>
+                                                        <Setter Property="FontWeight" Value="SemiBold"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Button.Style>
+                                    </Button>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
                         <Button Content="+" Style="{StaticResource MiniButtonStyle}"
                                 Command="{Binding AddProjectRootCommand}" ToolTip="Add project folder"/>
                     </StackPanel>
