@@ -38,14 +38,13 @@
 
 ---
 
-## What's New in v2.5.7
+## What's New in v2.5.8
 
-Bugfix release — updates now deliver the OCIO config, Substance Painter gets correct project color defaults, and stale config paths heal themselves.
+- **Project list sorting** — the PROJECTS section gets A–Z / Date / Apps switcher chips: alphabetical by file name (the old list sorted by full path, so folder structure buried names), newest-changed first, or grouped by application (blender → maya → houdini → nuke → painter, unknown formats last). The choice persists in the config
+- **Visible update reminder** — when an update is downloaded and ready, an accent banner appears at the top of both windows with a "Restart and install" button, next to the existing STATUS line and footer chip
 
-- **Updates ship the full package** — the auto-updater used to replace only the exe, so machines without an `ocio` folder next to it launched apps without color management, silently and forever. Updates now download the complete package (exe + OCIO config) and sync the folder on install; paths with spaces, Cyrillic characters and apostrophes are quoted safely
-- **Substance Painter: correct project defaults** — the bundled OCIO config now defines Painter's bitmap import/export default color spaces, so projects follow the studio regulation (16-bit export in ACEScg, sRGB textures stay sRGB) instead of falling back to the working color space for everything. Existing projects adopt the same defaults when their project configuration is re-applied (channels are recomputed)
-- **Config paths can no longer go stale** — the canonical config entry follows the installation: on every start it re-links to the config shipped with the running build, and legacy entries migrate automatically. Custom configs are left untouched
-- **Clearer warnings** — STATUS warns when the selected config has no file, the log flags non-ASCII config paths (some apps silently ignore them) and shows download progress
+### [v2.5.7](https://github.com/abyrvalg379/FLOMASTER/releases/tag/v2.5.7) — updates ship the config
+Auto-updates download the full package (exe + OCIO config), Painter project defaults follow the studio regulation, config paths can no longer go stale.
 
 ### [v2.5.6](https://github.com/abyrvalg379/FLOMASTER/releases/tag/v2.5.6) — self-healing
 No hidden admin launches after updates; lost OCIO config paths repair themselves on startup.

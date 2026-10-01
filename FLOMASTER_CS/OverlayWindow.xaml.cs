@@ -81,6 +81,7 @@ namespace FLOMASTER
             BuildAppAndProfileTiles();
             RebuildOcioChips();
             RebuildRootChips();
+            RebuildProjectSortChips();
             RebuildProjectFiles();
             RebuildRecentTiles();
             UpdateSectionVisibility();
@@ -446,6 +447,34 @@ namespace FLOMASTER
             }
             ProjectFilesFrame.Visibility = ProjectFileTiles.Count == 0 ? Visibility.Collapsed : Visibility.Visible;
             ProjectsEmpty.Visibility = ProjectFileTiles.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+        }
+
+        // ---- Сортировка проектов: A–Z / Date / Apps ----
+
+        public ObservableCollection<OverlayChip> ProjectSortChips { get; } = new();
+
+        private static readonly (string Key, string Label)[] ProjectSortModes =
+        {
+            ("name", "A\u2013Z"),
+            ("date", "Date"),
+            ("app", "Apps")
+        };
+
+        private void RebuildProjectSortChips()
+        {
+            ProjectSortChips.Clear();
+            foreach (var (key, label) in ProjectSortModes)
+                ProjectSortChips.Add(new OverlayChip { Name = label, Path = key, IsSelected = _vm.ProjectSort == key });
+        }
+
+        private void ProjectSortChip_Click(object sender, RoutedEventArgs e)
+        {
+            if ((sender as FrameworkElement)?.Tag is string mode)
+            {
+                _vm.ProjectSort = mode;
+                RebuildProjectSortChips();
+                RebuildProjectFiles();
+            }
         }
 
         // ---- Recent ----

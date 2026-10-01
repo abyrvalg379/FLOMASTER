@@ -911,8 +911,78 @@ namespace FLOMASTER.ViewModels
             var acc = new List<string>();
             if (string.IsNullOrEmpty(root) || !Directory.Exists(root)) return acc;
             CollectProjectFiles(root, "", acc, 0);
-            acc.Sort(StringComparer.OrdinalIgnoreCase);
+            SortProjectFiles(acc, _config.ProjectsSort);
             return acc;
+        }
+
+        /// <summary>Сортировка списка проектов: name — по имени файла (не по полному пути:
+        /// путь ставил порядок папок выше имён — «идут чёрт знает как»), date — свежие сверху,
+        /// app — группы по семейству DCC (blender/maya/houdini/nuke/painter, прочее в конец).</summary>
+        public static void SortProjectFiles(List<string> files, string mode)
+        {
+            switch (mode)
+            {
+                case "date":
+                    files.Sort((a, b) =>
+                    {
+                        int c = SafeMTimeUtc(b).CompareTo(SafeMTimeUtc(a)); // свежие сверху
+                        if (c != 0) return c;
+                        c = string.Compare(Path.GetFileName(a), Path.GetFileName(b), StringComparison.OrdinalIgnoreCase);
+                        return c != 0 ? c : string.Compare(a, b, StringComparison.OrdinalIgnoreCase);
+                    });
+                    break;
+                case "app":
+                    files.Sort((a, b) =>
+                    {
+                        int c = FamilyOrder(a).CompareTo(FamilyOrder(b));
+                        if (c != 0) return c;
+                        c = string.Compare(Path.GetFileName(a), Path.GetFileName(b), StringComparison.OrdinalIgnoreCase);
+                        return c != 0 ? c : string.Compare(a, b, StringComparison.OrdinalIgnoreCase);
+                    });
+                    break;
+                default: // name
+                    files.Sort((a, b) =>
+                    {
+                        int c = string.Compare(Path.GetFileName(a), Path.GetFileName(b), StringComparison.OrdinalIgnoreCase);
+                        return c != 0 ? c : string.Compare(a, b, StringComparison.OrdinalIgnoreCase);
+                    });
+                    break;
+            }
+        }
+
+        private static DateTime SafeMTimeUtc(string file)
+        {
+            try { return File.GetLastWriteTimeUtc(file); } catch { return DateTime.MinValue; }
+        }
+
+        private static int FamilyOrder(string file)
+        {
+            var fam = ExtToAppFamily.TryGetValue(Path.GetExtension(file).ToLowerInvariant(), out var f) ? f : "other";
+            return fam switch
+            {
+                "blender" => 0,
+                "maya" => 1,
+                "houdini" => 2,
+                "nuke" => 3,
+                "painter" => 4,
+                _ => 5
+            };
+        }
+
+        /// <summary>Режим сортировки проектов в дашборде; персистится в конфиге.</summary>
+        public string ProjectSort
+        {
+            get => _config.ProjectsSort;
+            set
+            {
+                var v = value == "date" || value == "app" ? value : "name";
+                if (v == _config.ProjectsSort) return;
+                _config.ProjectsSort = v;
+                _store.Save(_config);
+                OnPropertyChanged();
+                RebuildBrowserFiles();
+                Logger.Log("Projects", $"Sort: {v}", "info");
+            }
         }
 
         private void RebuildBrowserFiles()
@@ -925,7 +995,7 @@ namespace FLOMASTER.ViewModels
             CollectProjectFiles(root, _browserSearchText?.Trim() ?? "", acc, 0);
             // distinct по пути: junctions/reparse в дереве двоят файлы
             acc = acc.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
-            acc.Sort(StringComparer.OrdinalIgnoreCase);
+            SortProjectFiles(acc, _config.ProjectsSort);
             foreach (var f in acc)
             {
                 string rel;

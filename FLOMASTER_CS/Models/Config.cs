@@ -29,6 +29,9 @@ namespace FLOMASTER.Models
 
         /// <summary>При старте показывать полноэкранный дашборд (false — маленькое окно).</summary>
         public bool StartupDashboard { get; set; } = false;
+
+        /// <summary>Сортировка списка проектов: name (алфавит) | date (свежие сверху) | app (по софтам). Аддитивно.</summary>
+        public string ProjectsSort { get; set; } = "name";
     }
 
     public class OcioConfig
