@@ -23,7 +23,7 @@ namespace FLOMASTER.Tests
                     new Profile { Name = "Show A", PresetName = "Blender 5.2", OcioName = "ACES 1.2", Args = "--factory-startup" },
                     new Profile { Name = "SP bake", PresetName = "Substance 3D Painter", OcioName = "ACES 1.2", Args = "" }
                 },
-                ProjectRoots = new() { @"E:\0.Project\Work\Pipeline\STL", @"D:\shows" }
+                ProjectRoots = new() { @"E:\0.Project\Work\Pipeline\STL", @"D:\projects" }
             };
 
             var options = new JsonSerializerOptions { WriteIndented = true, PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
@@ -38,7 +38,7 @@ namespace FLOMASTER.Tests
             Assert.Equal("Blender 5.2", loaded.Profiles[0].PresetName);
             Assert.Equal("--factory-startup", loaded.Profiles[0].Args);
             Assert.Equal(2, loaded.ProjectRoots.Count);
-            Assert.Equal(@"D:\shows", loaded.ProjectRoots[1]);
+            Assert.Equal(@"D:\projects", loaded.ProjectRoots[1]);
         }
     }
 }

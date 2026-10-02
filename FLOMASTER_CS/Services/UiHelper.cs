@@ -13,7 +13,7 @@ namespace FLOMASTER.Services
     {
         // Расширения файлов проектов: источник для drag&drop, Recent и панели Projects.
         // Только родные форматы DCC. .fbx/.obj/.stl — обмен/выпечка, НЕ проекты (решение юзера;
-        // «STL» в пути E:\...\Pipeline\STL — это имя проекта, а не формат — не повторить мою путаницу).
+        // «STL» бывает именем проекта, а не форматом — не повторить эту путаницу).
         public static readonly string[] ProjectFileExtensions =
             { ".blend", ".spp", ".ma", ".mb", ".hip", ".hipl", ".hipnc", ".nk" };
 

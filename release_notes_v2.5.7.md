@@ -5,7 +5,7 @@ Bugfix release — updates deliver the OCIO config, Substance Painter gets corre
 ## Fixes
 
 - **Updates ship the full package** — the auto-updater replaced only the exe, so installs without an `ocio` folder next to it launched apps with no color management, silently. Updates now download the complete package (exe + OCIO config) and sync the folder on install. Paths with spaces, Cyrillic characters and apostrophes are quoted safely
-- **Substance Painter: correct project defaults** — the bundled OCIO config now defines Painter's bitmap import/export default color spaces, so projects follow the fixed regulation (16-bit export in ACES - ACEScg, 8/16-bit textures and materials in sRGB) instead of falling back to the working color space for everything. Existing projects adopt the same defaults when their project configuration is re-applied (channels are recomputed)
+- **Substance Painter: correct project defaults** — the bundled OCIO config now defines Painter's bitmap import/export default color spaces, so projects follow a fixed regulation (16-bit export in ACES - ACEScg, 8/16-bit textures and materials in sRGB) instead of falling back to the working color space for everything. Existing projects adopt the same defaults when their project configuration is re-applied (channels are recomputed)
 - **Config paths can no longer go stale** — the canonical config entry follows the installation: on every start it re-links to the config shipped with the running build; legacy entries migrate automatically. Custom (user-added) configs are untouched
 - **Clearer warnings** — STATUS warns when the selected config has no file; the log flags non-ASCII config paths (some apps silently ignore them) and logs download progress
 

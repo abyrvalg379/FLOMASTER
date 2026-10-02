@@ -52,7 +52,7 @@
 Project list sorting (A-Z / Date / Apps) and an explicit update-ready banner in both windows.
 
 ### [v2.5.7](https://github.com/abyrvalg379/FLOMASTER/releases/tag/v2.5.7) — updates ship the config
-Auto-updates download the full package (exe + OCIO config), Painter project defaults follow the fixed regulation, config paths can no longer go stale.
+Auto-updates download the full package (exe + OCIO config), Painter project defaults follow a fixed regulation, config paths can no longer go stale.
 
 ### [v2.5.6](https://github.com/abyrvalg379/FLOMASTER/releases/tag/v2.5.6) — self-healing
 No hidden admin launches after updates; lost OCIO config paths repair themselves on startup.
