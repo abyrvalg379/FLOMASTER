@@ -18,11 +18,13 @@ namespace FLOMASTER
         private const int BaseHeight = 560; // свёрнутое окно вмещает весь стек вкладок + ARGUMENTS (32 из них — шапка)
 
         private readonly MainViewModel _viewModel;
+        private readonly UiController? _ui;
 
-        public MainWindow(MainViewModel viewModel)
+        public MainWindow(MainViewModel viewModel, UiController? ui = null)
         {
             InitializeComponent();
             _viewModel = viewModel;
+            _ui = ui;
             DataContext = viewModel;
 
             // Open in top-right corner of the screen
@@ -180,6 +182,8 @@ namespace FLOMASTER
         }
 
         private void CaptionMinimize_Click(object sender, RoutedEventArgs e) => WindowState = WindowState.Minimized;
+
+        private void SwitchLauncher_Click(object sender, RoutedEventArgs e) => _ui?.SwitchLauncher();
 
         private void CaptionClose_Click(object sender, RoutedEventArgs e) => Close();
 

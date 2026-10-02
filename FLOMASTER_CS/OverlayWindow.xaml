@@ -105,7 +105,7 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Border Name="Bd" Background="{TemplateBinding Background}">
+                        <Border Name="Bd" Background="{TemplateBinding Background}" CornerRadius="8">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
@@ -345,6 +345,8 @@
             </StackPanel>
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Top"
                         WindowChrome.IsHitTestVisibleInChrome="True">
+                <Button Style="{StaticResource CaptionButtonStyle}" Content="&#xE8A7;"
+                        ToolTip="Switch to widget" Click="SwitchLauncher_Click"/>
                 <Button Style="{StaticResource CaptionButtonStyle}" Content="&#xE921;"
                         ToolTip="Minimize" Click="CaptionMinimize_Click"/>
                 <Button Style="{StaticResource CaptionButtonStyle}" Content="&#xE923;"
@@ -352,14 +354,40 @@
                 <Button Style="{StaticResource CaptionButtonStyle}" Content="&#xE8BB;"
                         ToolTip="Close" Click="CaptionClose_Click"/>
             </StackPanel>
-            <!-- Явное напоминание об апдейте: STATUS и чип MAINTENANCE пропускали -->
+            <!-- Апдейт: баннер виден с момента обнаружения — прогресс скачивания и заметки релиза не живут в STATUS -->
             <Border Grid.Row="1" Background="{DynamicResource AccentBrush}" CornerRadius="8" Padding="14,9" Margin="0,14,0,0"
-                    Visibility="{Binding UpdateReady, Converter={StaticResource BoolToVis}}">
+                    Visibility="{Binding UpdateActive, Converter={StaticResource BoolToVis}}">
                 <Grid>
-                    <TextBlock Text="{Binding UpdateInfoText}" Foreground="{DynamicResource AccentTextBrush}" FontWeight="SemiBold" FontSize="13"
-                               VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Margin="0,0,170,0"/>
-                    <Button Content="Restart and install" Style="{StaticResource BtnStyle}" Width="150" Height="26"
-                            FontSize="11.5" HorizontalAlignment="Right" Command="{Binding UpdateCommand}"/>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    <Grid Grid.Row="0">
+                        <TextBlock Text="{Binding UpdateInfoText}" Foreground="{DynamicResource AccentTextBrush}" FontWeight="SemiBold" FontSize="13"
+                                   VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Margin="0,0,330,0"/>
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                            <Button Content="What's new" Style="{StaticResource BtnStyle}" Width="90" Height="26" FontSize="11.5"
+                                    Margin="0,0,6,0" Command="{Binding ToggleNotesCommand}"
+                                    Visibility="{Binding HasUpdateNotes, Converter={StaticResource BoolToVis}}"/>
+                            <Button Content="Restart and install" Style="{StaticResource BtnStyle}" Width="150" Height="26"
+                                    FontSize="11.5" Command="{Binding UpdateCommand}"/>
+                        </StackPanel>
+                    </Grid>
+                    <ProgressBar Grid.Row="1" Height="4" Margin="0,8,0,0" Minimum="0" Maximum="1"
+                                 Value="{Binding UpdateProgress, Mode=OneWay}"
+                                 IsIndeterminate="{Binding UpdateProgressIndeterminate, Mode=OneWay}"
+                                 Foreground="{DynamicResource AccentTextBrush}" Background="Transparent" BorderThickness="0"/>
+                    <StackPanel Grid.Row="2" Margin="0,8,0,0"
+                                Visibility="{Binding BannerNotesVisible, Converter={StaticResource BoolToVis}}">
+                        <ScrollViewer MaxHeight="140" VerticalScrollBarVisibility="Auto">
+                            <TextBlock Text="{Binding UpdateNotes}" Foreground="{DynamicResource AccentTextBrush}"
+                                       FontSize="11.5" TextWrapping="Wrap"/>
+                        </ScrollViewer>
+                        <Button Content="Full notes on GitHub" Style="{StaticResource BtnStyle}" Height="24" FontSize="11"
+                                HorizontalAlignment="Left" Margin="0,8,0,0"
+                                Command="{Binding OpenFullNotesCommand}"/>
+                    </StackPanel>
                 </Grid>
             </Border>
         </Grid>
@@ -441,7 +469,7 @@
                         </ItemsControl.ItemsPanel>
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <Button Content="{Binding Name}"
+                                <Button Content="{Binding Name}" ToolTip="{Binding Path}"
                                         Style="{StaticResource ChipButtonStyle}"
                                         Click="OcioChip_Click" Tag="{Binding}"/>
                             </DataTemplate>
@@ -528,7 +556,7 @@
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
                                     <Button Content="{Binding Name}" Click="ProjectSortChip_Click" Tag="{Binding Path}"
-                                            ToolTip="Sort projects" Cursor="Hand">
+                                            ToolTip="{Binding Hint}" Cursor="Hand">
                                         <Button.Style>
                                             <Style TargetType="Button" BasedOn="{StaticResource ChipButtonStyle}">
                                                 <Setter Property="Height" Value="26"/>
@@ -717,6 +745,11 @@
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
+                    <!-- выбран NO OCIO: ролей нет, пояснение держит место в колонке -->
+                    <TextBlock Text="No color config — application defaults"
+                               Foreground="{DynamicResource DimBrush}" FontSize="12" FontStyle="Italic"
+                               Margin="4,4,0,0"
+                               Visibility="{Binding NoOcioActive, Converter={StaticResource BoolToVis}}"/>
                     <Button Content="Reset roles to config" Style="{StaticResource RowButtonStyle}" Height="34"
                             Command="{Binding ResetRolesCommand}"/>
                 </StackPanel>
@@ -808,6 +841,44 @@
                         </ItemsControl.Resources>
                     </ItemsControl>
                 </ScrollViewer>
+            </Grid>
+        </Border>
+
+        <!-- Панель обновления: живёт в пустой полосе слева от центрированного грида
+             (ширина считается в коде по остатку, налезание на колонки исключено;
+             узкое окно — фолбэк в инлайн-раскрытие внутри баннера) -->
+        <Border x:Name="UpdatePanel" Grid.Row="2" HorizontalAlignment="Left" Margin="36,0,0,12"
+                Background="{DynamicResource PanelBrush}" BorderBrush="{DynamicResource BorderBrush}"
+                BorderThickness="1" CornerRadius="12" Padding="14"
+                Visibility="{Binding UpdatePanelVisible, Converter={StaticResource BoolToVis}}">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                <Grid Grid.Row="0" Margin="0,0,0,8">
+                    <TextBlock Text="UPDATE NOTES" Foreground="{DynamicResource DimBrush}" FontSize="10.5"
+                               FontWeight="SemiBold" VerticalAlignment="Center"/>
+                    <Button Content="Close" Style="{StaticResource FooterChipStyle}" Height="26"
+                            HorizontalAlignment="Right" Click="UpdatePanelClose_Click"/>
+                </Grid>
+                <TextBlock Grid.Row="1" Text="{Binding UpdateInfoText}" Foreground="{DynamicResource AccentBrush}"
+                           FontSize="13" FontWeight="SemiBold" TextWrapping="Wrap" Margin="0,0,0,8"/>
+                <ProgressBar Grid.Row="2" Height="4" Minimum="0" Maximum="1"
+                             Value="{Binding UpdateProgress, Mode=OneWay}"
+                             IsIndeterminate="{Binding UpdateProgressIndeterminate, Mode=OneWay}"
+                             Foreground="{DynamicResource AccentBrush}" Background="{DynamicResource BgBrush}"
+                             BorderThickness="0" Margin="0,0,0,10"/>
+                <ScrollViewer Grid.Row="3" VerticalScrollBarVisibility="Auto">
+                    <TextBlock Text="{Binding UpdateNotes}" Foreground="{DynamicResource TextBrush}"
+                               FontSize="12" TextWrapping="Wrap" LineHeight="17"/>
+                </ScrollViewer>
+                <Button Grid.Row="4" Content="Full notes on GitHub" Style="{StaticResource BtnStyle}" Height="26"
+                        FontSize="11" HorizontalAlignment="Left" Margin="0,10,0,0"
+                        Command="{Binding OpenFullNotesCommand}"/>
             </Grid>
         </Border>
 
@@ -915,6 +986,9 @@
                                 Command="{Binding ExportSettingsCommand}" ToolTip="Export .flomaster for another machine"/>
                         <Button Content="Import" Style="{StaticResource FooterChipStyle}"
                                 Command="{Binding ImportSettingsCommand}" ToolTip="Import .flomaster"/>
+                        <Button Content="Sync folder" Style="{StaticResource FooterChipStyle}"
+                                Command="{Binding SetSyncFolderCommand}"
+                                ToolTip="Folder shared between your machines (Dropbox/OneDrive/NAS): profiles, roots and theme travel automatically"/>
                         <Button Content="App shortcut" Style="{StaticResource FooterChipStyle}"
                                 Command="{Binding CreateShortcutCommand}" ToolTip="Desktop shortcut with OCIO env for the selected app"/>
                         <Button Content="Launcher shortcut" Style="{StaticResource FooterChipStyle}"
@@ -927,6 +1001,14 @@
                                    FontSize="11" VerticalAlignment="Center" Margin="0,0,12,0" TextTrimming="CharacterEllipsis"/>
                         <Button Content="Restart and install" Style="{StaticResource FooterChipStyle}"
                                 Command="{Binding UpdateCommand}"/>
+                    </StackPanel>
+                    <!-- папка-синк: чужие файлы, предложенные к импорту -->
+                    <StackPanel Orientation="Horizontal" Margin="0,2,0,0"
+                                Visibility="{Binding SyncPendingVisible, Converter={StaticResource BoolToVis}}">
+                        <TextBlock Text="{Binding SyncPendingText}" Foreground="{DynamicResource TextBrush}"
+                                   FontSize="11" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                        <Button Content="Import" Style="{StaticResource FooterChipStyle}"
+                                Command="{Binding SyncImportCommand}" ToolTip="Merge profiles, roots and theme from the sync folder"/>
                     </StackPanel>
                 </StackPanel>
             </Grid>

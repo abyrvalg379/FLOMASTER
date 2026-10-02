@@ -43,6 +43,14 @@ namespace FLOMASTER.Services
                 Logger.Log("OCIO", "No OCIO config selected, launching without OCIO", "warn");
                 return;
             }
+            if (ocio.IsNoOcio)
+            {
+                // осознанный запуск в дефолтных цветах приложения: OCIO не применяем,
+                // унаследованный (сам FLOMASTER может быть запущен под OCIO) снимаем
+                psi.EnvironmentVariables.Remove("OCIO");
+                Logger.Log("OCIO", "NO OCIO mode: launching with application default color management", "info");
+                return;
+            }
             if (string.IsNullOrEmpty(ocio.Path))
             {
                 // seeded/imported запись без файла: NormalizePaths чинит это при старте,
@@ -82,6 +90,12 @@ namespace FLOMASTER.Services
             if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(path))
             {
                 Logger.Log("OCIO", "Add failed: name or path is empty", "warn");
+                return false;
+            }
+
+            if (name == ConfigManager.NoOcioName)
+            {
+                Logger.Log("OCIO", "Add failed: name is reserved for the built-in no-OCIO entry", "warn");
                 return false;
             }
 

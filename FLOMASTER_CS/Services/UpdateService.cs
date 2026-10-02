@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Net.Http;
 using System.Reflection;
 using System.Text;
@@ -42,21 +43,70 @@ namespace FLOMASTER.Services
         }
 
         /// <summary>
-        /// Тег и URL на обновление из вложений последнего релиза, если он новее текущего.
+        /// Тег, URL, заметки релиза и страница релиза из вложений последнего релиза, если он новее текущего.
         /// Качаем версионированный ZIP (exe + ocio): точечная замена одного exe оставляла
         /// машины без папки ocio — SP запускался без env var молча (случай Романа, 01.10).
         /// Fallback на exe-вложение, если ZIP в релизе нет.
+        /// Заметки (body) и html_url едут в том же ответе API — отдельных запросов нет.
         /// </summary>
-        public static async Task<(string? tag, string? url, bool isZip)> CheckAsync()
+        public static async Task<(string? tag, string? url, bool isZip, string? notes, string? htmlUrl)> CheckAsync()
         {
             Http.DefaultRequestHeaders.UserAgent.ParseAdd("FLOMASTER");
             var json = await Http.GetStringAsync(ReleasesApi).ConfigureAwait(false);
 
             var tag = Regex.Match(json, "\"tag_name\"\\s*:\\s*\"v?([^\"]+)\"").Groups[1].Value;
-            if (!IsUpdateAvailable(tag, CurrentVersion)) return (null, null, false);
+            if (!IsUpdateAvailable(tag, CurrentVersion)) return (null, null, false, null, null);
 
             var (url, isZip) = SelectUpdateAsset(json);
-            return url == null ? (null, null, false) : ("v" + tag, url, isZip);
+            if (url == null) return (null, null, false, null, null);
+
+            var (rawNotes, htmlUrl) = ExtractReleaseInfo(json);
+            return ("v" + tag, url, isZip, rawNotes, htmlUrl);
+        }
+
+        /// <summary>
+        /// body (markdown-заметки релиза) и html_url страницы релиза из ответа GitHub API.
+        /// Парс через System.Text.Json: body содержит экранированные \n/кавычки, regex хрупок.
+        /// Нечитаемый ответ — (null, null): баннер останется без What's new, не критично.
+        /// </summary>
+        public static (string? notes, string? htmlUrl) ExtractReleaseInfo(string releaseJson)
+        {
+            try
+            {
+                using var doc = System.Text.Json.JsonDocument.Parse(releaseJson);
+                var root = doc.RootElement;
+                var notes = root.TryGetProperty("body", out var b) && b.ValueKind == System.Text.Json.JsonValueKind.String
+                    ? b.GetString()
+                    : null;
+                var html = root.TryGetProperty("html_url", out var h) && h.ValueKind == System.Text.Json.JsonValueKind.String
+                    ? h.GetString()
+                    : null;
+                return (notes, html);
+            }
+            catch
+            {
+                return (null, null);
+            }
+        }
+
+        /// <summary>
+        /// Markdown заметок к виду для баннера: снять ##-заголовки и **жирный**, схлопнуть
+        /// пустые строки, обрезать по капу (полный текст — по ссылке «Full notes on GitHub»).
+        /// </summary>
+        public static string CleanupNotes(string? raw)
+        {
+            if (string.IsNullOrWhiteSpace(raw)) return "";
+
+            var lines = raw.Replace("\r\n", "\n").Split('\n').Select(l =>
+            {
+                var t = l.TrimStart();
+                if (t.StartsWith("#")) t = t.TrimStart('#').Trim();
+                return t.Replace("**", "").Replace("`", "");
+            });
+            var text = Regex.Replace(string.Join("\n", lines), "\n{3,}", "\n\n").Trim();
+
+            const int cap = 4000;
+            return text.Length <= cap ? text : text[..cap].TrimEnd() + "\n…";
         }
 
         /// <summary>

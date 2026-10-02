@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using FLOMASTER.Services;
 using FLOMASTER.ViewModels;
 using Xunit;
@@ -95,6 +96,86 @@ namespace FLOMASTER.Tests
             MainViewModel.SortProjectFiles(files, "garbage");
 
             Assert.EndsWith("y.nk", files[0], StringComparison.OrdinalIgnoreCase);
+        }
+
+        // ---- Цикл APP-сортировки: повторный клик по Apps докручивает семейства вправо ----
+
+        [Fact]
+        public void App_CycleOffset1_PutsPainterFirst()
+        {
+            // кейс юзера: все .spp наверху «в моменте» — один клик по активному Apps
+            var blend = MakeFile("g1", "scene.blend");
+            var ma = MakeFile("g2", "rig.ma");
+            var spp = MakeFile("g3", "tex.spp");
+            var files = new List<string> { blend, ma, spp };
+
+            MainViewModel.SortProjectFiles(files, "app", 1);
+
+            Assert.Same(spp, files[0]);
+            Assert.Same(blend, files[1]);
+            Assert.Same(ma, files[2]);
+        }
+
+        [Fact]
+        public void App_Cycle_TwoFamilies_FlipsEveryClick()
+        {
+            // фикс «через раз»: вращаются только ПРИСУТСТВУЮЩИЕ семейства —
+            // с blender+maya каждый клик меняет порядок, пустые места не съедают клики
+            var blend = MakeFile("h1", "scene.blend");
+            var ma = MakeFile("h2", "rig.ma");
+            var files = new List<string> { blend, ma };
+
+            MainViewModel.SortProjectFiles(files, "app", 1); // последнее присутствующее — наверх
+            Assert.Same(ma, files[0]);
+
+            MainViewModel.SortProjectFiles(files, "app", 2); // 2 % 2 = 0 — обратно к канону
+            Assert.Same(blend, files[0]);
+        }
+
+        [Fact]
+        public void App_Cycle_SkipsAbsentFamilies()
+        {
+            // maya/nuke файлов в папке нет: offset 1 ставит painter (последнее ПРИСУТСТВУЮЩЕЕ),
+            // offset 2 — houdini, а не прокручивает пустые maya/nuke
+            var blend = MakeFile("h7", "scene.blend");
+            var hip = MakeFile("h8", "fx.hip");
+            var spp = MakeFile("h9", "tex.spp");
+            var files = new List<string> { blend, hip, spp };
+
+            MainViewModel.SortProjectFiles(files, "app", 1);
+            Assert.Same(spp, files[0]);
+            Assert.Same(blend, files[1]);
+            Assert.Same(hip, files[2]);
+
+            MainViewModel.SortProjectFiles(files, "app", 2);
+            Assert.Same(hip, files[0]);
+        }
+
+        [Fact]
+        public void App_CycleOffset_EqualsCanonical_WhenModuloPresentCount()
+        {
+            var five = new List<string>
+            {
+                MakeFile("h3", "tex.spp"), MakeFile("h4", "comp.nk"), MakeFile("h5", "rig.ma"),
+                MakeFile("h6", "fx.hip"), MakeFile("h10", "scene.blend")
+            };
+            MainViewModel.SortProjectFiles(five, "app", 0);
+            var canonical = five.ToList();
+            MainViewModel.SortProjectFiles(five, "app", 5);
+            Assert.Equal(canonical, five);
+        }
+
+        [Fact]
+        public void App_OtherFamily_AlwaysLast_RegardlessOfOffset()
+        {
+            var unknown = MakeFile("i1", "readme.txt");
+            var spp = MakeFile("i2", "tex.spp");
+            var files = new List<string> { unknown, spp };
+
+            MainViewModel.SortProjectFiles(files, "app", 3); // painter наверх, «прочее» не участвует в цикле
+
+            Assert.Same(spp, files[0]);
+            Assert.Same(unknown, files[1]);
         }
     }
 }
