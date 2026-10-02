@@ -71,8 +71,11 @@ namespace FLOMASTER.Services
                 return 2;
             }
 
-            var ocio = config.OcioConfigs.FirstOrDefault(o => o.Name == profile.OcioName)
-                       ?? config.OcioConfigs.FirstOrDefault(o => o.Name == config.DefaultOcio);
+            // «NO OCIO» — псевдо-конфиг без OCIO: в config.OcioConfigs его нет, резолвим явно
+            var ocio = profile.OcioName == ConfigManager.NoOcioName
+                ? new OcioConfig { Name = ConfigManager.NoOcioName, IsNoOcio = true }
+                : config.OcioConfigs.FirstOrDefault(o => o.Name == profile.OcioName)
+                  ?? config.OcioConfigs.FirstOrDefault(o => o.Name == config.DefaultOcio);
             if (ocio == null && !string.IsNullOrEmpty(profile.OcioName))
                 Console.Error.WriteLine($"OCIO '{profile.OcioName}' not found, launching without OCIO.");
 

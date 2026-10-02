@@ -9,18 +9,21 @@ namespace FLOMASTER.Services
     /// <summary>
     /// Трей на уровне приложения: живёт независимо от того, какое окно показано
     /// (маленькое или дашборд). Show — поднять основной UI, Quit — единственный выход.
-    /// Меню: пресеты-лаунч, профили, Show, Quit; перестраивается на изменении коллекций.
+    /// Меню: пресеты-лаунч, профили, свап дашборд↔виджет, Show, Quit; перестраивается
+    /// на изменении коллекций и смене рульки хоткея (подпись пункта свапа).
     /// </summary>
     public class TrayService : IDisposable
     {
         private readonly MainViewModel _vm;
         private readonly Action _showUi;
+        private readonly Action? _switchLauncher;
         private readonly WinForms.NotifyIcon _icon;
 
-        public TrayService(MainViewModel vm, Action showUi)
+        public TrayService(MainViewModel vm, Action showUi, Action? switchLauncher = null)
         {
             _vm = vm;
             _showUi = showUi;
+            _switchLauncher = switchLauncher;
 
             _icon = new WinForms.NotifyIcon();
             try
@@ -38,6 +41,11 @@ namespace FLOMASTER.Services
             RebuildMenu();
             _vm.Presets.CollectionChanged += (_, _) => RebuildMenu();
             _vm.Profiles.CollectionChanged += (_, _) => RebuildMenu();
+            _vm.PropertyChanged += (_, e) =>
+            {
+                // подпись пункта свапа следует за рулькой хоткея
+                if (e.PropertyName == nameof(MainViewModel.HotkeyOpensDashboard)) RebuildMenu();
+            };
             _icon.DoubleClick += (_, _) => _showUi();
         }
 
@@ -88,6 +96,11 @@ namespace FLOMASTER.Services
             }
 
             menu.Items.Add(new WinForms.ToolStripSeparator());
+            if (_switchLauncher != null)
+            {
+                var switchItem = menu.Items.Add(_vm.HotkeyOpensDashboard ? "Switch to widget" : "Switch to dashboard");
+                switchItem.Click += (_, _) => _switchLauncher();
+            }
             var showItem = menu.Items.Add("Show FLOMASTER");
             showItem.Click += (_, _) => _showUi();
             var quitItem = menu.Items.Add("Quit");

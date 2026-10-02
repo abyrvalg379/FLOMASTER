@@ -43,6 +43,29 @@ namespace FLOMASTER
 
         // ---- Дашборд ----
 
+        /// <summary>
+        /// Свап дашборд ↔ виджет: целевое окно показываем первым, исходное гасим вторым
+        /// (дашборд закрывается штатно — память монитора и очистка треков; виджет прячется).
+        /// Рулька хоткея следует за экраном: HotkeyOpensDashboard переворачивается,
+        /// Ctrl+Alt+F всегда тогглит то, что сейчас открыто.
+        /// </summary>
+        public void SwitchLauncher()
+        {
+            bool toDashboard = !(_overlay is { IsVisible: true });
+            if (toDashboard)
+            {
+                ShowOverlay();
+                if (_window is { IsVisible: true }) _window.Hide();
+            }
+            else
+            {
+                ShowWindow();
+                _overlay?.Close();
+            }
+            _vm.HotkeyOpensDashboard = toDashboard;
+            Logger.Log("Ui", $"Switched to {(toDashboard ? "dashboard" : "widget")}", "info");
+        }
+
         /// <summary>Открыт и активен — закрыть; свёрнут — поднять; иначе — открыть/активировать.</summary>
         public void ToggleDashboard()
         {
@@ -80,7 +103,7 @@ namespace FLOMASTER
             if (!string.IsNullOrEmpty(saved))
                 preferred = WinForms.Screen.AllScreens.FirstOrDefault(s => s.DeviceName == saved);
 
-            var overlay = new OverlayWindow(_vm, _window, preferred);
+            var overlay = new OverlayWindow(_vm, _window, preferred, this);
             overlay.Topmost = _vm.OverlayTopmost;
             overlay.Closing += (_, _) =>
             {
@@ -95,7 +118,11 @@ namespace FLOMASTER
             _overlay = overlay;
             overlay.Show();
             overlay.Activate();
+            CheckSync();
         }
+
+        /// <summary>Открытие дашборда — повод перечитать папку синка (молча, если не задана).</summary>
+        private void CheckSync() => _vm.CheckSyncAsync();
 
         // ---- Маленькое окно ----
 
@@ -126,7 +153,7 @@ namespace FLOMASTER
         private MainWindow EnsureWindow()
         {
             if (_window != null) return _window;
-            _window = new MainWindow(_vm);
+            _window = new MainWindow(_vm, this);
             _window.Closed += (_, _) => _window = null;
             return _window;
         }

@@ -124,6 +124,49 @@ namespace FLOMASTER.Tests
         }
 
         [Fact]
+        public void ApplyOcio_NoOcioMode_RemovesInheritedEnvVar()
+        {
+            var psi = new ProcessStartInfo { FileName = @"C:\apps\blender.exe" };
+            psi.EnvironmentVariables["OCIO"] = @"E:\inherited\config.ocio"; // сам FLOMASTER запущен под OCIO
+            _svc.ApplyOcio(psi, new OcioConfig { Name = ConfigManager.NoOcioName, IsNoOcio = true }, @"C:\apps\blender.exe");
+            Assert.False(psi.EnvironmentVariables.ContainsKey("OCIO"));
+        }
+
+        [Fact]
+        public void ApplyOcio_NoOcioMode_UE_AddsNoArgAndNoEnv()
+        {
+            var psi = new ProcessStartInfo { FileName = @"E:\Unreal\UnrealEditor.exe", Arguments = "-log" };
+            _svc.ApplyOcio(psi, new OcioConfig { Name = ConfigManager.NoOcioName, IsNoOcio = true }, @"E:\Unreal\UnrealEditor.exe");
+            Assert.DoesNotContain("-ocio", psi.Arguments);
+            Assert.Contains("-log", psi.Arguments);
+            Assert.False(psi.EnvironmentVariables.ContainsKey("OCIO"));
+        }
+
+        [Fact]
+        public void ApplyOcio_NoOcioMode_IsNotBrokenConfig_WarnPathUntouched()
+        {
+            // у псевдо-записи Path пустой, но сломанным конфигом она не считается:
+            // ветка empty-path WARN не срабатывает, env var просто снимается (см. тест выше)
+            var psi = new ProcessStartInfo { FileName = @"C:\apps\blender.exe" };
+            var broken = new OcioConfig { Name = "ACES 1.2", Path = "" }; // сломанный: без флага
+            _svc.ApplyOcio(psi, broken, @"C:\apps\blender.exe");
+            Assert.False(psi.EnvironmentVariables.ContainsKey("OCIO")); // оба пути запускают без OCIO...
+            Assert.False(broken.IsNoOcio); // ...но флаг псевдо у сломанной записи не появился
+        }
+
+        [Fact]
+        public void AddOcioConfig_RejectsReservedNoOcioName()
+        {
+            var pathA = Path.Combine(_dir, "a.ocio"); File.WriteAllText(pathA, FullConfig);
+            var pathB = Path.Combine(_dir, "b.ocio"); File.WriteAllText(pathB, FullConfig);
+            var config = new Config();
+            config.OcioConfigs.Add(new() { Name = "ACES 1.2", Path = pathA });
+
+            Assert.False(_svc.AddOcioConfig(config, ConfigManager.NoOcioName, pathB));
+            Assert.DoesNotContain(config.OcioConfigs, o => o.Name == ConfigManager.NoOcioName);
+        }
+
+        [Fact]
         public void BuildVariant_RewritesRole_CanonicalUntouched_EolKept()
         {
             var baseCrlf = FullConfig.Replace("\n", "\r\n");

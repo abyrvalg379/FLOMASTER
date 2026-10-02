@@ -32,6 +32,16 @@ namespace FLOMASTER.Models
 
         /// <summary>Сортировка списка проектов: name (алфавит) | date (свежие сверху) | app (по софтам). Аддитивно.</summary>
         public string ProjectsSort { get; set; } = "name";
+
+        /// <summary>
+        /// Папка мультистанционного синка (наблюдаемая облаком/NAS). Машино-специфичная —
+        /// в SettingsExport не едет. Пустая — фича выключена молча.
+        /// </summary>
+        public string SyncFolder { get; set; } = "";
+
+        /// <summary>Обработанные файлы синка: имя файла → hash8 содержимого. Машино-локально,
+        /// не экспортируется: файл, чей hash совпал с записанным, повторно не предлагается.</summary>
+        public Dictionary<string, string> SyncSeen { get; set; } = new();
     }
 
     public class OcioConfig
@@ -44,6 +54,15 @@ namespace FLOMASTER.Models
         // сохранённый в launcher_config путь переживает установки/обновления
         // и законсервирует устаревшую копию (кейс второго ПК, 01.10).
         public bool IsCanon { get; set; }
+
+        /// <summary>
+        /// Псевдо-запись «запуск без OCIO» (дефолтный колор-менеджмент приложения).
+        /// Экземпляр инжектится VM в начало списка и НИКОГДА не попадает в
+        /// launcher_config. Отличать осознанный «без OCIO» от сломанного конфига
+        /// (пустой Path): иначе WARN «reinstall from zip» прилетит каждому,
+        /// кто выбрал дефолт. Имя резервируется (ConfigManager.NoOcioName).
+        /// </summary>
+        public bool IsNoOcio { get; set; }
     }
 
     public class Preset
@@ -90,6 +109,7 @@ namespace FLOMASTER.Models
     public class SettingsExport
     {
         public string App { get; set; } = "FLOMASTER";
+        public string MachineName { get; set; } = "";
         public string ExportedAt { get; set; } = "";
         public string Theme { get; set; } = "";
         public bool AnimationEnabled { get; set; } = true;

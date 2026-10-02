@@ -60,6 +60,8 @@ namespace FLOMASTER.ViewModels
         public ICommand QuickCommandCommand { get; private set; }
         public ICommand ResetRolesCommand { get; private set; }
         public ICommand UpdateCommand { get; private set; }
+        public ICommand ToggleNotesCommand { get; private set; }
+        public ICommand OpenFullNotesCommand { get; private set; }
         public ICommand ClearRecentCommand { get; private set; }
         public ICommand SaveProfileCommand { get; private set; }
         public ICommand ApplyProfileCommand { get; private set; }
@@ -69,6 +71,8 @@ namespace FLOMASTER.ViewModels
         public ICommand OpenProjectCommand { get; private set; }
         public ICommand ExportSettingsCommand { get; private set; }
         public ICommand ImportSettingsCommand { get; private set; }
+        public ICommand SetSyncFolderCommand { get; private set; }
+        public ICommand SyncImportCommand { get; private set; }
 
         private readonly IConfigStore _store;
         private readonly IOcioService _ocio;
@@ -94,6 +98,20 @@ namespace FLOMASTER.ViewModels
             RefreshProfiles();
             RefreshProjectRoots();
 
+            // папка-синк: любое изменение экспортируемого состояния — отложенный пуш
+            Profiles.CollectionChanged += (_, _) => ScheduleSyncPush();
+            ProjectRoots.CollectionChanged += (_, _) => ScheduleSyncPush();
+            PropertyChanged += (_, e) =>
+            {
+                if (e.PropertyName is nameof(SelectedTheme) or nameof(AnimationEnabled) or nameof(TopMostEnabled)
+                    or nameof(CheckUpdatesEnabled) or nameof(HotkeyEnabled))
+                    ScheduleSyncPush();
+            };
+            _syncPushTimer.Tick += (_, _) => { _syncPushTimer.Stop(); if (_syncDirty) PushSyncNow(); };
+
+            // стартовый пуш своего файла + скан чужих (папка не задана — молча)
+            CheckSyncAsync();
+
             // Init themes
             foreach (var key in ThemeManager.ThemeOrder)
                 Themes.Add(ThemeManager.Themes[key].Name);
@@ -102,7 +120,7 @@ namespace FLOMASTER.ViewModels
             LaunchCommand = new RelayCommand(_ => LaunchSelectedApp());
             AddPresetCommand = new RelayCommand(_ => AddPreset());
             AddOcioCommand = new RelayCommand(_ => AddOcioConfig());
-            RemoveOcioCommand = new RelayCommand(_ => RemoveOcioConfig(), _ => OcioConfigs.Count > 1);
+            RemoveOcioCommand = new RelayCommand(_ => RemoveOcioConfig(), _ => OcioConfigs.Count > 1 && SelectedOcio?.IsNoOcio != true);
             ClearArgsCommand = new RelayCommand(_ => ArgsText = "");
             AddScanPathCommand = new RelayCommand(_ => AddScanPath());
             RescanCommand = new RelayCommand(_ => RescanApps());
@@ -113,6 +131,8 @@ namespace FLOMASTER.ViewModels
             QuickCommandCommand = new RelayCommand<string>(cmd => AddQuickCommand(cmd));
             ResetRolesCommand = new RelayCommand(_ => ResetRoleOverrides(), _ => SelectedPreset?.RoleOverrides is { Count: > 0 });
             UpdateCommand = new RelayCommand(_ => ApplyUpdate(), _ => UpdateReady);
+            ToggleNotesCommand = new RelayCommand(_ => UpdateNotesVisible = !UpdateNotesVisible, _ => HasUpdateNotes);
+            OpenFullNotesCommand = new RelayCommand(_ => OpenFullNotes(), _ => UpdateHtmlUrl != null);
             ClearRecentCommand = new RelayCommand(_ => ClearRecentFiles());
             SaveProfileCommand = new RelayCommand(_ => SaveProfile());
             ApplyProfileCommand = new RelayCommand<Profile>(p => ApplyProfile(p));
@@ -122,6 +142,8 @@ namespace FLOMASTER.ViewModels
             OpenProjectCommand = new RelayCommand<string>(p => { if (p != null) OpenProjectFile(p); });
             ExportSettingsCommand = new RelayCommand(_ => ExportSettings());
             ImportSettingsCommand = new RelayCommand(_ => ImportSettings());
+            SetSyncFolderCommand = new RelayCommand(_ => SetSyncFolder());
+            SyncImportCommand = new RelayCommand(_ => ImportSyncedSettings(), _ => SyncPendingVisible);
 
             // Init state
             _selectedTheme = ThemeManager.GetTheme(_config.Theme).Name;
@@ -129,8 +151,8 @@ namespace FLOMASTER.ViewModels
             _animationEnabled = _config.AnimationEnabled;
             _autoStartEnabled = IsAutoStartEnabled();
 
-            if (OcioConfigs.Count > 0)
-                _selectedOcio = OcioConfigs.FirstOrDefault();
+            // выбор OCIO уже сделан в RefreshOcioConfigs (дефолт из конфига);
+            // перебивать поле первым элементом нельзя — первым стоит псевдо-конфиг NO OCIO
             if (Presets.Count > 0)
                 SelectedPreset = Presets.FirstOrDefault();
 
@@ -142,7 +164,22 @@ namespace FLOMASTER.ViewModels
         public string StatusText { get => _statusText; set => SetProperty(ref _statusText, value); }
         public string ArgsText { get => _argsText; set => SetProperty(ref _argsText, value); }
         public Preset SelectedPreset { get => _selectedPreset; set { if (SetProperty(ref _selectedPreset, value)) { RefreshQuickCommands(); RebuildRoleRows(); } } }
-        public OcioConfig SelectedOcio { get => _selectedOcio; set { if (SetProperty(ref _selectedOcio, value)) { UpdateOcioRoles(); RebuildRoleRows(); } } }
+        public OcioConfig SelectedOcio
+        {
+            get => _selectedOcio;
+            set
+            {
+                if (SetProperty(ref _selectedOcio, value))
+                {
+                    UpdateOcioRoles();
+                    RebuildRoleRows();
+                    OnPropertyChanged(nameof(NoOcioActive));
+                }
+            }
+        }
+
+        /// <summary>Выбран псевдо-конфиг NO OCIO: дашборд прячет роли и показывает «application defaults».</summary>
+        public bool NoOcioActive => SelectedOcio?.IsNoOcio == true;
 
         // Валидация выбранного OCIO: ключевые роли + предупреждения (строка для UI)
         public string OcioWarningsText { get => _ocioWarningsText; set => SetProperty(ref _ocioWarningsText, value); }
@@ -216,6 +253,12 @@ namespace FLOMASTER.ViewModels
         private string? _updateTag;
         private string? _updateUrl;
         private string? _updatePath;
+        private string? _updateHtmlUrl;
+        private string _updateNotes = "";
+        private bool _updateActive;
+        private double _updateProgress;
+        private bool _updateProgressIndeterminate;
+        private bool _updateNotesVisible;
 
         /// <summary>Проверять обновления при старте (отключается в Settings).</summary>
         public bool CheckUpdatesEnabled
@@ -245,6 +288,52 @@ namespace FLOMASTER.ViewModels
             set => SetProperty(ref _updateReady, value);
         }
 
+        /// <summary>Обновление обнаружено (баннер виден с момента обнаружения, не только на «ready»).</summary>
+        public bool UpdateActive
+        {
+            get => _updateActive;
+            private set => SetProperty(ref _updateActive, value);
+        }
+
+        /// <summary>Прогресс скачивания 0..1 (total неизвестен — бар в indeterminate).</summary>
+        public double UpdateProgress
+        {
+            get => _updateProgress;
+            private set => SetProperty(ref _updateProgress, value);
+        }
+
+        public bool UpdateProgressIndeterminate
+        {
+            get => _updateProgressIndeterminate;
+            private set => SetProperty(ref _updateProgressIndeterminate, value);
+        }
+
+        /// <summary>Заметки релиза (body из GitHub API, почищенные от markdown-разметки).</summary>
+        public string UpdateNotes
+        {
+            get => _updateNotes;
+            private set { SetProperty(ref _updateNotes, value); OnPropertyChanged(nameof(HasUpdateNotes)); }
+        }
+
+        public bool HasUpdateNotes => !string.IsNullOrEmpty(UpdateNotes);
+
+        /// <summary>Страница релиза на GitHub (линк «Full notes»), null — не прятать кнопку нельзя.</summary>
+        public string? UpdateHtmlUrl
+        {
+            get => _updateHtmlUrl;
+            private set => SetProperty(ref _updateHtmlUrl, value);
+        }
+
+        /// <summary>Раскрытые заметки «What's new» (панель в дашборде / инлайн в малом окне).</summary>
+        public bool UpdateNotesVisible
+        {
+            get => _updateNotesVisible;
+            private set => SetProperty(ref _updateNotesVisible, value);
+        }
+
+        /// <summary>Закрыть заметки извне (Esc, открытие другой шторки — взаимное исключение).</summary>
+        public void CloseUpdateNotes() => UpdateNotesVisible = false;
+
         private async void StartUpdateCheck()
         {
             if (_checkingUpdates || !_config.CheckUpdates) return;
@@ -252,20 +341,37 @@ namespace FLOMASTER.ViewModels
             try
             {
                 await Task.Delay(3000); // даём окну спокойно стартовать
-                var (tag, url, isZip) = await UpdateService.CheckAsync();
+                var (tag, url, isZip, notes, htmlUrl) = await UpdateService.CheckAsync();
                 if (tag == null || url == null) { Logger.Log("Update", "Up to date", "info"); return; }
 
                 _updateTag = tag;
                 _updateUrl = url;
                 _updatePath = Path.Combine(Path.GetTempPath(), isZip ? "FLOMASTER_update.zip" : "FLOMASTER_update.exe");
+                UpdateHtmlUrl = htmlUrl;
+                UpdateNotes = UpdateService.CleanupNotes(notes);
+                UpdateProgress = 0;
+                UpdateProgressIndeterminate = false;
+                UpdateActive = true; // баннер сразу: видно, что качается, и есть что почитать
                 UpdateInfoText = $"Update {tag}: downloading...";
                 Logger.Log("Update", $"Downloading {tag}...", "info"); // прогресс и в лог: раньше скачивание молчало
 
                 await UpdateService.DownloadAsync(url, _updatePath,
-                    (done, total) => UpdateInfoText = total > 0
-                        ? $"Update {tag}: {done * 100 / total}%"
-                        : $"Update {tag}: downloading...");
+                    (done, total) =>
+                    {
+                        UpdateProgressIndeterminate = total <= 0;
+                        if (total > 0)
+                        {
+                            UpdateProgress = Math.Min(1.0, (double)done / total);
+                            UpdateInfoText = $"Update {tag}: {done * 100 / total}%";
+                        }
+                        else
+                        {
+                            UpdateInfoText = $"Update {tag}: downloading... {done / 1048576} MB";
+                        }
+                    });
 
+                UpdateProgress = 1.0;
+                UpdateProgressIndeterminate = false;
                 UpdateInfoText = $"Update {tag} ready — restart to install";
                 UpdateReady = true;
                 StatusText = $"Update {tag} ready";
@@ -278,6 +384,21 @@ namespace FLOMASTER.ViewModels
             finally
             {
                 _checkingUpdates = false;
+            }
+        }
+
+        private void OpenFullNotes()
+        {
+            if (string.IsNullOrEmpty(_updateHtmlUrl)) return;
+            try
+            {
+                Process.Start(new ProcessStartInfo(_updateHtmlUrl) { UseShellExecute = true });
+                Logger.Log("Update", $"Opened release page: {_updateHtmlUrl}", "info");
+            }
+            catch (Exception ex)
+            {
+                StatusText = $"Cannot open browser: {ex.Message}";
+                Logger.Log("Update", $"Open release page failed: {ex.Message}", "warn");
             }
         }
 
@@ -416,9 +537,10 @@ namespace FLOMASTER.ViewModels
             }
         }
 
-        /// <summary>Подсказка, когда у выбранного конфига нет файла: DCC уйдёт без OCIO молча (реальный кейс).</summary>
+        /// <summary>Подсказка, когда у выбранного конфига нет файла: DCC уйдёт без OCIO молча (реальный кейс).
+        /// Псевдо-конфиг NO OCIO — осознанный запуск без колор-менеджмента, это НЕ сломанная установка.</summary>
         private string OcioMissingHint() =>
-            SelectedOcio != null && string.IsNullOrEmpty(SelectedOcio.Path)
+            SelectedOcio != null && !SelectedOcio.IsNoOcio && string.IsNullOrEmpty(SelectedOcio.Path)
                 ? $"OCIO '{SelectedOcio.Name}' has no config file (ocio\\ folder missing next to FLOMASTER.exe) — app runs WITHOUT color management, reinstall from the full zip"
                 : "";
 
@@ -518,7 +640,7 @@ namespace FLOMASTER.ViewModels
 
         private void RemoveOcioConfig()
         {
-            if (SelectedOcio == null || OcioConfigs.Count <= 1) return;
+            if (SelectedOcio == null || SelectedOcio.IsNoOcio || OcioConfigs.Count <= 1) return;
             var result = MessageBox.Show($"Remove \"{SelectedOcio.Name}\"?", "FLOMASTER", MessageBoxButton.YesNo, MessageBoxImage.Question);
             if (result != MessageBoxResult.Yes) return;
             if (_ocio.RemoveOcioConfig(_config, SelectedOcio))
@@ -716,12 +838,23 @@ namespace FLOMASTER.ViewModels
             foreach (var p in _config.Presets) Presets.Add(p);
         }
 
+        /// <summary>Псевдо-конфиг «NO OCIO»: живёт только в VM-коллекции, в launcher_config не пишется.</summary>
+        private static OcioConfig CreateNoOcioConfig() => new()
+        {
+            Name = ConfigManager.NoOcioName,
+            Path = "",
+            IsNoOcio = true
+        };
+
         private void RefreshOcioConfigs()
         {
             OcioConfigs.Clear();
+            OcioConfigs.Add(CreateNoOcioConfig());
             foreach (var o in _config.OcioConfigs) OcioConfigs.Add(o);
-            if (OcioConfigs.Count > 0)
-                SelectedOcio = OcioConfigs.FirstOrDefault(o => o.Name == _config.DefaultOcio) ?? OcioConfigs[0];
+            // дефолт из конфига; записи нет — первый РЕАЛЬНЫЙ конфиг; конфигов нет вовсе — NO OCIO
+            SelectedOcio = OcioConfigs.FirstOrDefault(o => o.Name == _config.DefaultOcio)
+                           ?? _config.OcioConfigs.FirstOrDefault()
+                           ?? OcioConfigs[0];
             var hint = OcioMissingHint();
             if (hint != "") StatusText = hint; // видно сразу при старте, не только после запуска
         }
@@ -901,6 +1034,7 @@ namespace FLOMASTER.ViewModels
         {
             ProjectRoots.Clear();
             foreach (var r in _config.ProjectRoots) ProjectRoots.Add(r);
+            _walkKey = null; // состав корней менялся — кэш обхода невалиден
             // держим выбор корня валидным; смена триггерит RebuildBrowserFiles
             if (SelectedBrowserRoot == null || !ProjectRoots.Contains(SelectedBrowserRoot))
                 SelectedBrowserRoot = ProjectRoots.FirstOrDefault();
@@ -908,17 +1042,40 @@ namespace FLOMASTER.ViewModels
 
         public List<string> GetProjectFiles(string root)
         {
-            var acc = new List<string>();
-            if (string.IsNullOrEmpty(root) || !Directory.Exists(root)) return acc;
-            CollectProjectFiles(root, "", acc, 0);
-            SortProjectFiles(acc, _config.ProjectsSort);
+            var acc = CollectProjectFilesCached(root, "");
+            SortProjectFiles(acc, _config.ProjectsSort, _appSortOffset);
             return acc;
+        }
+
+        // ---- Кэш обхода дерева проектов. Чипы сортировки кликаются часто, а полный
+// обход папки на UI-потоке — фриз («что-то просчитывается»), до двух раз на клик.
+// Инвалидация: смена корня/поиска (ключ), правка списка корней, TTL 20 с
+// (файл, сохранённый в DCC, появится не позже чем через 20 с). ----
+        private string? _walkKey;
+        private DateTime _walkTime = DateTime.MinValue;
+        private List<string> _walkCache = new();
+
+        private List<string> CollectProjectFilesCached(string root, string search)
+        {
+            var key = root + "\x1" + search;
+            if (_walkKey != key || (DateTime.UtcNow - _walkTime).TotalSeconds >= 20)
+            {
+                var acc = new List<string>();
+                if (!string.IsNullOrEmpty(root) && Directory.Exists(root))
+                    CollectProjectFiles(root, search, acc, 0);
+                _walkKey = key;
+                _walkCache = acc;
+                _walkTime = DateTime.UtcNow;
+            }
+            return new List<string>(_walkCache);
         }
 
         /// <summary>Сортировка списка проектов: name — по имени файла (не по полному пути:
         /// путь ставил порядок папок выше имён — «идут чёрт знает как»), date — свежие сверху,
-        /// app — группы по семейству DCC (blender/maya/houdini/nuke/painter, прочее в конец).</summary>
-        public static void SortProjectFiles(List<string> files, string mode)
+        /// app — группы по семейству DCC (blender/maya/houdini/nuke/painter, прочее в конец).
+        /// appOffset — циклическая ротация семейств вправо (повторный клик по Apps):
+        /// offset 1 ставит painter наверх, 2 — nuke, и т.д.; «прочее» в цикле не участвует.</summary>
+        public static void SortProjectFiles(List<string> files, string mode, int appOffset = 0)
         {
             switch (mode)
             {
@@ -932,14 +1089,23 @@ namespace FLOMASTER.ViewModels
                     });
                     break;
                 case "app":
+                {
+                    // цикл только по семействам, ПРЕДСТАВЛЕННЫМ в списке: иначе клики
+                    // вращали пустые места и порядок менялся «через раз»
+                    var ranks = BuildAppRanks(files, appOffset);
+                    int Rank(string f) =>
+                        ExtToAppFamily.TryGetValue(Path.GetExtension(f).ToLowerInvariant(), out var fam)
+                            ? ranks[fam]
+                            : ranks["other"];
                     files.Sort((a, b) =>
                     {
-                        int c = FamilyOrder(a).CompareTo(FamilyOrder(b));
+                        int c = Rank(a).CompareTo(Rank(b));
                         if (c != 0) return c;
                         c = string.Compare(Path.GetFileName(a), Path.GetFileName(b), StringComparison.OrdinalIgnoreCase);
                         return c != 0 ? c : string.Compare(a, b, StringComparison.OrdinalIgnoreCase);
                     });
                     break;
+                }
                 default: // name
                     files.Sort((a, b) =>
                     {
@@ -955,18 +1121,43 @@ namespace FLOMASTER.ViewModels
             try { return File.GetLastWriteTimeUtc(file); } catch { return DateTime.MinValue; }
         }
 
-        private static int FamilyOrder(string file)
+        /// <summary>Ранги семейств для APP-сортировки. В цикле участвуют только семейства,
+        /// представленные в списке (в каноническом порядке blender→maya→houdini→nuke→painter):
+        /// папка с двумя семействами переворачивается КАЖДЫМ кликом, а не 1-м и 5-м.
+        /// Цикл вправо: offset 1 ставит последнее присутствующее семейство наверху.
+        /// «Прочее» всегда в конце, в цикле не участвует.</summary>
+        private static Dictionary<string, int> BuildAppRanks(List<string> files, int appOffset)
         {
-            var fam = ExtToAppFamily.TryGetValue(Path.GetExtension(file).ToLowerInvariant(), out var f) ? f : "other";
-            return fam switch
-            {
-                "blender" => 0,
-                "maya" => 1,
-                "houdini" => 2,
-                "nuke" => 3,
-                "painter" => 4,
-                _ => 5
-            };
+            var canonical = new[] { "blender", "maya", "houdini", "nuke", "painter" };
+            var present = new HashSet<string>();
+            foreach (var f in files)
+                if (ExtToAppFamily.TryGetValue(Path.GetExtension(f).ToLowerInvariant(), out var fam))
+                    present.Add(fam);
+
+            var ordered = new List<string>();
+            foreach (var fam in canonical)
+                if (present.Contains(fam)) ordered.Add(fam);
+
+            var ranks = new Dictionary<string, int>();
+            // цикл вправо: смещение растёт вместе с каноническим индексом —
+            // offset 1 ставит последнее присутствующее семейство (painter) на позицию 0
+            for (int i = 0; i < ordered.Count; i++)
+                ranks[ordered[i]] = (i + appOffset) % ordered.Count;
+            ranks["other"] = int.MaxValue;
+            return ranks;
+        }
+
+        /// <summary>Смещение цикла APP-сортировки. Сессионное (в конфиг не пишется):
+        /// фича про «поставить нужное наверх в моменте», рестарт возвращает канон.</summary>
+        private int _appSortOffset;
+
+        /// <summary>Повторный клик по активному Apps: цикл семейств вправо —
+        /// painter → nuke → houdini → maya → blender; нужная группа наверху в момент.</summary>
+        public void CycleAppSort()
+        {
+            _appSortOffset = (_appSortOffset + 1) % 5;
+            RebuildBrowserFiles();
+            Logger.Log("Projects", $"App sort cycle: {_appSortOffset}/5", "info");
         }
 
         /// <summary>Режим сортировки проектов в дашборде; персистится в конфиге.</summary>
@@ -978,6 +1169,7 @@ namespace FLOMASTER.ViewModels
                 var v = value == "date" || value == "app" ? value : "name";
                 if (v == _config.ProjectsSort) return;
                 _config.ProjectsSort = v;
+                if (v == "app") _appSortOffset = 0; // каждое включение Apps — с канонического порядка
                 _store.Save(_config);
                 OnPropertyChanged();
                 RebuildBrowserFiles();
@@ -991,11 +1183,10 @@ namespace FLOMASTER.ViewModels
             var root = SelectedBrowserRoot;
             if (string.IsNullOrEmpty(root) || !Directory.Exists(root)) return;
 
-            var acc = new List<string>();
-            CollectProjectFiles(root, _browserSearchText?.Trim() ?? "", acc, 0);
+            var acc = CollectProjectFilesCached(root, _browserSearchText?.Trim() ?? "");
             // distinct по пути: junctions/reparse в дереве двоят файлы
             acc = acc.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
-            SortProjectFiles(acc, _config.ProjectsSort);
+            SortProjectFiles(acc, _config.ProjectsSort, _appSortOffset);
             foreach (var f in acc)
             {
                 string rel;
@@ -1049,27 +1240,9 @@ namespace FLOMASTER.ViewModels
                 };
                 if (dialog.ShowDialog() != true) return;
 
-                var export = new SettingsExport
-                {
-                    ExportedAt = DateTime.Now.ToString("s"),
-                    Theme = SelectedTheme,
-                    AnimationEnabled = AnimationEnabled,
-                    TopMostEnabled = TopMostEnabled,
-                    CheckUpdates = CheckUpdatesEnabled,
-                    Profiles = _config.Profiles.Select(p => new Profile
-                    {
-                        Name = p.Name, PresetName = p.PresetName, OcioName = p.OcioName, Args = p.Args
-                    }).ToList(),
-                    ProjectRoots = _config.ProjectRoots.ToList()
-                };
-                File.WriteAllText(dialog.FileName,
-                    System.Text.Json.JsonSerializer.Serialize(export, new System.Text.Json.JsonSerializerOptions
-                    {
-                        WriteIndented = true,
-                        PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase
-                    }));
+                File.WriteAllText(dialog.FileName, SyncService.BuildPayload(BuildSyncExport()));
                 StatusText = $"Settings exported: {Path.GetFileName(dialog.FileName)}";
-                Logger.Log("Sync", $"Exported {export.Profiles.Count} profiles, {export.ProjectRoots.Count} roots -> {dialog.FileName}", "info");
+                Logger.Log("Sync", $"Exported {_config.Profiles.Count} profiles, {_config.ProjectRoots.Count} roots -> {dialog.FileName}", "info");
             }
             catch (Exception ex)
             {
@@ -1089,59 +1262,211 @@ namespace FLOMASTER.ViewModels
                 };
                 if (dialog.ShowDialog() != true) return;
 
-                var json = File.ReadAllText(dialog.FileName);
-                var export = System.Text.Json.JsonSerializer.Deserialize<SettingsExport>(json,
-                    new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                var export = SyncService.Parse(File.ReadAllText(dialog.FileName));
                 if (export == null) { StatusText = "Import: file is not a FLOMASTER setup"; return; }
 
-                int overwritten = 0, added = 0;
-                foreach (var p in export.Profiles ?? new List<Profile>())
-                {
-                    var existing = _config.Profiles.FirstOrDefault(x => x.Name == p.Name);
-                    if (existing != null)
-                    {
-                        existing.PresetName = p.PresetName;
-                        existing.OcioName = p.OcioName;
-                        existing.Args = p.Args;
-                        overwritten++;
-                    }
-                    else
-                    {
-                        _config.Profiles.Add(new Profile
-                        {
-                            Name = p.Name, PresetName = p.PresetName, OcioName = p.OcioName, Args = p.Args
-                        });
-                        added++;
-                    }
-                }
-
-                int rootsAdded = 0;
-                foreach (var root in export.ProjectRoots ?? new List<string>())
-                    if (!_config.ProjectRoots.Contains(root))
-                    {
-                        _config.ProjectRoots.Add(root);
-                        rootsAdded++;
-                    }
-
-                _store.Save(_config);
-                RefreshProfiles();
-                RefreshProjectRoots();
-
-                if (!string.IsNullOrEmpty(export.Theme) && Themes.Contains(export.Theme))
-                    SelectedTheme = export.Theme;
-                AnimationEnabled = export.AnimationEnabled;
-                TopMostEnabled = export.TopMostEnabled;
-                CheckUpdatesEnabled = export.CheckUpdates;
-                _store.Save(_config);
-
-                StatusText = $"Imported: {added} new, {overwritten} updated profiles, {rootsAdded} roots";
-                Logger.Log("Sync", $"Imported: +{added}/~{overwritten} profiles, +{rootsAdded} roots, theme {export.Theme}", "info");
+                var (added, updated, rootsAdded) = ApplySyncedSettings(export);
+                StatusText = $"Imported: {added} new, {updated} updated profiles, {rootsAdded} roots";
+                Logger.Log("Sync", $"Imported: +{added}/~{updated} profiles, +{rootsAdded} roots, theme {export.Theme}", "info");
+                ScheduleSyncPush(); // состояние изменилось — пусть уедет и в папку-синк
             }
             catch (Exception ex)
             {
                 StatusText = $"Import error: {ex.Message}";
                 Logger.Log("Sync", $"Import failed: {ex.Message}", "error");
             }
+        }
+
+        // ============ ПАПКА-СИНК v2: свой файл пишем сам, чужие предлагаем к импорту ============
+
+        private bool _syncDirty;
+        private bool _syncWarned; // спам-гвард: одна WARN на полосу недоступности папки
+        private readonly List<SyncCandidate> _syncPending = new();
+        private bool _syncPendingVisible;
+        private string _syncPendingText = "";
+        private readonly System.Windows.Threading.DispatcherTimer _syncPushTimer = new() { Interval = TimeSpan.FromSeconds(3) };
+
+        /// <summary>Есть необработанные чужие файлы синка — чип импорта в MAINTENANCE.</summary>
+        public bool SyncPendingVisible { get => _syncPendingVisible; private set => SetProperty(ref _syncPendingVisible, value); }
+        public string SyncPendingText { get => _syncPendingText; private set => SetProperty(ref _syncPendingText, value); }
+
+        /// <summary>Экспортируемый слепок — общий источник для ручного Export и пуша в папку-синк.</summary>
+        private SettingsExport BuildSyncExport() => new()
+        {
+            App = "FLOMASTER",
+            MachineName = Environment.MachineName,
+            ExportedAt = DateTime.Now.ToString("s"),
+            Theme = SelectedTheme,
+            AnimationEnabled = AnimationEnabled,
+            TopMostEnabled = TopMostEnabled,
+            CheckUpdates = CheckUpdatesEnabled,
+            HotkeyEnabled = HotkeyEnabled,
+            Profiles = _config.Profiles.Select(p => new Profile
+            {
+                Name = p.Name, PresetName = p.PresetName, OcioName = p.OcioName, Args = p.Args
+            }).ToList(),
+            ProjectRoots = _config.ProjectRoots.ToList()
+        };
+
+        /// <summary>Мержит SettingsExport в текущее состояние: профили merge по имени, корни union, тема/галки.
+        /// Общий путь ручного Import и импорта из папки-синка.</summary>
+        private (int added, int updated, int rootsAdded) ApplySyncedSettings(SettingsExport export)
+        {
+            int overwritten = 0, added = 0;
+            foreach (var p in export.Profiles ?? new List<Profile>())
+            {
+                var existing = _config.Profiles.FirstOrDefault(x => x.Name == p.Name);
+                if (existing != null)
+                {
+                    existing.PresetName = p.PresetName;
+                    existing.OcioName = p.OcioName;
+                    existing.Args = p.Args;
+                    overwritten++;
+                }
+                else
+                {
+                    _config.Profiles.Add(new Profile
+                    {
+                        Name = p.Name, PresetName = p.PresetName, OcioName = p.OcioName, Args = p.Args
+                    });
+                    added++;
+                }
+            }
+
+            int rootsAdded = 0;
+            foreach (var root in export.ProjectRoots ?? new List<string>())
+                if (!_config.ProjectRoots.Contains(root))
+                {
+                    _config.ProjectRoots.Add(root);
+                    rootsAdded++;
+                }
+
+            _store.Save(_config);
+            RefreshProfiles();
+            RefreshProjectRoots();
+
+            if (!string.IsNullOrEmpty(export.Theme) && Themes.Contains(export.Theme))
+                SelectedTheme = export.Theme;
+            AnimationEnabled = export.AnimationEnabled;
+            TopMostEnabled = export.TopMostEnabled;
+            CheckUpdatesEnabled = export.CheckUpdates;
+            HotkeyEnabled = export.HotkeyEnabled;
+            _store.Save(_config);
+            return (added, overwritten, rootsAdded);
+        }
+
+        /// <summary>Папка задана → отложенный пуш (3 с после последнего изменения, без дёрганья облака).</summary>
+        private void ScheduleSyncPush()
+        {
+            if (string.IsNullOrEmpty(_config.SyncFolder)) return;
+            _syncDirty = true;
+            _syncPushTimer.Stop();
+            _syncPushTimer.Start();
+        }
+
+        private void PushSyncNow()
+        {
+            _syncDirty = false;
+            if (string.IsNullOrEmpty(_config.SyncFolder)) return;
+            try
+            {
+                SyncService.Push(_config.SyncFolder, SyncService.BuildPayload(BuildSyncExport()));
+                _syncWarned = false;
+            }
+            catch (Exception ex)
+            {
+                if (!_syncWarned)
+                {
+                    _syncWarned = true;
+                    Logger.Log("Sync", $"Push failed, will retry on next change: {ex.Message}", "warn");
+                    StatusText = "Sync: folder unavailable";
+                }
+            }
+        }
+
+        /// <summary>Чек папки синка: пуш своего + скан чужих. Старт и открытие дашборда; папка не задана — молча.</summary>
+        public async void CheckSyncAsync()
+        {
+            if (string.IsNullOrEmpty(_config.SyncFolder)) return;
+            try
+            {
+                var payload = SyncService.BuildPayload(BuildSyncExport());
+                var folder = _config.SyncFolder;
+                var candidates = await System.Threading.Tasks.Task.Run(() =>
+                {
+                    SyncService.Push(folder, payload);
+                    return SyncService.Scan(folder, SyncService.OwnFileName(), _config.SyncSeen);
+                });
+                _syncWarned = false;
+                SetSyncPending(candidates);
+            }
+            catch (Exception ex)
+            {
+                if (!_syncWarned)
+                {
+                    _syncWarned = true;
+                    Logger.Log("Sync", $"Check failed: {ex.Message}", "warn");
+                }
+            }
+        }
+
+        private void SetSyncPending(List<SyncCandidate> candidates)
+        {
+            _syncPending.Clear();
+            _syncPending.AddRange(candidates);
+            SyncPendingVisible = _syncPending.Count > 0;
+            if (_syncPending.Count == 0) { SyncPendingText = ""; return; }
+
+            var sources = _syncPending.Select(c => c.Label).Distinct().ToList();
+            SyncPendingText = sources.Count == 1
+                ? $"Sync: {_syncPending.Count} file(s) from {sources[0]}"
+                : $"Sync: {_syncPending.Count} file(s), {sources.Count} machines";
+            Logger.Log("Sync", $"Pending sync imports: {string.Join(", ", _syncPending.Select(c => c.FileName))}", "info");
+        }
+
+        /// <summary>Импортирует всё накопленное из папки-синка (клик по чипу в MAINTENANCE).</summary>
+        private void ImportSyncedSettings()
+        {
+            if (_syncPending.Count == 0) return;
+            var labels = string.Join(", ", _syncPending.Select(c => c.Label).Distinct());
+            try
+            {
+                int added = 0, updated = 0, roots = 0;
+                foreach (var candidate in _syncPending)
+                {
+                    var export = SyncService.Parse(File.ReadAllText(candidate.Path));
+                    if (export == null) continue;
+                    var r = ApplySyncedSettings(export);
+                    added += r.added; updated += r.updated; roots += r.rootsAdded;
+                    _config.SyncSeen[candidate.FileName] = candidate.Hash;
+                }
+                _store.Save(_config);
+                _syncPending.Clear();
+                SyncPendingVisible = false;
+                SyncPendingText = "";
+                StatusText = $"Sync imported: +{added}/~{updated} profiles, +{roots} roots ({labels})";
+                Logger.Log("Sync", $"Sync import done ({labels}): +{added}/~{updated} profiles, +{roots} roots", "info");
+                PushSyncNow(); // своё состояние изменилось — перезаписать свой файл в папке
+            }
+            catch (Exception ex)
+            {
+                StatusText = $"Sync import error: {ex.Message}";
+                Logger.Log("Sync", $"Sync import failed: {ex.Message}", "error");
+            }
+        }
+
+        private void SetSyncFolder()
+        {
+            var dialog = new System.Windows.Forms.FolderBrowserDialog
+            {
+                Description = "Select a folder synchronized between your machines (Dropbox, OneDrive, NAS). Profiles, project roots and theme travel through it automatically."
+            };
+            if (dialog.ShowDialog() != System.Windows.Forms.DialogResult.OK) return;
+            _config.SyncFolder = dialog.SelectedPath;
+            _store.Save(_config);
+            StatusText = $"Sync folder set: {Path.GetFileName(dialog.SelectedPath)}";
+            Logger.Log("Sync", $"Sync folder set: {dialog.SelectedPath}", "info");
+            CheckSyncAsync();
         }
 
         private void AddProjectRoot()

@@ -54,10 +54,14 @@ namespace FLOMASTER
             public string Name { get; set; } = "";
             public string Path { get; set; } = "";
             public bool IsSelected { get; set; }
+
+            /// <summary>Тултип чипа (null = без тултипа). Заполняет построитель чипов.</summary>
+            public string? Hint { get; set; }
         }
 
         private readonly MainViewModel _vm;
         private readonly Window? _owner;
+        private readonly UiController? _ui;
         private readonly System.Windows.Forms.Screen? _preferredScreen;
         private System.Windows.Forms.Screen _screen = System.Windows.Forms.Screen.PrimaryScreen
             ?? System.Windows.Forms.Screen.AllScreens[0];
@@ -69,11 +73,13 @@ namespace FLOMASTER
         private void Raise(string name) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
 
         /// <param name="owner">Маленькое окно, если создано (старт с дашборда — null).</param>
+        /// <param name="ui">Владелец окон — кнопка свапа дашборд↔виджет в шапке.</param>
         public OverlayWindow(MainViewModel viewModel, Window? owner,
-            System.Windows.Forms.Screen? preferredScreen = null)
+            System.Windows.Forms.Screen? preferredScreen = null, UiController? ui = null)
         {
             InitializeComponent();
             _vm = viewModel;
+            _ui = ui;
             _owner = owner;
             _preferredScreen = preferredScreen;
             DataContext = this;
@@ -101,12 +107,42 @@ namespace FLOMASTER
                 if (e.PropertyName == nameof(MainViewModel.StatusText)) Raise(nameof(StatusText));
                 else if (e.PropertyName == nameof(MainViewModel.UpdateInfoText)) Raise(nameof(UpdateInfoText));
                 else if (e.PropertyName == nameof(MainViewModel.UpdateReady)) Raise(nameof(UpdateReady));
+                else if (e.PropertyName == nameof(MainViewModel.UpdateActive)) Raise(nameof(UpdateActive));
+                else if (e.PropertyName == nameof(MainViewModel.UpdateProgress)) Raise(nameof(UpdateProgress));
+                else if (e.PropertyName == nameof(MainViewModel.UpdateProgressIndeterminate)) Raise(nameof(UpdateProgressIndeterminate));
+                else if (e.PropertyName == nameof(MainViewModel.UpdateNotes)) Raise(nameof(UpdateNotes));
+                else if (e.PropertyName == nameof(MainViewModel.HasUpdateNotes)) Raise(nameof(HasUpdateNotes));
+                else if (e.PropertyName == nameof(MainViewModel.UpdateHtmlUrl)) Raise(nameof(UpdateHtmlUrl));
+                else if (e.PropertyName == nameof(MainViewModel.SyncPendingVisible)) Raise(nameof(SyncPendingVisible));
+                else if (e.PropertyName == nameof(MainViewModel.SyncPendingText)) Raise(nameof(SyncPendingText));
+                else if (e.PropertyName == nameof(MainViewModel.UpdateNotesVisible))
+                {
+                    Raise(nameof(UpdateNotesVisible));
+                    Raise(nameof(UpdatePanelVisible));
+                    Raise(nameof(BannerNotesVisible));
+                    if (_vm.UpdateNotesVisible)
+                    {
+                        // панель — член клуба шторок: взаимное исключение
+                        LogDrawer.Visibility = Visibility.Collapsed;
+                        RoleDrawer.Visibility = Visibility.Collapsed;
+                    }
+                }
                 else if (e.PropertyName == nameof(MainViewModel.OcioWarningsText)) Raise(nameof(OcioWarningsText));
+                else if (e.PropertyName == nameof(MainViewModel.NoOcioActive)) Raise(nameof(NoOcioActive));
+                else if (e.PropertyName == nameof(MainViewModel.SelectedOcio)) RebuildOcioChips(); // выбор мог смениться вне чипа (профиль, старт)
             };
 
             PositionOnOwnerScreen();
             LocationChanged += (_, _) => SnapToMonitorIfChanged();
             StateChanged += (_, _) => { if (WindowState == WindowState.Normal) ApplyScreenBounds(); };
+            // ширина свободной полосы под панель обновления зависит от фактического размера окна
+            SizeChanged += (_, _) => ComputeUpdatePanelLayout();
+            Loaded += (_, _) => ComputeUpdatePanelLayout();
+            // панель обновления — член семьи шторок: появление с анимацией (биндинг видимости не трогаем)
+            UpdatePanel.IsVisibleChanged += (_, e) =>
+            {
+                if (e.NewValue is true) AnimateDrawerIn(UpdatePanel, -80, 0, alreadyVisible: true); // выезд слева
+            };
 
             // debounce поиска: 250 мс после последнего нажатия — без дрожи при быстром наборе
             _searchDebounce = new System.Windows.Threading.DispatcherTimer
@@ -169,9 +205,48 @@ namespace FLOMASTER
 
         public string VersionLabel => _vm.VersionLabel;
         public string OcioWarningsText => _vm.OcioWarningsText;
+        public bool NoOcioActive => _vm.NoOcioActive;
         public string StatusText => _vm.StatusText;
         public string UpdateInfoText => _vm.UpdateInfoText;
         public bool UpdateReady => _vm.UpdateReady;
+        public bool UpdateActive => _vm.UpdateActive;
+        public double UpdateProgress => _vm.UpdateProgress;
+        public bool UpdateProgressIndeterminate => _vm.UpdateProgressIndeterminate;
+        public string UpdateNotes => _vm.UpdateNotes;
+        public bool HasUpdateNotes => _vm.HasUpdateNotes;
+        public string? UpdateHtmlUrl => _vm.UpdateHtmlUrl;
+        public bool UpdateNotesVisible => _vm.UpdateNotesVisible;
+        public ICommand ToggleNotesCommand => _vm.ToggleNotesCommand;
+        public ICommand OpenFullNotesCommand => _vm.OpenFullNotesCommand;
+
+        // ---- Папка-синк: чип импорта в MAINTENANCE ----
+
+        public bool SyncPendingVisible => _vm.SyncPendingVisible;
+        public string SyncPendingText => _vm.SyncPendingText;
+        public ICommand SyncImportCommand => _vm.SyncImportCommand;
+        public ICommand SetSyncFolderCommand => _vm.SetSyncFolderCommand;
+
+        // ---- Панель обновления: занимает свободную полосу слева от центрированного грида ----
+
+        /// <summary>Ширина полосы слева от грида (MaxWidth=1780, по центру). 0 — окно уже 1852.</summary>
+        private double _stripWidth;
+
+        private void ComputeUpdatePanelLayout()
+        {
+            double inner = Math.Max(0, ActualWidth - 72); // Margin 36+36 контентного грида
+            double gridLeft = (ActualWidth - Math.Min(1780, inner)) / 2;
+            _stripWidth = Math.Max(0, gridLeft - 36 - 12); // левый отступ панели + зазор до грида
+            UpdatePanel.Width = _stripWidth > 0 ? _stripWidth : double.NaN;
+            Raise(nameof(UpdatePanelVisible));
+            Raise(nameof(BannerNotesVisible));
+        }
+
+        /// <summary>Панель: заметки открыты, апдейт активен и полоса достаточна —
+        /// иначе панель налезла бы на колонки (узкое окно = фолбэк в баннер).</summary>
+        public bool UpdatePanelVisible => _vm.UpdateNotesVisible && _vm.UpdateActive && _stripWidth >= 260;
+
+        /// <summary>Фолбэк: на узком окне заметки раскрываются внутри баннера.</summary>
+        public bool BannerNotesVisible => _vm.UpdateNotesVisible && !UpdatePanelVisible;
 
         public ObservableCollection<OcioConfig> OcioConfigs => _vm.OcioConfigs;
 
@@ -408,7 +483,7 @@ namespace FLOMASTER
                 OcioChips.Add(new OverlayChip
                 {
                     Name = o.Name,
-                    Path = o.Path ?? "",
+                    Path = o.IsNoOcio ? "Application default color management" : (o.Path ?? ""),
                     IsSelected = _vm.SelectedOcio?.Name == o.Name
                 });
         }
@@ -464,14 +539,22 @@ namespace FLOMASTER
         {
             ProjectSortChips.Clear();
             foreach (var (key, label) in ProjectSortModes)
-                ProjectSortChips.Add(new OverlayChip { Name = label, Path = key, IsSelected = _vm.ProjectSort == key });
+                ProjectSortChips.Add(new OverlayChip
+                {
+                    Name = label,
+                    Path = key,
+                    IsSelected = _vm.ProjectSort == key,
+                    Hint = key == "app" ? "Click again to cycle app groups" : "Sort projects"
+                });
         }
 
         private void ProjectSortChip_Click(object sender, RoutedEventArgs e)
         {
             if ((sender as FrameworkElement)?.Tag is string mode)
             {
-                _vm.ProjectSort = mode;
+                // повторный клик по активному Apps — цикл семейств, а не no-op
+                if (mode == "app" && _vm.ProjectSort == "app") _vm.CycleAppSort();
+                else _vm.ProjectSort = mode;
                 RebuildProjectSortChips();
                 RebuildProjectFiles();
             }
@@ -777,10 +860,40 @@ namespace FLOMASTER
             Close();
         }
 
+        // ---- Появление шторок: выезд + fade, уход мгновенный. ----
+        // Уважает «Launcher animation» (BEHAVIOUR): галка выключена — появляются как раньше.
+
+        /// <summary>Показать шторку с анимацией: сдвиг из (fromX, fromY) в ноль + fade 150мс, ease-out 200мс.
+        /// alreadyVisible — для элементов с биндингом видимости (явный Set убил бы биндинг).</summary>
+        private void AnimateDrawerIn(FrameworkElement el, double fromX, double fromY, bool alreadyVisible = false)
+        {
+            if (!alreadyVisible) el.Visibility = Visibility.Visible;
+            if (!_vm.AnimationEnabled) return;
+
+            var ease = new System.Windows.Media.Animation.CubicEase
+                { EasingMode = System.Windows.Media.Animation.EasingMode.EaseOut };
+            var tt = new System.Windows.Media.TranslateTransform(fromX, fromY);
+            el.RenderTransform = tt;
+            var slideX = new System.Windows.Media.Animation.DoubleAnimation(fromX, 0, TimeSpan.FromMilliseconds(200)) { EasingFunction = ease };
+            var slideY = new System.Windows.Media.Animation.DoubleAnimation(fromY, 0, TimeSpan.FromMilliseconds(200)) { EasingFunction = ease };
+            var fade = new System.Windows.Media.Animation.DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(150));
+            tt.BeginAnimation(System.Windows.Media.TranslateTransform.XProperty, slideX);
+            tt.BeginAnimation(System.Windows.Media.TranslateTransform.YProperty, slideY);
+            el.BeginAnimation(OpacityProperty, fade);
+            // самый долгий таймлайн гасит HoldEnd-хвосты: базовые Opacity=1, transform=null
+            slideX.Completed += (_, _) =>
+            {
+                el.BeginAnimation(OpacityProperty, null);
+                el.RenderTransform = null;
+            };
+        }
+
+        private void UpdatePanelClose_Click(object sender, RoutedEventArgs e) => _vm.CloseUpdateNotes();
+
         private void RoleRow_Click(object sender, RoutedEventArgs e)
         {
             if (sender is not FrameworkElement { DataContext: OcioRoleRow row }) return;
-            if (_vm.SelectedOcio == null) return;
+            if (_vm.SelectedOcio == null || _vm.SelectedOcio.IsNoOcio) return; // пикать нечего — конфига нет
 
             // повторный клик по той же роли схлопывает шторку
             if (_expandedRole == row && RoleDrawer.Visibility == Visibility.Visible)
@@ -790,6 +903,7 @@ namespace FLOMASTER
             }
 
             LogDrawer.Visibility = Visibility.Collapsed; // шторки взаимно исключают друг друга
+            _vm.CloseUpdateNotes();
             _expandedRole = row;
             RoleDrawerTitle.Text = $"ROLE: {row.RoleName}";
             RoleDrawerSearch.Text = "";
@@ -797,7 +911,7 @@ namespace FLOMASTER
                 .OrderBy(kv => kv.Key, StringComparer.OrdinalIgnoreCase)
                 .ToList();
             RebuildRoleDrawerList("");
-            RoleDrawer.Visibility = Visibility.Visible;
+            AnimateDrawerIn(RoleDrawer, 480, 0); // выезд справа
             RoleDrawerSearch.Focus();
         }
 
@@ -918,9 +1032,10 @@ namespace FLOMASTER
                 return;
             }
             RoleDrawer.Visibility = Visibility.Collapsed; // шторки взаимно исключают друг друга
+            _vm.CloseUpdateNotes();
             var entries = Logger.GetLastEntries(200);
             LogText.Text = entries.Count == 0 ? "No log entries yet." : string.Join(Environment.NewLine, entries);
-            LogDrawer.Visibility = Visibility.Visible;
+            AnimateDrawerIn(LogDrawer, 0, 240); // подъём снизу
             LogText.ScrollToEnd();
         }
 
@@ -1037,6 +1152,8 @@ namespace FLOMASTER
 
         private void CaptionMinimize_Click(object sender, RoutedEventArgs e) => WindowState = WindowState.Minimized;
 
+        private void SwitchLauncher_Click(object sender, RoutedEventArgs e) => _ui?.SwitchLauncher();
+
         private void CaptionMaximize_Click(object sender, RoutedEventArgs e) =>
             WindowState = WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized;
 
@@ -1058,6 +1175,12 @@ namespace FLOMASTER
                 if (RoleDrawer.Visibility == Visibility.Visible)
                 {
                     CollapseRoleDrawer();
+                    e.Handled = true;
+                    return;
+                }
+                if (UpdatePanelVisible)
+                {
+                    _vm.CloseUpdateNotes();
                     e.Handled = true;
                     return;
                 }

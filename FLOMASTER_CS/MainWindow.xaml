@@ -1,8 +1,8 @@
-<Window x:Class="FLOMASTER.MainWindow"
+﻿<Window x:Class="FLOMASTER.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:local="clr-namespace:FLOMASTER.Converters"
-        Title="FLOMASTER v2.5.8" Height="560" Width="440" MinHeight="560" MaxHeight="940"
+        Title="FLOMASTER v2.6.0" Height="560" Width="440" MinHeight="560" MaxHeight="940"
         WindowStartupLocation="CenterScreen" ResizeMode="CanMinimize"
         WindowStyle="None"
         AllowsTransparency="True"
@@ -265,6 +265,27 @@
                        VerticalAlignment="Center" Margin="12,0,0,0"/>
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right"
                         WindowChrome.IsHitTestVisibleInChrome="True">
+                <Button Content="&#xE8A7;" FontFamily="Segoe MDL2 Assets" FontSize="10"
+                        ToolTip="Switch to dashboard" Click="SwitchLauncher_Click">
+                    <Button.Style>
+                        <Style TargetType="Button">
+                            <Setter Property="Width" Value="46"/>
+                            <Setter Property="Height" Value="32"/>
+                            <Setter Property="Background" Value="Transparent"/>
+                            <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+                            <Setter Property="BorderThickness" Value="0"/>
+                            <Setter Property="Template">
+                                <Setter.Value>
+                                    <ControlTemplate TargetType="Button">
+                                        <Border Background="{TemplateBinding Background}">
+                                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        </Border>
+                                    </ControlTemplate>
+                                </Setter.Value>
+                            </Setter>
+                        </Style>
+                    </Button.Style>
+                </Button>
                 <Button Content="&#xE921;" FontFamily="Segoe MDL2 Assets" FontSize="10"
                         ToolTip="Minimize" Click="CaptionMinimize_Click">
                     <Button.Style>
@@ -335,14 +356,40 @@
                         </TextBlock>
                     </StackPanel>
                 </Grid>
-                <!-- Явное напоминание об апдейте: STATUS и чип MAINTENANCE пропускали -->
+                <!-- Апдейт: баннер виден с момента обнаружения — прогресс скачивания и заметки релиза не живут в STATUS -->
                 <Border Background="{DynamicResource AccentBrush}" CornerRadius="6" Padding="12,8" Margin="0,12,0,0"
-                        Visibility="{Binding UpdateReady, Converter={StaticResource BoolToVis}}">
+                        Visibility="{Binding UpdateActive, Converter={StaticResource BoolToVis}}">
                     <Grid>
-                        <TextBlock Text="{Binding UpdateInfoText}" Foreground="{DynamicResource AccentTextBrush}" FontWeight="SemiBold" FontSize="12.5"
-                                   VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Margin="0,0,150,0"/>
-                        <Button Content="Restart and install" Style="{StaticResource BtnStyle}" Width="140" Height="24"
-                                FontSize="11" HorizontalAlignment="Right" Command="{Binding UpdateCommand}"/>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+                        <Grid Grid.Row="0">
+                            <TextBlock Text="{Binding UpdateInfoText}" Foreground="{DynamicResource AccentTextBrush}" FontWeight="SemiBold" FontSize="12.5"
+                                       VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Margin="0,0,310,0"/>
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                <Button Content="What's new" Style="{StaticResource BtnStyle}" Width="84" Height="24" FontSize="11"
+                                        Margin="0,0,6,0" Command="{Binding ToggleNotesCommand}"
+                                        Visibility="{Binding HasUpdateNotes, Converter={StaticResource BoolToVis}}"/>
+                                <Button Content="Restart and install" Style="{StaticResource BtnStyle}" Width="140" Height="24"
+                                        FontSize="11" Command="{Binding UpdateCommand}"/>
+                            </StackPanel>
+                        </Grid>
+                        <ProgressBar Grid.Row="1" Height="4" Margin="0,7,0,0" Minimum="0" Maximum="1"
+                                     Value="{Binding UpdateProgress, Mode=OneWay}"
+                                     IsIndeterminate="{Binding UpdateProgressIndeterminate, Mode=OneWay}"
+                                     Foreground="{DynamicResource AccentTextBrush}" Background="Transparent" BorderThickness="0"/>
+                        <StackPanel Grid.Row="2" Margin="0,7,0,0"
+                                    Visibility="{Binding UpdateNotesVisible, Converter={StaticResource BoolToVis}}">
+                            <ScrollViewer MaxHeight="120" VerticalScrollBarVisibility="Auto">
+                                <TextBlock Text="{Binding UpdateNotes}" Foreground="{DynamicResource AccentTextBrush}"
+                                           FontSize="11" TextWrapping="Wrap"/>
+                            </ScrollViewer>
+                            <Button Content="Full notes on GitHub" Style="{StaticResource BtnStyle}" Height="22" FontSize="10.5"
+                                    HorizontalAlignment="Left" Margin="0,7,0,0"
+                                    Command="{Binding OpenFullNotesCommand}"/>
+                        </StackPanel>
                     </Grid>
                 </Border>
             </StackPanel>
@@ -688,6 +735,20 @@
                                     <Button Grid.Column="1" Content="Import settings" Style="{StaticResource BtnStyle}"
                                             Margin="4,0,0,0" Height="26" Command="{Binding ImportSettingsCommand}"/>
                                 </Grid>
+                                <Grid Margin="10,0,10,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Button Grid.Column="0" Content="Set sync folder" Style="{StaticResource BtnStyle}"
+                                            Height="26" Command="{Binding SetSyncFolderCommand}"
+                                            ToolTip="Folder shared between your machines: profiles, roots and theme travel automatically"/>
+                                    <Button Grid.Column="1" Content="{Binding SyncPendingText}" Style="{StaticResource BtnStyle}"
+                                            Margin="4,0,0,0" Height="26" Command="{Binding SyncImportCommand}"
+                                            ToolTip="Merge profiles, roots and theme from the sync folder"
+                                            Visibility="{Binding SyncPendingVisible, Converter={StaticResource BoolToVis}}"/>
+                                </Grid>
+                                <Border Height="12"/>
                                 <TextBlock Text="SHORTCUTS" Foreground="{DynamicResource DimBrush}" FontSize="10" FontWeight="SemiBold"
                                            Margin="10,0,10,6"/>
                                 <Grid Margin="10,0,10,0">

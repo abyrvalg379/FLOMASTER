@@ -64,7 +64,7 @@ namespace FLOMASTER
             };
 
             _ui = new UiController(viewModel);
-            _tray = new TrayService(viewModel, () => _ui.ShowUi());
+            _tray = new TrayService(viewModel, () => _ui.ShowUi(), () => _ui.SwitchLauncher());
             _hotkey = new HotkeyService(viewModel, _ui.ToggleDashboard, _ui.ToggleWindow);
 
             _ui.ShowStartupUi();

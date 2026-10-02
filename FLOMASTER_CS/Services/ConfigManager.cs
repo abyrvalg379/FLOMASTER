@@ -18,6 +18,11 @@ namespace FLOMASTER.Services
         // без явного флага — legacy-сидинг, мигрируют в IsCanon при загрузке.
         public const string CanonName = "ACES 1.2";
 
+        // Резервированное имя псевдо-конфига «запуск без OCIO» (OcioConfig.IsNoOcio).
+        // В launcher_config не хранится, но резервируется, чтобы пользовательский
+        // конфиг с таким именем не конфликтовал с ним в списках/профилях.
+        public const string NoOcioName = "NO OCIO";
+
         private readonly string _dir;
         private string ConfigPath => Path.Combine(_dir, "launcher_config.json");
 
