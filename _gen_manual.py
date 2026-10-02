@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-r'''FLOMASTER - Руководство пользователя (RU + EN). Генератор DOCX. Версия V2.5.5.
+r'''FLOMASTER - Руководство пользователя (RU + EN). Генератор DOCX. Версия V2.6.0.
 
 Хелперы стиля наследуют семейства STUKACH/LAMPOCHKA/TOCHKA,
 акцент - фирменный оранжевый FLOMASTER #E87D0D.
@@ -47,7 +47,7 @@ def _save(doc, out):
 
 def build_ru():
     ds.H1_REGISTRY.clear()
-    doc = ds.new_doc('FLOMASTER', 'Руководство пользователя', 'V2.5.5  -  WINDOWS 10/11')
+    doc = ds.new_doc('FLOMASTER', 'Руководство пользователя', 'V2.6.0  -  WINDOWS 10/11')
 
     p(doc, 'FLOMASTER - лаунчер для рабочих приложений трёхмерной графики: одна кнопка '
            'запускает Blender, Maya, Houdini, Nuke, DaVinci Resolve, Unreal Engine или '
@@ -93,13 +93,15 @@ def build_ru():
     add_table(doc, [
         ('Этап', 'Что происходит'),
         ('Проверка при старте', 'через ~3 секунды после запуска версия сверяется с последним релизом на GitHub'),
-        ('Фоновая загрузка', 'новый exe качается во временную папку, прогресс виден в Settings'),
+        ('Баннер обновления', 'акцентная плашка в шапке обоих окон появляется сразу при обнаружении обновления: прогресс с процентами и кнопка What\'s new'),
+        ('Заметки релиза', 'What\'s new раскрывает описание обновления: на широких экранах - отдельная панель в свободной полосе слева (текст в полную высоту, прогресс внутри), на узких - раскрытие внутри баннера; Full notes on GitHub открывает страницу релиза'),
+        ('Фоновая загрузка', 'обновление качается целиком (exe + папка ocio) во временную папку'),
         ('Restart and install', 'кнопка в Settings: один запрос UAC — лаунчер закроется, заменит exe и запустится уже новой версией'),
         ('Отключение', 'галка Check for updates on start в Settings'),
     ], [5.0, 12.0])
-    p(doc, 'Обновляется только exe: настройки, профили и журнал в %APPDATA% остаются как были. '
-           'До нажатия кнопки ничего не устанавливается — скачивание идёт в фоне и ни на что '
-           'не влияет.')
+    p(doc, 'Обновляется весь пакет: exe и папка ocio. Настройки, профили и журнал в %APPDATA% '
+           'остаются как были. До нажатия кнопки ничего не устанавливается — скачивание идёт '
+           'в фоне и ни на что не влияет.')
 
     h2(doc, '2.2 Ручное обновление')
     p(doc, 'Закройте лаунчер (в том числе из трея), замените файлы, запустите заново. Настройки '
@@ -154,6 +156,7 @@ def build_ru():
         'кнопкой «+» добавьте папку, где хранятся проекты (корень); «−» удаляет выбранный корень;',
         'список показывает все проектные файлы корня рекурсивно, с относительными путями;',
         'клик по файлу открывает его в правильном приложении: .spp — в Substance Painter, .blend — в Blender, .hip — в Houdini (приложение подбирается по расширению, даже если в списке выбрано другое);',
+        'чипы A-Z / Date / Apps в шапке секции сортируют список; повторный клик по активному Apps вращает группы софтов — все .spp (или любое другое семейство) наверху одним кликом, группы без файлов кликов не тратят;',
         'Recent — то же правило: недавние файлы переоткрываются в своих приложениях.',
     ):
         p(doc, b, bullet=True)
@@ -165,18 +168,21 @@ def build_ru():
            'управляются конфиги, приложения, профили, папки проектов и настройки.')
     for b in (
         'ЦВЕТОВОЙ КОНФИГ: клик по чипу меняет конфиг; плюс и минус в шапке секции добавляют и убирают конфиги;',
+        'чип NO OCIO (первый в списке) запускает приложения в их дефолтном колор-менеджменте, без OCIO; можно закрепить в профиле или сделать конфигом по умолчанию;',
         'ПРИЛОЖЕНИЯ: плитки с иконками exe, клик = запуск; ПКМ по плитке — запуск с командой (чистый старт, фоновый рендер и т.д.) и сохранение профиля; плюс и рескан в шапке секции;',
         'ПРОЕКТЫ: чипы корней и файлы проектов, клик открывает файл в правильном приложении; плюс в шапке добавляет папку, ПКМ по чипу корня убирает её;',
         'ЗАПУЩЕННЫЕ: чипы живых DCC-инстансов у строки поиска; клик выводит приложение вперёд, ПКМ — фокус и перезапуск;',
         'ПРОФИЛИ: клик применяет профиль и запускает приложение; «Save current as profile» в шапке секции;',
         'OCIO ROLES: клик по роли выдвигает справа шторку с деревом колорспейсов по семействам и поиском, Reset возвращает значения конфига;',
         'RECENT FILES: последние файлы, клик переоткрывает; Clear очищает;',
-        'SETTINGS (футер): THEME (тема, конфиг по умолчанию), BEHAVIOUR (хоткей, режимы старта и «поверх окон»), MAINTENANCE (рескан, пути сканирования, SYNC, ярлыки, лог).',
+        'SETTINGS (футер): THEME (тема, конфиг по умолчанию), BEHAVIOUR (хоткей, режимы старта и «поверх окон»), MAINTENANCE (рескан, пути сканирования, SYNC, папка-синк, ярлыки, лог);',
+        'переключатель в шапке (иконка слева от «свернуть») меняет дашборд и маленькое окно местами — тот же пункт в трее; Ctrl+Alt+F всегда открывает то, что сейчас на экране;',
     ):
         p(doc, b, bullet=True)
     p(doc, 'Строка поиска фильтрует всё на лету: Enter запускает первое совпадение, стрелки '
            'Up/Down идут по плиткам. Лог вызывается чипом Log и выдвигается шторкой внизу '
-           '(последние 200 записей, текст копируется).')
+           '(последние 200 записей, текст копируется). Шторки - лог, роли и панель обновления - '
+           'выезжают плавно; галка Launcher animation возвращает мгновенное появление.')
     p(doc, 'Дашборд открывается на мониторе, где был закрыт в прошлый раз (запоминается в '
            'настройках), и перетаскивается за шапку между мониторами — под каждый монитор '
            'подстраиваются размеры. Если поверх окон не нужно — снимите галку Dashboard on top. '
@@ -284,9 +290,14 @@ def build_ru():
            'точно так же, как при запуске из окна.')
 
     h1(doc, '15. Перенос на другую машину')
-    p(doc, 'Настройки переносятся файлом: Settings → SYNC → Export settings сохраняет профили, '
+    p(doc, 'Ручной перенос: Settings → SYNC → Export settings сохраняет профили, '
            'корни проектов, тему и опции в файл flomaster_setup_дата.flomaster. На другой машине: '
            'установите лаунчер, нажмите Import settings и выберите этот файл.')
+    p(doc, 'Папка-синк - перенос без рук. В MAINTENANCE нажмите Sync folder и укажите любую папку, '
+           'которую синхронизирует между машинами Dropbox/OneDrive/NAS. Свой файл '
+           'FLOMASTER_<имя-ПК>.flomaster пишется туда сам при изменении настроек; чужие файлы '
+           'предлагаются чипом Import и применяются только по клику. Едут профили, корни проектов, '
+           'тема и флаги поведения; пути к exe и OCIO остаются машинными.')
     for b in (
         'профили импортируются по имени: новые добавляются, существующие обновляются;',
         'корни проектов сливаются без дублей;',
@@ -355,7 +366,7 @@ def build_ru():
 
 def build_en():
     ds.H1_REGISTRY.clear()
-    doc = ds.new_doc('FLOMASTER', 'User Guide', 'V2.5.5  -  WINDOWS 10/11')
+    doc = ds.new_doc('FLOMASTER', 'User Guide', 'V2.6.0  -  WINDOWS 10/11')
 
     p(doc, 'FLOMASTER is a launcher for 3D graphics applications: one button starts Blender, '
            'Maya, Houdini, Nuke, DaVinci Resolve, Unreal Engine or Substance Painter with a '
@@ -401,13 +412,15 @@ def build_en():
     add_table(doc, [
         ('Stage', 'What happens'),
         ('Check at startup', '~3 seconds after launch the version is compared against the latest GitHub release'),
-        ('Background download', 'the new exe is downloaded to a temp folder, progress is visible in Settings'),
+        ('Update banner', 'an accent banner in the header of both windows appears as soon as an update is found: live progress with percent and a What\'s new button'),
+        ('Release notes', 'What\'s new reveals the update description: on wide screens a dedicated panel in the free space on the left (full-height text, progress inside), on narrow ones an in-banner expansion; Full notes on GitHub opens the release page'),
+        ('Background download', 'the update downloads in full (exe + the ocio folder) into a temp folder'),
         ('Restart and install', 'button in Settings: one UAC prompt — the launcher closes, replaces its exe and restarts on the new version'),
         ('Disable', 'the Check for updates on start checkbox in Settings'),
     ], [5.0, 12.0])
-    p(doc, 'Only the exe is updated: settings, profiles and the log in %APPDATA% stay exactly as '
-           'they were. Nothing is installed until you press the button — the download is a '
-           'background operation with no side effects.')
+    p(doc, 'The whole package is updated: the exe and the ocio folder. Settings, profiles and '
+           'the log in %APPDATA% stay exactly as they were. Nothing is installed until you press '
+           'the button — the download is a background operation with no side effects.')
 
     h2(doc, '2.2 Manual update')
     p(doc, 'Close the launcher (including the tray), replace the files, start it again. Settings '
@@ -462,6 +475,7 @@ def build_en():
         'add the folder where your projects live with the "+" button (a root); "−" removes the selected root;',
         'the list shows every project file under the root recursively, with relative paths;',
         'a click opens the file in the matching application: .spp — in Substance Painter, .blend — in Blender, .hip — in Houdini (the application is picked by extension, even if another one is selected in the list);',
+        'the A-Z / Date / Apps chips in the section header sort the list; clicking the active Apps chip again rotates the app groups — all .spp files (or any other family) jump to the top in one click, groups with no files do not waste clicks;',
         'Recent — the same rule: recent files reopen in their applications.',
     ):
         p(doc, b, bullet=True)
@@ -473,18 +487,21 @@ def build_en():
            'applications, profiles, project folders and settings are managed right here.')
     for b in (
         'COLOR CONFIG: click a chip to switch the config; + and − in the section header add and remove configs;',
+        'the NO OCIO chip (first in the list) launches applications in their default color management, without OCIO; pin it in a profile or make it the default config;',
         'APPLICATIONS: tiles with real exe icons, click = launch; right-click a tile to launch with a command preset (clean start, background render, etc.) or to save a profile; + and rescan in the section header;',
         'PROJECTS: root chips and project files, a click opens the file in the matching application; + adds a folder, right-click a root chip removes it;',
         'RUNNING: chips of live DCC instances next to the search; click brings the app forward, right-click offers focus and restart;',
         'PROFILES: a click applies the profile and launches the application; "Save current as profile" in the section header;',
         'OCIO ROLES: clicking a role slides in a right-hand drawer with a family-grouped colorspace tree and search, Reset returns the config values;',
         'RECENT FILES: recent files, a click reopens them; Clear empties the list;',
-        'SETTINGS (footer): THEME (theme, default config), BEHAVIOUR (hotkey, startup and always-on-top modes), MAINTENANCE (rescan, scan paths, SYNC, shortcuts, log).',
+        'SETTINGS (footer): THEME (theme, default config), BEHAVIOUR (hotkey, startup and always-on-top modes), MAINTENANCE (rescan, scan paths, SYNC, sync folder, shortcuts, log);',
+        'the header switcher (the icon left of "minimize") swaps the fullscreen dashboard and the small window — the same item lives in the tray; Ctrl+Alt+F always toggles what you see;',
     ):
         p(doc, b, bullet=True)
     p(doc, 'The search box filters everything on the fly: Enter launches the first match, the '
            'Up/Down arrows walk the visible tiles. The Log chip pulls up a log drawer at the '
-           'bottom (last 200 entries, text is copyable).')
+           'bottom (last 200 entries, text is copyable). The drawers - log, roles and the update '
+           'panel - slide in smoothly; the Launcher animation toggle restores instant appearance.')
     p(doc, 'The dashboard opens on the monitor where it was last closed (remembered in the '
            'settings) and can be dragged between monitors by its header — sizes adapt to each '
            'monitor. If you do not need it above other windows — untick Dashboard on top. The '
@@ -592,9 +609,15 @@ def build_en():
            'are passed exactly like a window launch.')
 
     h1(doc, '15. Moving to another machine')
-    p(doc, 'Settings travel as a file: Settings → SYNC → Export settings saves profiles, project '
+    p(doc, 'Manual transfer: Settings → SYNC → Export settings saves profiles, project '
            'roots, theme and options into a flomaster_setup_date.flomaster file. On another '
            'machine: install the launcher, press Import settings and pick the file.')
+    p(doc, 'The sync folder transfers settings hands-free. In MAINTENANCE press Sync folder and '
+           'pick any folder your Dropbox/OneDrive/NAS keeps in sync across machines. Your own '
+           'FLOMASTER_<pc-name>.flomaster file is written there automatically whenever settings '
+           'change; other machines\' files are offered as an Import chip and apply only on your '
+           'click. Profiles, project roots, theme and behaviour flags travel; exe and OCIO paths '
+           'stay machine-local.')
     for b in (
         'profiles are imported by name: new ones are added, existing ones updated;',
         'project roots merge without duplicates;',
