@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <ApplicationManifest>app.manifest</ApplicationManifest>
@@ -10,8 +10,8 @@
     <ApplicationIcon>Resources\flomaster.ico</ApplicationIcon>
     <AssemblyTitle>FLOMASTER</AssemblyTitle>
     <AssemblyDescription>OCIO Launcher for DCC Applications</AssemblyDescription>
-    <AssemblyVersion>2.6.0.0</AssemblyVersion>
-    <FileVersion>2.6.0.0</FileVersion>
+    <AssemblyVersion>2.6.1.0</AssemblyVersion>
+    <FileVersion>2.6.1.0</FileVersion>
     <Company>FLOMASTER</Company>
     <Product>FLOMASTER OCIO Launcher</Product>
   </PropertyGroup>

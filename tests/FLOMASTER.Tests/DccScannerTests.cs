@@ -23,6 +23,47 @@ namespace FLOMASTER.Tests
         }
 
         [Theory]
+        [InlineData("NukeX13.2v1.exe", true)]
+        [InlineData("NukeX15.0.exe", true)]
+        [InlineData("nukex15.0.exe", true)]
+        [InlineData("Nuke17.1.exe", false)]     // главный — не X
+        [InlineData("NukeXInit.exe", false)]
+        [InlineData("NukeStudio.exe", false)]
+        [InlineData("blender.exe", false)]
+        [InlineData(null, false)]
+        public void IsNukeXExe_MatchesLegacyNukeXExecutable(string fileName, bool expected)
+        {
+            Assert.Equal(expected, DccScanner.IsNukeXExe(fileName));
+        }
+
+        [Theory]
+        [InlineData("Nuke17.1v2", true)]
+        [InlineData("Nuke 16.0", true)]
+        [InlineData("Nuke16", true)]
+        [InlineData("Nuke15.0v5", false)]       // до 16 — отдельные бинарники
+        [InlineData("Nuke 15.1", false)]
+        [InlineData("NukeX13.2v1", false)]      // легаси-X ставился отдельной папкой
+        [InlineData("NukeShared", false)]       // папка без версии — не установка
+        [InlineData("Nuke", false)]
+        [InlineData(null, false)]
+        public void IsUnifiedNukeFolder_GatesUnifiedBinaryEra(string folderName, bool expected)
+        {
+            Assert.Equal(expected, DccScanner.IsUnifiedNukeFolder(folderName));
+        }
+
+        [Theory]
+        [InlineData("Nuke17.1v2", "17.1v2")]
+        [InlineData("Nuke 15.0v3", "15.0v3")]
+        [InlineData("NukeX13.2v1", "13.2v1")]
+        [InlineData("Nuke 16.0", "16.0")]
+        [InlineData("Nuke", "Nuke")]            // вырожденный случай — как была установка без версии
+        [InlineData(null, "")]
+        public void NukeVersionLabel_StripsProductPrefix(string folderName, string expected)
+        {
+            Assert.Equal(expected, DccScanner.NukeVersionLabel(folderName));
+        }
+
+        [Theory]
         [InlineData("Blender 4.2.3", true)]
         [InlineData("blender", true)]
         [InlineData("Autodesk Maya 2025", true)]

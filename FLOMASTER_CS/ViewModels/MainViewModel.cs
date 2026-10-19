@@ -514,7 +514,8 @@ namespace FLOMASTER.ViewModels
         {
             if (SelectedPreset == null) { StatusText = "No app selected"; return; }
 
-            var args = ArgsText?.Trim() ?? "";
+            // вшитые аргументы пресета (NukeX: --nukex) всегда едут впереди пользовательских
+            var args = SelectedPreset.CombineArgs(ArgsText);
             var error = _launch.Launch(SelectedPreset.Exe, SelectedPreset.Name, SelectedOcio, SelectedPreset.RoleOverrides, args);
             if (error != null)
             {
@@ -697,12 +698,15 @@ namespace FLOMASTER.ViewModels
                 dynamic shell = Activator.CreateInstance(Type.GetTypeFromProgID("WScript.Shell"));
                 dynamic shortcut = shell.CreateShortcut(Path.Combine(lnkDir, $"{SelectedPreset.Name}.lnk"));
                 shortcut.TargetPath = SelectedPreset.Exe;
+                shortcut.Arguments = SelectedPreset.Args ?? ""; // вшитые аргументы (NukeX: --nukex)
                 shortcut.WorkingDirectory = Path.GetDirectoryName(SelectedPreset.Exe);
-                shortcut.IconLocation = $"{SelectedPreset.Exe},0";
+                shortcut.IconLocation = string.IsNullOrEmpty(SelectedPreset.IconPath)
+                    ? $"{SelectedPreset.Exe},0"
+                    : $"{SelectedPreset.IconPath},0";
                 if (ocio != null && !string.IsNullOrEmpty(ocio.Path) && File.Exists(ocio.Path))
                 {
                     var batPath = Path.Combine(lnkDir, $"{SelectedPreset.Name}.bat");
-                    File.WriteAllText(batPath, $"@echo off\r\nset \"OCIO={ocio.Path}\"\r\nstart \"\" \"{SelectedPreset.Exe}\"");
+                    File.WriteAllText(batPath, $"@echo off\r\nset \"OCIO={ocio.Path}\"\r\nstart \"\" \"{SelectedPreset.Exe}\" {SelectedPreset.Args}");
                     shortcut.TargetPath = batPath;
                 }
                 shortcut.Save();
@@ -751,7 +755,7 @@ namespace FLOMASTER.ViewModels
 
             try
             {
-                var psi = new ProcessStartInfo { FileName = target.Exe, UseShellExecute = false, Arguments = $"\"{filePath}\"" };
+                var psi = new ProcessStartInfo { FileName = target.Exe, UseShellExecute = false, Arguments = target.CombineArgs($"\"{filePath}\"") };
                 _ocio.ApplyOcio(psi, SelectedOcio, target.Exe);
                 Process.Start(psi);
 
@@ -1520,10 +1524,20 @@ namespace FLOMASTER.ViewModels
             if (appName.Contains("houdini"))
                 return new() { ("-batch", "Batch mode (no GUI)"), ("-foreground", "Don't fork process") };
             if (appName.Contains("nuke"))
-                return new() { ("-t", "Terminal mode (no GUI)"), ("-F 1-100", "Frame range") };
+                return new() { ("-t", "Terminal mode (no GUI)"), ("-x \"{file}\" -F 1-100", "Render frame range from script") };
             if (appName.Contains("unreal"))
                 return new() { ("-game", "Standalone game mode"), ("-log", "Show log window"), ("-renderoffscreen", "Render without GUI"), ("-nullrhi", "No rendering (headless)") };
             return new();
+        }
+
+        /// <summary>Подсказка плитки/профиля по семейству DCC. Nuke — единственный поддержанный
+        /// DCC, где после запуска нужен ручной шаг: env var даёт и лочит конфиг, но режим
+        /// проекта (нативный/OCIO) хранится в скрипте и по умолчанию нативный.</summary>
+        public static string? GetHintForApp(string appName)
+        {
+            if (appName.Contains("nuke"))
+                return "Nuke: set Project Settings → Color → color management to OCIO once per script — the env var only provides and locks the config";
+            return null;
         }
     }
 

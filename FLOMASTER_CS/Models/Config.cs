@@ -70,6 +70,24 @@ namespace FLOMASTER.Models
         public string Name { get; set; } = "";
         public string Exe { get; set; } = "";
 
+        // Аргументы, вшитые в пресет сканером (NukeX у единого бинарника Nuke 16+: --nukex).
+        // Комбинируются с пользовательскими при каждом запуске, в профили не пишутся:
+        // профиль хранит только юзерские аргументы и ссылку на пресет по имени.
+        public string Args { get; set; } = "";
+
+        // Родная .ico вместо иконки exe (NukeX: NukeXApp.ico рядом с общим бинарником).
+        // Без неё плитки Nuke и NukeX неотличимы: exe один, иконки и подзаголовок совпадают.
+        public string IconPath { get; set; } = "";
+
+        public string CombineArgs(string userArgs)
+        {
+            var baked = (Args ?? "").Trim();
+            var user = (userArgs ?? "").Trim();
+            if (baked == "") return user;
+            if (user == "") return baked;
+            return $"{baked} {user}";
+        }
+
         // Переопределения ролей OCIO на уровень запуска (роль -> colorspace).
         // Канонический .ocio никогда не модифицируется: при запуске собирается
         // вариант конфига в %APPDATA%\FLOMASTER\variants\ и OCIO указывает на него.

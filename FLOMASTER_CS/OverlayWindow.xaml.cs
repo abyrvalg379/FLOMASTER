@@ -34,6 +34,9 @@ namespace FLOMASTER
 
             public string Title { get; set; } = "";
             public string Subtitle { get; set; } = "";
+
+            /// <summary>Тултип плитки (null = без тултипа): подсказки по семейству DCC, см. MainViewModel.GetHintForApp.</summary>
+            public string? Hint { get; set; }
             public ImageSource? Icon { get; set; }
             public string Monogram { get; set; } = "";
             public string Badge { get; set; } = "";
@@ -430,8 +433,11 @@ namespace FLOMASTER
                 AppTiles.Add(new OverlayTile
                 {
                     Title = preset.Name,
-                    Subtitle = SafeFileName(preset.Exe),
-                    Icon = ExtractIcon(preset.Exe),
+                    // Nuke и NukeX шарят один exe — в подзаголовок вшитый флаг, иначе плитки-близнецы
+                    Subtitle = SafeFileName(preset.Exe) +
+                               (string.IsNullOrWhiteSpace(preset.Args) ? "" : $" · {preset.Args}"),
+                    Icon = ExtractIcon(preset.Exe, preset.IconPath),
+                    Hint = MainViewModel.GetHintForApp(preset.Name.ToLowerInvariant()),
                     Payload = preset
                 });
             }
@@ -450,6 +456,7 @@ namespace FLOMASTER
                     Title = profile.Name,
                     Subtitle = $"{profile.PresetName} · {profile.OcioName}",
                     Monogram = letter,
+                    Hint = MainViewModel.GetHintForApp(profile.PresetName.ToLowerInvariant()),
                     Payload = profile
                 });
             }
@@ -458,9 +465,23 @@ namespace FLOMASTER
             ProfilesSection.Visibility = _vm.Profiles.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
         }
 
-        /// <summary>Иконка exe (System.Drawing 32x32 -> ImageSource). Не удалось — null, плитка без иконки.</summary>
-        private static ImageSource? ExtractIcon(string? exePath)
+        /// <summary>Иконка пресета: родная .ico (IconPath, напр. NukeXApp.ico) либо иконка exe
+        /// (System.Drawing 32x32 -> ImageSource). Не удалось — null, плитка без иконки.</summary>
+        private static ImageSource? ExtractIcon(string? exePath, string? iconPath = null)
         {
+            if (!string.IsNullOrEmpty(iconPath) && File.Exists(iconPath))
+            {
+                try
+                {
+                    using var ico = new System.Drawing.Icon(iconPath, 32, 32);
+                    var fromIco = System.Windows.Interop.Imaging.CreateBitmapSourceFromHIcon(
+                        ico.Handle, Int32Rect.Empty, System.Windows.Media.Imaging.BitmapSizeOptions.FromEmptyOptions());
+                    fromIco.Freeze();
+                    return fromIco;
+                }
+                catch { /* битая .ico — падаем на иконку exe */ }
+            }
+
             try
             {
                 if (string.IsNullOrEmpty(exePath) || !File.Exists(exePath)) return null;

@@ -79,7 +79,8 @@ namespace FLOMASTER.Services
             if (ocio == null && !string.IsNullOrEmpty(profile.OcioName))
                 Console.Error.WriteLine($"OCIO '{profile.OcioName}' not found, launching without OCIO.");
 
-            var args = profile.Args ?? "";
+            // вшитые аргументы пресета (NukeX: --nukex) — база, профиль добавляет свои
+            var args = preset.CombineArgs(profile.Args);
             if (!string.IsNullOrEmpty(project))
             {
                 if (!File.Exists(project))

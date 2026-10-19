@@ -24,6 +24,29 @@ namespace FLOMASTER.Services
             return Regex.IsMatch(fileName ?? "", @"^Nuke(\d+(\.\d+)?)?(v\d+)?\.exe$", RegexOptions.IgnoreCase);
         }
 
+        /// <summary>Легаси-NukeX (≤15): отдельный бинарник NukeX13.2v1.exe (префикс X). Суффиксные
+        /// варианты (Nuke15.0x.exe) не матчим сознательно — в природе не подтверждены.</summary>
+        public static bool IsNukeXExe(string fileName)
+        {
+            return Regex.IsMatch(fileName ?? "", @"^NukeX(\d+(\.\d+)?)?(v\d+)?\.exe$", RegexOptions.IgnoreCase);
+        }
+
+        /// <summary>Nuke 16+ — единый бинарник (Nuke/NukeX/Studio разлочиваются лицензией,
+        /// режим выбирается флагом: --nukex / --studio). До 16 — отдельные продукты.</summary>
+        public static bool IsUnifiedNukeFolder(string folderName)
+        {
+            var m = Regex.Match(folderName ?? "", @"^Nuke\s*(\d+)", RegexOptions.IgnoreCase);
+            return m.Success && int.Parse(m.Groups[1].Value) >= 16;
+        }
+
+        /// <summary>"Nuke17.1v2" / "Nuke 15.0v3" / "NukeX13.2v1" → "17.1v2" / "15.0v3" / "13.2v1".
+        /// Replace("Nuke ") не резал папки без пробела — плитка называлась «Nuke Nuke17.1v2».</summary>
+        public static string NukeVersionLabel(string folderName)
+        {
+            var m = Regex.Match(folderName ?? "", @"^Nuke\s*X?\s*(\S.*)$", RegexOptions.IgnoreCase);
+            return m.Success ? m.Groups[1].Value.Trim() : (folderName ?? "").Trim();
+        }
+
         private static readonly Regex JunkExeRegex = new(
             @"(?i)(uninst|installer|setup|crashreport|crash_handler|error_report|vcredist|redist|directx|prereq)",
             RegexOptions.Compiled);
@@ -114,9 +137,10 @@ namespace FLOMASTER.Services
                 found.Remove(junk);
             }
 
-            // дедуп по exe: реестр может пересечься с эвристиками
+            // дедуп по exe+args: реестр может пересечься с эвристиками; Nuke и NukeX
+            // шарят один exe и различаются вшитым аргументом — выкидывать по пути нельзя
             found = found
-                .GroupBy(f => f.Exe, StringComparer.OrdinalIgnoreCase)
+                .GroupBy(f => f.Exe + "\x1" + (f.Args ?? ""), StringComparer.OrdinalIgnoreCase)
                 .Select(g => g.First())
                 .ToList();
 
@@ -293,16 +317,49 @@ namespace FLOMASTER.Services
             {
                 foreach (var dir in Directory.GetDirectories(nukeBase, "Nuke*"))
                 {
+                    var files = Directory.GetFiles(dir, "Nuke*.exe");
                     // маска главного exe: NukeXX.Y.exe (Init/Assist/Register отсекаются ей же)
-                    var nukeExe = Directory.GetFiles(dir, "Nuke*.exe")
+                    var nukeExe = files
                         .Where(f => IsNukeMainExe(Path.GetFileName(f)))
                         .FirstOrDefault();
 
                     if (!string.IsNullOrEmpty(nukeExe))
                     {
-                        var ver = Path.GetFileName(dir).Replace("Nuke ", "").Trim();
+                        var ver = NukeVersionLabel(Path.GetFileName(dir));
                         found.Add(new() { Name = $"Nuke {ver}", Exe = nukeExe });
-                        Logger.Log("Scanner", $"Found: Nuke {ver}", "info");
+
+                        // Nuke 16+: бинарник один, NukeX — флаг --nukex поверх того же exe.
+                        // IconPath — родная NukeXApp.ico: без неё плитки неотличимы.
+                        if (IsUnifiedNukeFolder(Path.GetFileName(dir)))
+                        {
+                            var xIcon = Path.Combine(dir, "NukeXApp.ico");
+                            found.Add(new()
+                            {
+                                Name = $"NukeX {ver}",
+                                Exe = nukeExe,
+                                Args = "--nukex",
+                                IconPath = File.Exists(xIcon) ? xIcon : ""
+                            });
+                            Logger.Log("Scanner", $"Found: NukeX {ver} (--nukex)", "info");
+                        }
+                    }
+
+                    // легаси (≤15): NukeX ставился отдельным продуктом/бинарником NukeX*.exe
+                    var legacyX = files
+                        .Where(f => IsNukeXExe(Path.GetFileName(f)))
+                        .FirstOrDefault();
+                    if (!string.IsNullOrEmpty(legacyX) &&
+                        !string.Equals(legacyX, nukeExe, StringComparison.OrdinalIgnoreCase))
+                    {
+                        var ver = NukeVersionLabel(Path.GetFileName(dir));
+                        var xIcon = Path.Combine(dir, "NukeXApp.ico");
+                        found.Add(new()
+                        {
+                            Name = $"NukeX {ver}",
+                            Exe = legacyX,
+                            IconPath = File.Exists(xIcon) ? xIcon : ""
+                        });
+                        Logger.Log("Scanner", $"Found: NukeX {ver} (legacy exe)", "info");
                     }
                 }
             }
