@@ -38,15 +38,16 @@
 
 ---
 
-## What's New in v2.6.0
+## What's New in v2.6.1
 
-- **Launch without OCIO** — the NO OCIO chip (top of COLOR CONFIG) starts any DCC with its own default color management: no OCIO env var, no `-ocio` for Unreal. Pin it in a profile ("Blender without ACES") or make it the startup default. A deliberate no-OCIO stays clearly distinct from a broken config — no scary warnings
-- **Sync folder** — point FLOMASTER to a folder shared between your machines (Dropbox, OneDrive, NAS): profiles, project roots, theme and behaviour flags travel automatically. Your own state is pushed silently; other machines' changes are offered as an Import chip in MAINTENANCE and apply only on your click
-- **Update banner, upgraded** — the banner appears as soon as an update is found (not only when it is ready): a live download progress bar with percent, and a "What's new" button that opens the release notes right in the app
-- **Release notes panel** — on wide screens the notes open in a dedicated panel in the free space next to the columns (full-height reading, download progress inside); narrow windows fall back to the in-banner expansion
-- **Dashboard <-> widget switching** — one header button in each window (plus a tray item) swaps the fullscreen dashboard and the small window in place; the Ctrl+Alt+F rule follows the screen, so the hotkey always toggles what you see
-- **Animated drawers** — the roles drawer, the log drawer and the update panel slide in smoothly; the "Launcher animation" toggle switches that off
-- **App sort cycling** — click the active Apps chip again and the app groups rotate: all .spp files (or any other family) jump to the top in one click. Groups with no files don't waste your clicks
+- **NukeX support** — since Nuke 16, Nuke, NukeX and Studio ship as a single binary, so scanners that look for a separate NukeX executable find nothing. The auto-scan now adds a second **NukeX** tile that launches the same exe with `--nukex` and carries the native NukeX icon (exactly how Foundry's own desktop shortcut works). Legacy (≤ Nuke 15) NukeX installs are detected by their own executable
+- **Per-preset launch arguments** — a preset can carry baked arguments; they always run ahead of your own — on tiles, quick commands, file routing, `--launch` from the command line and shortcuts created by FLOMASTER. Profiles keep storing only your arguments. Baked args are visible right on the tile subtitle (`Nuke17.1.exe · --nukex`), so lookalike tiles stay tellable and searchable
+- **Nuke fixes** — the render-range quick command actually renders now (`-x "file" -F 1-100`), the app tile explains the one-time Project Settings → Color → OCIO switch in its tooltip, and the scanned tile is named "Nuke 17.1v2" instead of the stuttering "Nuke Nuke17.1v2"
+
+Manuals (RU + EN, DOCX/PDF) are attached below. Smoke 22/22, unit tests 140.
+
+### [v2.6.0](https://github.com/abyrvalg379/FLOMASTER/releases/tag/v2.6.0) — no-OCIO launches, sync folder, update banner with release notes
+Launch without OCIO (NO OCIO chip), a sync folder for settings, an upgraded update banner with a release-notes panel, dashboard ↔ widget switching, app sort cycling and animated drawers.
 
 ### [v2.5.8](https://github.com/abyrvalg379/FLOMASTER/releases/tag/v2.5.8) — sorted projects, update banner
 Project list sorting (A-Z / Date / Apps) and an explicit update-ready banner in both windows.
