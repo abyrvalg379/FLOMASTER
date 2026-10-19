@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-r'''FLOMASTER - Руководство пользователя (RU + EN). Генератор DOCX. Версия V2.6.0.
+r'''FLOMASTER - Руководство пользователя (RU + EN). Генератор DOCX. Версия V2.6.1.
 
 Хелперы стиля наследуют семейства STUKACH/LAMPOCHKA/TOCHKA,
 акцент - фирменный оранжевый FLOMASTER #E87D0D.
@@ -47,7 +47,7 @@ def _save(doc, out):
 
 def build_ru():
     ds.H1_REGISTRY.clear()
-    doc = ds.new_doc('FLOMASTER', 'Руководство пользователя', 'V2.6.0  -  WINDOWS 10/11')
+    doc = ds.new_doc('FLOMASTER', 'Руководство пользователя', 'V2.6.1  -  WINDOWS 10/11')
 
     p(doc, 'FLOMASTER - лаунчер для рабочих приложений трёхмерной графики: одна кнопка '
            'запускает Blender, Maya, Houdini, Nuke, DaVinci Resolve, Unreal Engine или '
@@ -65,7 +65,7 @@ def build_ru():
     h1(doc, '1. О программе')
     p(doc, 'Ключевые возможности:', bullet=False)
     for b in (
-        'автоскан установленных приложений: реестр Windows, манифесты Epic Games и файловый поиск — Blender, K-Cycles, Maya, Houdini, Nuke, DaVinci Resolve, Unreal Engine, Substance Painter;',
+        'автоскан установленных приложений: реестр Windows, манифесты Epic Games и файловый поиск — Blender, K-Cycles, Maya, Houdini, Nuke и NukeX, DaVinci Resolve, Unreal Engine, Substance Painter;',
         'пресеты запуска: своё имя, свой exe, свои аргументы запуска;',
         'профили запуска: именованные связки «приложение + OCIO-конфиг + аргументы», переключение проектов одним нажатием;',
         'полноэкранный дашборд по Ctrl+Alt+F: конфиг, приложения, проекты, профили и роли — поверх всего;',
@@ -216,6 +216,11 @@ def build_ru():
         ('Blender, Maya, Houdini, Nuke, DaVinci Resolve, Substance Painter', 'переменная окружения OCIO'),
         ('Unreal Engine', 'аргумент -ocio='),
     ], [9.6, 7.4])
+    p(doc, 'Nuke: переменная задаёт и лочит конфиг - Nuke сообщит «OCIO environment variable '
+           'is set» и отключит смену конфига изнутри. Режим колор-менеджмента хранится в самом '
+           'скрипте: в новом .nk один раз переведите Project Settings → Color → color management '
+           'в OCIO. Начиная с Nuke 16 редакции Nuke, NukeX и Studio собраны в одном бинарнике - '
+           'лаунчер показывает обе плитки, NukeX запускается флагом --nukex и несёт родную иконку.')
     p(doc, 'В комплекте - ACES 1.2 конфиг (папка ocio/ рядом с exe). В нём заведены строчные '
            'алиасы acescg и raw: это interchange-имена ACES, одинаковые во всех приложениях и '
            'конфигах. Скрипты и пресеты, прописывающие colorspace строкой acescg или raw, '
@@ -366,7 +371,7 @@ def build_ru():
 
 def build_en():
     ds.H1_REGISTRY.clear()
-    doc = ds.new_doc('FLOMASTER', 'User Guide', 'V2.6.0  -  WINDOWS 10/11')
+    doc = ds.new_doc('FLOMASTER', 'User Guide', 'V2.6.1  -  WINDOWS 10/11')
 
     p(doc, 'FLOMASTER is a launcher for 3D graphics applications: one button starts Blender, '
            'Maya, Houdini, Nuke, DaVinci Resolve, Unreal Engine or Substance Painter with a '
@@ -384,7 +389,7 @@ def build_en():
     h1(doc, '1. About FLOMASTER')
     p(doc, 'Key features:', bullet=False)
     for b in (
-        'auto-scan of installed applications from the Windows registry, Epic Games manifests and file search — Blender, K-Cycles, Maya, Houdini, Nuke, DaVinci Resolve, Unreal Engine, Substance Painter;',
+        'auto-scan of installed applications from the Windows registry, Epic Games manifests and file search — Blender, K-Cycles, Maya, Houdini, Nuke and NukeX, DaVinci Resolve, Unreal Engine, Substance Painter;',
         'launch presets: your own name, exe and launch arguments;',
         'launch profiles: named app + OCIO config + arguments bundles, one-click project switching;',
         'fullscreen overlay dashboard by Ctrl+Alt+F: color config, applications, projects, profiles, roles and recent files — over everything;',
@@ -535,6 +540,12 @@ def build_en():
         ('Blender, Maya, Houdini, Nuke, DaVinci Resolve, Substance Painter', 'OCIO environment variable'),
         ('Unreal Engine', '-ocio= argument'),
     ], [9.6, 7.4])
+    p(doc, 'Nuke: the variable provides and locks the config - Nuke shows "OCIO environment '
+           'variable is set" and disables switching configs from inside. The project '
+           'color-management mode lives in the script itself: in a new .nk set Project Settings '
+           '→ Color → color management to OCIO once. Since Nuke 16, Nuke, NukeX and Studio ship '
+           'as one binary - the launcher shows both tiles; NukeX runs via the --nukex flag and '
+           'carries its native icon.')
     p(doc, 'The bundled ACES 1.2 config (the ocio/ folder next to the exe) defines lowercase '
            'aliases acescg and raw: interchange ACES names identical across applications and '
            'configs. Scripts and presets that set a colorspace by the acescg or raw string '
