@@ -38,7 +38,14 @@
 
 ---
 
-## What's New in v2.6.1
+## What's New in v2.6.2
+
+- **Auto EN keyboard layout (Houdini, Maya)** — a new Settings option for the eternal pain: hotkeys stop firing in a non-Latin keyboard layout (Houdini and Maya bind hotkeys to characters, not physical keys). When enabled, a tiny background guard (`DccEnLayout.exe`, ~9 KB, embedded into the launcher) switches the layout to English automatically whenever a Houdini or Maya window gets focus — within a second, no user action. Other apps are untouched; inside a DCC, Alt+Shift still gives you Russian for notes and holds until you re-enter the app. The guard deploys to `%LOCALAPPDATA%\FLOMASTER`, runs from HKCU autostart and lives independently of the launcher; a pre-FLOMASTER standalone installation (`HoudiniEnLayout`) is adopted silently
+- Off by default (public release); the preference travels with Settings Export, and older exports don't carry the field, so your choice is never flipped silently
+
+Smoke 22/22, unit tests 140.
+
+### [v2.6.1](https://github.com/abyrvalg379/FLOMASTER/releases/tag/v2.6.1) — NukeX, per-preset args, Nuke fixes
 
 - **NukeX support** — since Nuke 16, Nuke, NukeX and Studio ship as a single binary, so scanners that look for a separate NukeX executable find nothing. The auto-scan now adds a second **NukeX** tile that launches the same exe with `--nukex` and carries the native NukeX icon (exactly how Foundry's own desktop shortcut works). Legacy (≤ Nuke 15) NukeX installs are detected by their own executable
 - **Per-preset launch arguments** — a preset can carry baked arguments; they always run ahead of your own — on tiles, quick commands, file routing, `--launch` from the command line and shortcuts created by FLOMASTER. Profiles keep storing only your arguments. Baked args are visible right on the tile subtitle (`Nuke17.1.exe · --nukex`), so lookalike tiles stay tellable and searchable
