@@ -957,8 +957,11 @@
                                       Foreground="{DynamicResource TextBrush}" FontSize="12" Margin="0,0,0,8"
                                       ToolTip="FLOMASTER starts with the fullscreen dashboard instead of the small window"/>
                             <CheckBox Content="Always on top" IsChecked="{Binding TopMostEnabled}"
-                                      Foreground="{DynamicResource TextBrush}" FontSize="12"
+                                      Foreground="{DynamicResource TextBrush}" FontSize="12" Margin="0,0,0,8"
                                       ToolTip="The small launcher window stays on top"/>
+                            <CheckBox Content="Auto EN layout (Houdini/Maya)" IsChecked="{Binding EnLayoutEnabled}"
+                                      Foreground="{DynamicResource TextBrush}" FontSize="12"
+                                      ToolTip="Entering Houdini/Maya switches the keyboard to English automatically — Russian layout breaks DCC hotkeys (Alt+Shift inside still works)"/>
                         </StackPanel>
                         <StackPanel Grid.Column="1">
                             <CheckBox Content="Dashboard on top" IsChecked="{Binding OverlayTopmost}"

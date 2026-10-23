@@ -17,6 +17,8 @@ Desktop.ini
 
 # Build artifacts
 *.exe
+# вшитый сторож раскладки — бинарник нужен сборке (исходник и build.ps1 в tools\DccEnLayout)
+!FLOMASTER_CS/Resources/DccEnLayout.exe
 *.pdb
 *.dll
 work/test/

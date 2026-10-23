@@ -10,14 +10,17 @@
     <ApplicationIcon>Resources\flomaster.ico</ApplicationIcon>
     <AssemblyTitle>FLOMASTER</AssemblyTitle>
     <AssemblyDescription>OCIO Launcher for DCC Applications</AssemblyDescription>
-    <AssemblyVersion>2.6.1.0</AssemblyVersion>
-    <FileVersion>2.6.1.0</FileVersion>
+    <AssemblyVersion>2.6.2.0</AssemblyVersion>
+    <FileVersion>2.6.2.0</FileVersion>
     <Company>FLOMASTER</Company>
     <Product>FLOMASTER OCIO Launcher</Product>
   </PropertyGroup>
 
   <ItemGroup>
     <Resource Include="Resources\flomaster.ico" />
+    <!-- Фоновый сторож раскладки (опция «Auto EN keyboard layout»): вшит в exe,
+         извлекается EnLayoutService в %LOCALAPPDATA%. Пересборка — tools\DccEnLayout\build.ps1. -->
+    <Resource Include="Resources\DccEnLayout.exe" />
   </ItemGroup>
 
 </Project>

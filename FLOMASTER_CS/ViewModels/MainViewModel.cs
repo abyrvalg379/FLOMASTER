@@ -104,7 +104,7 @@ namespace FLOMASTER.ViewModels
             PropertyChanged += (_, e) =>
             {
                 if (e.PropertyName is nameof(SelectedTheme) or nameof(AnimationEnabled) or nameof(TopMostEnabled)
-                    or nameof(CheckUpdatesEnabled) or nameof(HotkeyEnabled))
+                    or nameof(CheckUpdatesEnabled) or nameof(HotkeyEnabled) or nameof(EnLayoutEnabled))
                     ScheduleSyncPush();
             };
             _syncPushTimer.Tick += (_, _) => { _syncPushTimer.Stop(); if (_syncDirty) PushSyncNow(); };
@@ -473,6 +473,20 @@ namespace FLOMASTER.ViewModels
                 OnPropertyChanged();
                 StatusText = value ? "Global hotkey on (Ctrl+Alt+F)" : "Global hotkey off";
                 Logger.Log("Hotkey", $"Global hotkey {(value ? "enabled" : "disabled")}", "info");
+            }
+        }
+
+        /// <summary>Авто-английская раскладка в DCC (деплой сторожа — в EnLayoutService).</summary>
+        public bool EnLayoutEnabled
+        {
+            get => _config.EnLayoutEnabled;
+            set
+            {
+                _config.EnLayoutEnabled = value;
+                _store.Save(_config);
+                OnPropertyChanged();
+                StatusText = value ? "EN layout guard on (Houdini, Maya)" : "EN layout guard off";
+                Logger.Log("EnLayout", $"EN layout guard {(value ? "enabled" : "disabled")}", "info");
             }
         }
 
@@ -1305,6 +1319,7 @@ namespace FLOMASTER.ViewModels
             TopMostEnabled = TopMostEnabled,
             CheckUpdates = CheckUpdatesEnabled,
             HotkeyEnabled = HotkeyEnabled,
+            EnLayoutEnabled = EnLayoutEnabled,
             Profiles = _config.Profiles.Select(p => new Profile
             {
                 Name = p.Name, PresetName = p.PresetName, OcioName = p.OcioName, Args = p.Args
@@ -1355,6 +1370,8 @@ namespace FLOMASTER.ViewModels
             TopMostEnabled = export.TopMostEnabled;
             CheckUpdatesEnabled = export.CheckUpdates;
             HotkeyEnabled = export.HotkeyEnabled;
+            // nullable: экспорты до v2.6.2 поля не несут — null не трогает включённый сторож
+            if (export.EnLayoutEnabled.HasValue) EnLayoutEnabled = export.EnLayoutEnabled.Value;
             _store.Save(_config);
             return (added, overwritten, rootsAdded);
         }

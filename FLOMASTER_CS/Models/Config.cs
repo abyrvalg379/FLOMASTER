@@ -18,6 +18,11 @@ namespace FLOMASTER.Models
         /// <summary>Глобальный хоткей Ctrl+Alt+F: показать/спрятать лаунчер поверх всего.</summary>
         public bool HotkeyEnabled { get; set; } = true;
 
+        /// <summary>Авто-английская раскладка в DCC (Houdini/Maya): фоновый сторож DccEnLayout.
+        /// Преференс едет в SettingsExport; машинный эффект (exe в %LOCALAPPDATA%, HKCU Run,
+        /// процесс) применяет EnLayoutService — сторож живёт независимо от лаунчера.</summary>
+        public bool EnLayoutEnabled { get; set; } = false;
+
         /// <summary>DeviceName монитора, на котором оверлей был закрыт последний раз.</summary>
         public string OverlayScreenDeviceName { get; set; } = "";
 
@@ -135,6 +140,9 @@ namespace FLOMASTER.Models
         public bool CheckUpdates { get; set; } = true;
         /// <summary>Глобальный хоткей Ctrl+Alt+F: показать/спрятать лаунчер поверх всего.</summary>
         public bool HotkeyEnabled { get; set; } = true;
+        /// <summary>Nullable: экспорты до v2.6.2 поля не несут — null не трогает текущее состояние
+        /// (bool-false молча выключал бы включённый сторож при импорте старого файла).</summary>
+        public bool? EnLayoutEnabled { get; set; }
         public List<Profile> Profiles { get; set; } = new();
         public List<string> ProjectRoots { get; set; } = new();
     }

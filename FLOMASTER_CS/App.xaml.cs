@@ -15,6 +15,7 @@ namespace FLOMASTER
 
         private TrayService? _tray;
         private HotkeyService? _hotkey;
+        private EnLayoutService? _enLayout;
         private UiController? _ui;
 
         /// <summary>Истинный выход (Quit в трее): окна при Closing не прячутся, а закрываются.</summary>
@@ -66,6 +67,8 @@ namespace FLOMASTER
             _ui = new UiController(viewModel);
             _tray = new TrayService(viewModel, () => _ui.ShowUi(), () => _ui.SwitchLauncher());
             _hotkey = new HotkeyService(viewModel, _ui.ToggleDashboard, _ui.ToggleWindow);
+            // сторож раскладки живёт независимо от лаунчера — Dispose только отписывает VM
+            _enLayout = new EnLayoutService(viewModel);
 
             _ui.ShowStartupUi();
         }
@@ -75,6 +78,7 @@ namespace FLOMASTER
             IsExiting = true;
             _hotkey?.Dispose();
             _tray?.Dispose();
+            _enLayout?.Dispose();
             base.OnExit(e);
         }
 
