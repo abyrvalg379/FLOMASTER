@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-r'''FLOMASTER - Руководство пользователя (RU + EN). Генератор DOCX. Версия V2.6.1.
+r'''FLOMASTER - Руководство пользователя (RU + EN). Генератор DOCX. Версия V2.6.2.
 
 Хелперы стиля наследуют семейства STUKACH/LAMPOCHKA/TOCHKA,
 акцент - фирменный оранжевый FLOMASTER #E87D0D.
@@ -47,7 +47,7 @@ def _save(doc, out):
 
 def build_ru():
     ds.H1_REGISTRY.clear()
-    doc = ds.new_doc('FLOMASTER', 'Руководство пользователя', 'V2.6.1  -  WINDOWS 10/11')
+    doc = ds.new_doc('FLOMASTER', 'Руководство пользователя', 'V2.6.2  -  WINDOWS 10/11')
 
     p(doc, 'FLOMASTER - лаунчер для рабочих приложений трёхмерной графики: одна кнопка '
            'запускает Blender, Maya, Houdini, Nuke, DaVinci Resolve, Unreal Engine или '
@@ -259,6 +259,7 @@ def build_ru():
         ('Always on top', 'маленькое окно поверх всех'),
         ('Dashboard on top', 'полноэкранный дашборд поверх всех окон'),
         ('Global hotkey (Ctrl+Alt+F)', 'глобальный хоткей: показать/спрятать дашборд'),
+        ('Auto EN keyboard layout (Houdini, Maya)', 'автопереключение на английскую раскладку при входе в Houdini/Maya (русская ломает хоткеи); Alt+Shift внутри приложения всё ещё работает'),
         ('Hotkey opens dashboard', 'что открывает хоткей: дашборд или маленькое окно'),
         ('Launcher animation', 'включить/выключить анимацию панелей'),
         ('Default OCIO', 'конфиг по умолчанию для запусков из трея'),
@@ -371,7 +372,7 @@ def build_ru():
 
 def build_en():
     ds.H1_REGISTRY.clear()
-    doc = ds.new_doc('FLOMASTER', 'User Guide', 'V2.6.1  -  WINDOWS 10/11')
+    doc = ds.new_doc('FLOMASTER', 'User Guide', 'V2.6.2  -  WINDOWS 10/11')
 
     p(doc, 'FLOMASTER is a launcher for 3D graphics applications: one button starts Blender, '
            'Maya, Houdini, Nuke, DaVinci Resolve, Unreal Engine or Substance Painter with a '
@@ -584,6 +585,7 @@ def build_en():
         ('Always on top', 'the small launcher window above all others'),
         ('Dashboard on top', 'fullscreen dashboard above all windows'),
         ('Global hotkey (Ctrl+Alt+F)', 'global hotkey: show/hide the dashboard'),
+        ('Auto EN keyboard layout (Houdini, Maya)', 'switches the keyboard to English automatically when entering Houdini/Maya (a Russian layout breaks DCC hotkeys); Alt+Shift inside the app still works'),
         ('Hotkey opens dashboard', 'what the hotkey opens: the dashboard or the small window'),
         ('Launcher animation', 'enable/disable panel animation'),
         ('Default OCIO', 'default config for tray launches'),
